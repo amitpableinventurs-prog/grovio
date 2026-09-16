@@ -25,3 +25,15 @@ export function fetchProducts(params: ListParams = {}) {
 export function setProductStatus(id: string, status: 'active' | 'inactive') {
   return unwrap<Product>(apiClient.patch(`/admin/products/${id}/status`, { status }));
 }
+
+export function createProduct(formData: FormData) {
+  return unwrap<Product>(apiClient.post('/admin/products', formData));
+}
+
+export function updateProduct(id: string, formData: FormData) {
+  return unwrap<Product>(apiClient.patch(`/admin/products/${id}`, formData));
+}
+
+export function deleteProduct(id: string) {
+  return unwrap(apiClient.delete(`/admin/products/${id}`));
+}

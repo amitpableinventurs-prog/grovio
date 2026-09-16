@@ -88,7 +88,7 @@ Socket.IO on the same port. Connect with `auth: { token: <accessToken> }`. Event
 - `PATCH /admin/users/:id/active` — `{ isActive }`
 - `GET /admin/stores`, `GET /admin/stores/:id`, `PATCH /admin/stores/:id` — zones/timings/status
 - `POST/GET/PATCH/DELETE /admin/categories`
-- `GET /admin/products`, `PATCH /admin/products/:id/status`
+- `GET /admin/products`, `POST /admin/products`, `PATCH /admin/products/:id` (full edit), `PATCH /admin/products/:id/status` (quick toggle), `DELETE /admin/products/:id` — admin can create/edit/delete a product under **any** store (support/onboarding use case; vendors otherwise manage their own via `/vendor/products`)
 - `GET /admin/orders`, `GET /admin/orders/:id`, `PATCH /admin/orders/:id/assign-picker|assign-delivery`
 - `POST /admin/orders/:id/refund` — `{ amount, reason }` (manual/partial refund to customer wallet)
 - `POST/GET/PATCH/DELETE /admin/coupons`

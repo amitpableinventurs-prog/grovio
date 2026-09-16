@@ -48,7 +48,10 @@ router.get('/categories', p(PERMISSIONS.MANAGE_CATALOG), catalogCtrl.listCategor
 router.patch('/categories/:id', p(PERMISSIONS.MANAGE_CATALOG), upload.single('image'), catalogCtrl.updateCategory);
 router.delete('/categories/:id', p(PERMISSIONS.MANAGE_CATALOG), catalogCtrl.deleteCategory);
 router.get('/products', p(PERMISSIONS.MANAGE_CATALOG), catalogCtrl.listAllProducts);
+router.post('/products', p(PERMISSIONS.MANAGE_CATALOG), upload.array('images', 5), catalogCtrl.createProduct);
+router.patch('/products/:id', p(PERMISSIONS.MANAGE_CATALOG), upload.array('images', 5), catalogCtrl.updateProduct);
 router.patch('/products/:id/status', p(PERMISSIONS.MANAGE_CATALOG), catalogCtrl.setProductStatus);
+router.delete('/products/:id', p(PERMISSIONS.MANAGE_CATALOG), catalogCtrl.deleteProduct);
 
 // Orders
 router.get('/orders', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.listOrders);

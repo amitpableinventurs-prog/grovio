@@ -3,6 +3,7 @@ const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
+const { logAdminActivity } = require('../../services/audit.service');
 
 // ---------- Categories ----------
 
@@ -88,6 +89,64 @@ const setProductStatus = catchAsync(async (req, res) => {
   new ApiResponse(200, product, 'Product status updated').send(res);
 });
 
+// POST /admin/products  (admin can create a product under any store — support/onboarding use case)
+const createProduct = catchAsync(async (req, res) => {
+  const { storeId, name, description, categoryId, unit, price, discountPrice, stockQty, sku } = req.body;
+  if (!storeId) throw new ApiError(400, 'storeId is required');
+
+  const store = await Store.findById(storeId);
+  if (!store) throw new ApiError(404, 'Store not found');
+
+  const images = (req.files || []).map((f) => `/uploads/${f.filename}`);
+
+  const product = await Product.create({
+    store: storeId,
+    category: categoryId,
+    name,
+    description,
+    unit,
+    price,
+    discountPrice: discountPrice || null,
+    stockQty: stockQty || 0,
+    sku,
+    images,
+  });
+
+  await logAdminActivity({ adminId: req.user.id, action: 'product.create', entityType: 'Product', entityId: product._id, metadata: { storeId } });
+
+  new ApiResponse(201, product, 'Product created').send(res);
+});
+
+// PATCH /admin/products/:id  (full edit — separate from the quick status-only toggle above)
+const updateProduct = catchAsync(async (req, res) => {
+  const product = await Product.findById(req.params.id);
+  if (!product) throw new ApiError(404, 'Product not found');
+
+  const fields = ['name', 'description', 'unit', 'price', 'discountPrice', 'stockQty', 'sku', 'isAvailable', 'status'];
+  fields.forEach((f) => {
+    if (req.body[f] !== undefined) product[f] = req.body[f];
+  });
+  if (req.body.categoryId !== undefined) product.category = req.body.categoryId;
+  if (req.body.storeId !== undefined) product.store = req.body.storeId;
+  if (req.files?.length) product.images = req.files.map((f) => `/uploads/${f.filename}`);
+
+  await product.save();
+
+  await logAdminActivity({ adminId: req.user.id, action: 'product.update', entityType: 'Product', entityId: product._id, metadata: req.body });
+
+  new ApiResponse(200, product, 'Product updated').send(res);
+});
+
+const deleteProduct = catchAsync(async (req, res) => {
+  const product = await Product.findById(req.params.id);
+  if (!product) throw new ApiError(404, 'Product not found');
+  await product.deleteOne();
+
+  await logAdminActivity({ adminId: req.user.id, action: 'product.delete', entityType: 'Product', entityId: product._id });
+
+  new ApiResponse(200, null, 'Product deleted').send(res);
+});
+
 module.exports = {
   createCategory,
   listCategories,
@@ -95,4 +154,7 @@ module.exports = {
   deleteCategory,
   listAllProducts,
   setProductStatus,
+  createProduct,
+  updateProduct,
+  deleteProduct,
 };

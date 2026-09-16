@@ -127,16 +127,34 @@ paths['/admin/categories/{id}'] = {
     responses: { 200: envelope(null, 'Category deleted'), 401: RESPONSES_401, 404: RESPONSES_404 },
   },
 };
+const adminProductFields = { storeId: { type: 'string' }, name: { type: 'string' }, description: { type: 'string' }, categoryId: { type: 'string' }, unit: { type: 'string' }, price: { type: 'number' }, discountPrice: { type: 'number' }, stockQty: { type: 'integer' }, sku: { type: 'string' }, isAvailable: { type: 'boolean' }, status: { type: 'string', enum: ['active', 'inactive'] }, images: { type: 'array', items: { type: 'string', format: 'binary' } } };
+
 paths['/admin/products'] = {
   get: {
     tags: TAG_CATALOG, summary: 'List/moderate products across all stores', ...bearer(),
     parameters: [...PAGE_QS, q('status', 'active | inactive'), q('storeId'), q('vendorId')],
     responses: { 200: envelope(paginated(ref('Product'))), 401: RESPONSES_401, 403: RESPONSES_403 },
   },
+  post: {
+    tags: TAG_CATALOG, summary: 'Create a product under any store (admin support/onboarding use case)', ...bearer(),
+    requestBody: formBody(adminProductFields, ['storeId', 'name', 'categoryId', 'unit', 'price']),
+    responses: { 201: envelope(ref('Product'), 'Product created'), 401: RESPONSES_401, 404: errorResponse('Store not found') },
+  },
+};
+paths['/admin/products/{id}'] = {
+  patch: {
+    tags: TAG_CATALOG, summary: 'Full edit of a product (any field, any store)', ...bearer(), parameters: [idParam()],
+    requestBody: formBody(adminProductFields),
+    responses: { 200: envelope(ref('Product'), 'Product updated'), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
+  delete: {
+    tags: TAG_CATALOG, summary: 'Delete a product', ...bearer(), parameters: [idParam()],
+    responses: { 200: envelope(null, 'Product deleted'), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
 };
 paths['/admin/products/{id}/status'] = {
   patch: {
-    tags: TAG_CATALOG, summary: 'Activate/deactivate a product', ...bearer(), parameters: [idParam()],
+    tags: TAG_CATALOG, summary: 'Activate/deactivate a product (quick toggle)', ...bearer(), parameters: [idParam()],
     requestBody: jsonBody({ status: { type: 'string', enum: ['active', 'inactive'] } }, ['status']),
     responses: { 200: envelope(ref('Product'), 'Product status updated'), 401: RESPONSES_401, 404: RESPONSES_404 },
   },
