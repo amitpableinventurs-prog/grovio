@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Table, Typography, Button, Modal, Form, Input, Select, Upload, Space, Popconfirm, App as AntApp, Image } from 'antd';
-import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
+import { Table, Typography, Button, Modal, Form, Input, Select, Upload, Space, Popconfirm, Tag, App as AntApp, Image } from 'antd';
+import { PlusOutlined, UploadOutlined, AppstoreOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchCategories, createCategory, updateCategory, deleteCategory } from '../api/catalog';
@@ -17,6 +17,7 @@ interface CategoryFormValues {
 export default function CategoriesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
+  const [forcedParent, setForcedParent] = useState<Category | null>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [form] = Form.useForm<CategoryFormValues>();
   const { message } = AntApp.useApp();
@@ -29,7 +30,7 @@ export default function CategoriesPage() {
   const createMutation = useMutation({
     mutationFn: createCategory,
     onSuccess: () => {
-      message.success('Category created');
+      message.success(forcedParent ? 'Subcategory created' : 'Category created');
       invalidate();
       closeModal();
     },
@@ -38,7 +39,7 @@ export default function CategoriesPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, formData }: { id: string; formData: FormData }) => updateCategory(id, formData),
     onSuccess: () => {
-      message.success('Category updated');
+      message.success('Saved');
       invalidate();
       closeModal();
     },
@@ -47,7 +48,7 @@ export default function CategoriesPage() {
   const deleteMutation = useMutation({
     mutationFn: deleteCategory,
     onSuccess: () => {
-      message.success('Category deleted');
+      message.success('Deleted');
       invalidate();
     },
   });
@@ -55,19 +56,33 @@ export default function CategoriesPage() {
   function closeModal() {
     setModalOpen(false);
     setEditing(null);
+    setForcedParent(null);
     setFileList([]);
     form.resetFields();
   }
 
-  function openCreate() {
+  // Top-level "Add Category"
+  function openCreateCategory() {
     setEditing(null);
+    setForcedParent(null);
     form.resetFields();
+    setFileList([]);
+    setModalOpen(true);
+  }
+
+  // "+ Add Subcategory" on a specific parent row
+  function openCreateSubcategory(parent: Category) {
+    setEditing(null);
+    setForcedParent(parent);
+    form.resetFields();
+    form.setFieldsValue({ parentId: parent._id });
     setFileList([]);
     setModalOpen(true);
   }
 
   function openEdit(category: Category) {
     setEditing(category);
+    setForcedParent(null);
     form.setFieldsValue({ name: category.name, parentId: category.parent || undefined, status: category.status });
     setFileList([]);
     setModalOpen(true);
@@ -87,15 +102,24 @@ export default function CategoriesPage() {
     }
   }
 
-  const flatRows: Category[] = (data || []).flatMap((parent) => [parent, ...(parent.children || [])]);
+  const topLevelOptions = (data || []).map((c) => ({ value: c._id, label: c.name }));
+
+  function modalTitle() {
+    if (editing) return editing.parent ? 'Edit Subcategory' : 'Edit Category';
+    if (forcedParent) return `Add Subcategory to "${forcedParent.name}"`;
+    return 'Add Category';
+  }
 
   return (
     <div>
       <Space style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Typography.Title level={3} style={{ margin: 0 }}>
-          Categories
-        </Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+        <div>
+          <Typography.Title level={3} style={{ margin: 0 }}>
+            Categories
+          </Typography.Title>
+          <Typography.Text type="secondary">Click the arrow next to a category to see/manage its subcategories.</Typography.Text>
+        </div>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreateCategory}>
           Add Category
         </Button>
       </Space>
@@ -103,23 +127,55 @@ export default function CategoriesPage() {
       <Table<Category>
         rowKey="_id"
         loading={isLoading}
-        dataSource={flatRows}
+        dataSource={data}
         pagination={false}
+        expandable={{
+          childrenColumnName: 'children',
+          defaultExpandAllRows: true,
+          rowExpandable: (r) => !!r.children?.length,
+        }}
         columns={[
           {
             title: 'Image',
+            width: 70,
             render: (_, r) => (r.image ? <Image src={assetUrl(r.image)} width={40} height={40} style={{ objectFit: 'cover' }} /> : '—'),
           },
-          { title: 'Name', render: (_, r) => (r.parent ? `— ${r.name}` : r.name) },
-          { title: 'Status', render: (_, r) => <StatusTag status={r.status} /> },
+          { title: 'Name', dataIndex: 'name' },
+          {
+            title: 'Type',
+            width: 130,
+            render: (_, r) =>
+              r.parent ? (
+                <Tag>Subcategory</Tag>
+              ) : (
+                <Tag icon={<AppstoreOutlined />} color="blue">
+                  Category
+                </Tag>
+              ),
+          },
+          { title: 'Status', width: 110, render: (_, r) => <StatusTag status={r.status} /> },
+          {
+            title: 'Subcategories',
+            width: 120,
+            render: (_, r) => (r.parent ? '—' : r.children?.length || 0),
+          },
           {
             title: 'Actions',
             render: (_, r) => (
               <Space>
+                {!r.parent && (
+                  <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={() => openCreateSubcategory(r)}>
+                    Add Subcategory
+                  </Button>
+                )}
                 <Button size="small" onClick={() => openEdit(r)}>
                   Edit
                 </Button>
-                <Popconfirm title="Delete this category?" onConfirm={() => deleteMutation.mutate(r._id)}>
+                <Popconfirm
+                  title={r.parent ? 'Delete this subcategory?' : 'Delete this category?'}
+                  description={!r.parent && r.children?.length ? `It has ${r.children.length} subcategory(ies) — they won't be deleted automatically.` : undefined}
+                  onConfirm={() => deleteMutation.mutate(r._id)}
+                >
                   <Button size="small" danger>
                     Delete
                   </Button>
@@ -131,7 +187,7 @@ export default function CategoriesPage() {
       />
 
       <Modal
-        title={editing ? 'Edit Category' : 'Add Category'}
+        title={modalTitle()}
         open={modalOpen}
         onCancel={closeModal}
         onOk={() => form.submit()}
@@ -141,11 +197,12 @@ export default function CategoriesPage() {
           <Form.Item name="name" label="Name" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="parentId" label="Parent Category (optional)">
+          <Form.Item name="parentId" label="Parent Category">
             <Select
               allowClear
-              placeholder="None (top-level category)"
-              options={(data || []).map((c) => ({ value: c._id, label: c.name }))}
+              placeholder="None (this is a top-level category)"
+              disabled={!!forcedParent}
+              options={topLevelOptions}
             />
           </Form.Item>
           <Form.Item name="status" label="Status" initialValue="active">

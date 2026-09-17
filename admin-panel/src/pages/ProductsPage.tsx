@@ -178,8 +178,21 @@ export default function ProductsPage() {
             title: 'Store',
             render: (_, r) => (typeof r.store === 'object' ? (r.store as Store).name : r.store),
           },
-          { title: 'Price', render: (_, r) => formatCurrency(r.discountPrice || r.price) },
-          { title: 'Stock', dataIndex: 'stockQty' },
+          {
+            title: 'Price',
+            render: (_, r) =>
+              r.discountPrice && r.discountPrice < r.price ? (
+                <Space size={6}>
+                  <Typography.Text strong>{formatCurrency(r.price)}</Typography.Text>
+                  <Typography.Text type="success" style={{ fontSize: 12 }}>
+                    Sale: {formatCurrency(r.discountPrice)}
+                  </Typography.Text>
+                </Space>
+              ) : (
+                formatCurrency(r.price)
+              ),
+          },
+          { title: 'Stock', render: (_, r) => `${r.stockQty} ${r.unit}` },
           { title: 'Status', render: (_, r) => <StatusTag status={r.status} /> },
           {
             title: 'Actions',
