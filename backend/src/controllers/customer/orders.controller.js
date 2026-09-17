@@ -1,10 +1,11 @@
-const { Cart, Order, Product, Store, Vendor, Address, Coupon, CouponUsage, Setting, Refund } = require('../../models');
+const { Cart, Order, Product, Store, Address, Coupon, CouponUsage, Setting, Refund } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const generateOrderNumber = require('../../utils/orderNumber');
 const { transitionOrder } = require('../../services/order.service');
+const { findAvailablePicker } = require('../../services/assignment.service');
 const { debitWallet, creditWallet } = require('../../services/payment.service');
 const { notifyUser } = require('../../services/notification.service');
 
@@ -13,14 +14,11 @@ async function getSetting(key, fallback) {
   return row ? row.value : fallback;
 }
 
-async function resolveCoupon(code, itemTotal, userId, vendorId) {
+async function resolveCoupon(code, itemTotal, userId) {
   if (!code) return { discount: 0, coupon: null };
 
   const coupon = await Coupon.findOne({ code: code.toUpperCase(), isActive: true });
   if (!coupon) throw new ApiError(400, 'Invalid coupon code');
-  if (coupon.vendor && coupon.vendor.toString() !== vendorId.toString()) {
-    throw new ApiError(400, 'This coupon is not valid for this store');
-  }
 
   const now = new Date();
   if (coupon.validFrom && now < coupon.validFrom) throw new ApiError(400, 'Coupon is not yet active');
@@ -51,8 +49,6 @@ async function loadAndPriceCart(userId, couponCodeOverride) {
 
   const store = await Store.findById(cart.store);
   if (!store || store.status !== 'active') throw new ApiError(400, 'This store is currently unavailable');
-  const vendor = await Vendor.findById(store.vendor);
-  if (!vendor || vendor.status !== 'approved') throw new ApiError(400, 'This store is currently unavailable');
   if (!store.isOpen) throw new ApiError(400, 'This store is currently closed');
 
   for (const item of cart.items) {
@@ -71,11 +67,11 @@ async function loadAndPriceCart(userId, couponCodeOverride) {
   const itemTotal = cart.items.reduce((sum, i) => sum + Number(i.priceSnapshot) * i.qty, 0);
   const deliveryFee = Number(await getSetting('deliveryFee', process.env.DEFAULT_DELIVERY_FEE || 25));
   const couponCode = couponCodeOverride !== undefined ? couponCodeOverride : cart.couponCode;
-  const { discount, coupon } = await resolveCoupon(couponCode, itemTotal, userId, vendor._id);
+  const { discount, coupon } = await resolveCoupon(couponCode, itemTotal, userId);
   const tax = 0;
   const grandTotal = Number((itemTotal + deliveryFee + tax - discount).toFixed(2));
 
-  return { cart, store, vendor, itemTotal, deliveryFee, discount, coupon, tax, grandTotal };
+  return { cart, store, itemTotal, deliveryFee, discount, coupon, tax, grandTotal };
 }
 
 // POST /customer/checkout/summary  { couponCode? }  -> recalculate totals without placing the order
@@ -103,7 +99,7 @@ const placeOrder = catchAsync(async (req, res) => {
   const address = await Address.findOne({ _id: addressId, user: req.user.id });
   if (!address) throw new ApiError(404, 'Address not found');
 
-  const { cart, store, vendor, itemTotal, deliveryFee, discount, coupon, tax, grandTotal } = await loadAndPriceCart(req.user.id);
+  const { cart, store, itemTotal, deliveryFee, discount, coupon, tax, grandTotal } = await loadAndPriceCart(req.user.id);
 
   if (paymentMethod === 'WALLET') {
     await debitWallet({ userId: req.user.id, amount: grandTotal, reason: 'Order payment' });
@@ -112,7 +108,6 @@ const placeOrder = catchAsync(async (req, res) => {
   const order = await Order.create({
     orderNumber: generateOrderNumber(),
     customer: req.user.id,
-    vendor: vendor._id,
     store: store._id,
     address: addressId,
     itemTotal,
@@ -157,12 +152,21 @@ const placeOrder = catchAsync(async (req, res) => {
   cart.couponCode = null;
   await cart.save();
 
-  await notifyUser(vendor.user, {
-    title: 'New order received',
-    body: `Order ${order.orderNumber} needs your confirmation.`,
-    type: 'new_order',
-    data: { orderId: order._id },
-  });
+  // Stores are company-owned now — there's no vendor to approve the order, so it's
+  // accepted immediately and handed straight to an available picker at this store.
+  await transitionOrder({ order, toStatus: 'accepted', changedBy: req.user.id, note: 'Auto-accepted (no vendor approval required)' });
+
+  const picker = await findAvailablePicker(store._id);
+  if (picker) {
+    order.picker = picker.user;
+    await order.save();
+    await notifyUser(picker.user, {
+      title: 'New order assigned',
+      body: `Order ${order.orderNumber} is ready to be picked at ${store.name}.`,
+      type: 'new_order',
+      data: { orderId: order._id },
+    });
+  }
 
   new ApiResponse(201, order, 'Order placed successfully').send(res);
 });

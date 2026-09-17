@@ -4,12 +4,14 @@ const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
-const { ALL_PERMISSIONS } = require('../../utils/permissions');
+const { ALL_PERMISSIONS, PERMISSIONS } = require('../../utils/permissions');
 const { logAdminActivity } = require('../../services/audit.service');
 
-// POST /admin/admins  { name, email, password, permissions: [...] }  -> create a staff admin
+// POST /admin/admins  { name, email, password, permissions: [...], assignedStore? }
+// assignedStore only makes sense alongside the MANAGE_OWN_STORE_INVENTORY permission —
+// it scopes that restricted admin to managing just that one store's catalog/inventory.
 const createAdmin = catchAsync(async (req, res) => {
-  const { name, email, password, permissions = [] } = req.body;
+  const { name, email, password, permissions = [], assignedStore } = req.body;
 
   const existing = await User.findOne({ email });
   if (existing) throw new ApiError(409, 'Email already registered');
@@ -17,15 +19,27 @@ const createAdmin = catchAsync(async (req, res) => {
   const invalid = permissions.filter((p) => p !== '*' && !ALL_PERMISSIONS.includes(p));
   if (invalid.length) throw new ApiError(400, `Unknown permissions: ${invalid.join(', ')}`);
 
+  if (permissions.includes(PERMISSIONS.MANAGE_OWN_STORE_INVENTORY) && !assignedStore) {
+    throw new ApiError(400, 'assignedStore is required for the MANAGE_OWN_STORE_INVENTORY permission');
+  }
+
   const hashed = await bcrypt.hash(password, 10);
-  const admin = await User.create({ name, email, password: hashed, role: 'admin', permissions, isVerified: true });
+  const admin = await User.create({
+    name,
+    email,
+    password: hashed,
+    role: 'admin',
+    permissions,
+    assignedStore: assignedStore || null,
+    isVerified: true,
+  });
 
   await logAdminActivity({
     adminId: req.user.id,
     action: 'admin.create',
     entityType: 'User',
     entityId: admin._id,
-    metadata: { email, permissions },
+    metadata: { email, permissions, assignedStore },
   });
 
   const safeAdmin = admin.toObject();

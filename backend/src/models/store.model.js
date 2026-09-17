@@ -1,9 +1,8 @@
 const { Schema, model } = require('mongoose');
 
-// A physical outlet belonging to a Vendor. A vendor can run multiple stores;
-// products, inventory, pickers and orders are all scoped to a specific store.
+// A company-owned outlet, created and managed directly by Admin (no vendor/owner login).
+// Products, inventory, pickers and orders are all scoped to a specific store.
 const storeSchema = new Schema({
-  vendor: { type: Schema.Types.ObjectId, ref: 'Vendor', required: true },
   name: { type: String, required: true },
   logo: { type: String, default: null },
   banner: { type: String, default: null },

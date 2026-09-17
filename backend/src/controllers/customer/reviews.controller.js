@@ -16,7 +16,6 @@ const submitReview = catchAsync(async (req, res) => {
   const review = await Review.create({
     order: order._id,
     customer: req.user.id,
-    vendor: order.vendor,
     store: order.store,
     product: productId || null,
     rating,

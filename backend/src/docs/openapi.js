@@ -6,9 +6,11 @@ const spec = {
     title: 'Grovio API',
     version: '1.0.0',
     description:
-      'Multi-vendor grocery/quick-commerce backend — Admin, Vendor, Customer, Picker and Delivery APIs.\n\n' +
-      '**Auth**: Admin/Vendor use email+password (`/auth/login`); Customer/Picker/Delivery use mobile+OTP ' +
-      '(`/auth/send-otp` then `/auth/verify-otp`). Every protected endpoint needs `Authorization: Bearer <accessToken>` ' +
+      'Multi-store grocery/quick-commerce backend — Admin, Customer, Picker and Delivery APIs. ' +
+      'Stores are admin-owned system entities; there is no vendor/store login.\n\n' +
+      '**Auth**: Admin uses email+password (`/auth/login`); Customer/Picker/Delivery use mobile+OTP ' +
+      '(`/auth/send-otp` then `/auth/verify-otp`) — Picker/Delivery accounts must already exist (created by Admin) ' +
+      'before OTP login will work. Every protected endpoint needs `Authorization: Bearer <accessToken>` ' +
       '— click **Authorize** below and paste an `accessToken` obtained from a login/verify-otp response.\n\n' +
       'All successful responses share the envelope `{ success, message, data }`; failures are `{ success: false, message, errors }`.',
   },
@@ -36,13 +38,6 @@ const spec = {
     { name: 'Admin - Payments' },
     { name: 'Admin - Settlements' },
     { name: 'Admin - RBAC' },
-    { name: 'Vendor - Business' },
-    { name: 'Vendor - Stores' },
-    { name: 'Vendor - Products' },
-    { name: 'Vendor - Orders' },
-    { name: 'Vendor - Reviews' },
-    { name: 'Vendor - Offers' },
-    { name: 'Vendor - Reports & Settlements' },
     { name: 'Customer - Home & Catalog' },
     { name: 'Customer - Cart' },
     { name: 'Customer - Addresses' },
@@ -56,7 +51,6 @@ const spec = {
   paths: {
     ...require('./paths/core.paths'),
     ...require('./paths/admin.paths'),
-    ...require('./paths/vendor.paths'),
     ...require('./paths/customer.paths'),
     ...require('./paths/picker.paths'),
     ...require('./paths/delivery.paths'),

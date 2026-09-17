@@ -3,13 +3,11 @@ const ctrl = require('../controllers/auth/auth.controller');
 const validate = require('../middleware/validate.middleware');
 const { authenticate } = require('../middleware/auth.middleware');
 const {
-  registerVendorRules,
   loginRules,
   sendOtpRules,
   verifyOtpRules,
 } = require('../validators/auth.validator');
 
-router.post('/register-vendor', registerVendorRules, validate, ctrl.registerVendor);
 router.post('/login', loginRules, validate, ctrl.loginWithPassword);
 router.post('/send-otp', sendOtpRules, validate, ctrl.sendOtp);
 router.post('/resend-otp', sendOtpRules, validate, ctrl.resendOtp);

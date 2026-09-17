@@ -1,4 +1,4 @@
-const { User, Vendor, PickerProfile, DeliveryProfile } = require('../../models');
+const { User, PickerProfile, DeliveryProfile } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
@@ -7,7 +7,6 @@ const { notifyUser } = require('../../services/notification.service');
 const { logAdminActivity } = require('../../services/audit.service');
 
 const PROFILE_MODEL = {
-  vendor: Vendor,
   picker: PickerProfile,
   delivery: DeliveryProfile,
 };
@@ -50,7 +49,7 @@ function updateProfileStatus(role) {
   return catchAsync(async (req, res) => {
     const { status } = req.body;
     const ProfileModel = PROFILE_MODEL[role];
-    const validStatuses = role === 'vendor' ? ['pending', 'approved', 'rejected', 'blocked'] : ['pending', 'approved', 'blocked'];
+    const validStatuses = ['pending', 'approved', 'blocked'];
 
     if (!validStatuses.includes(status)) {
       throw new ApiError(400, `Status must be one of: ${validStatuses.join(', ')}`);
@@ -124,13 +123,12 @@ const getUserDetail = catchAsync(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (!user) throw new ApiError(404, 'User not found');
 
-  const [vendorProfile, pickerProfile, deliveryProfile] = await Promise.all([
-    Vendor.findOne({ user: user._id }),
+  const [pickerProfile, deliveryProfile] = await Promise.all([
     PickerProfile.findOne({ user: user._id }),
     DeliveryProfile.findOne({ user: user._id }),
   ]);
 
-  new ApiResponse(200, { ...user.toObject(), vendorProfile, pickerProfile, deliveryProfile }).send(res);
+  new ApiResponse(200, { ...user.toObject(), pickerProfile, deliveryProfile }).send(res);
 });
 
 module.exports = { listByRole, updateProfileStatus, assignPickerToStore, toggleActive, getUserDetail };

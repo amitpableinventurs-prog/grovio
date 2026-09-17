@@ -1,9 +1,8 @@
 const { Schema, model } = require('mongoose');
 
 const settlementSchema = new Schema({
-  payeeRole: { type: String, enum: ['vendor', 'picker', 'delivery'], required: true },
+  payeeRole: { type: String, enum: ['picker', 'delivery'], required: true },
   payeeUser: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // the person/account being paid out
-  vendor: { type: Schema.Types.ObjectId, ref: 'Vendor', default: null }, // set when payeeRole === 'vendor'
   periodFrom: { type: Date, required: true },
   periodTo: { type: Date, required: true },
   orderCount: { type: Number, default: 0 },

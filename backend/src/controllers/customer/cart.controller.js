@@ -1,4 +1,4 @@
-const { Cart, Product, Store, Coupon, CouponUsage } = require('../../models');
+const { Cart, Product, Coupon, CouponUsage } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
@@ -105,13 +105,6 @@ const applyCoupon = catchAsync(async (req, res) => {
 
   const coupon = await Coupon.findOne({ code: code.toUpperCase(), isActive: true });
   if (!coupon) throw new ApiError(400, 'Invalid coupon code');
-
-  if (coupon.vendor) {
-    const store = await Store.findById(cart.store);
-    if (!store || store.vendor.toString() !== coupon.vendor.toString()) {
-      throw new ApiError(400, 'This coupon is not valid for this store');
-    }
-  }
 
   const now = new Date();
   if (coupon.validFrom && now < coupon.validFrom) throw new ApiError(400, 'Coupon is not yet active');

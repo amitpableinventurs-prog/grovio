@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const { User, Vendor, Store, PickerProfile, DeliveryProfile, Wallet } = require('../../models');
+const { User, PickerProfile, DeliveryProfile, Wallet } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
@@ -14,28 +14,9 @@ async function respondWithTokens(res, user, { deviceId, platform } = {}, statusC
   return new ApiResponse(statusCode, { accessToken, refreshToken, user: safeUser }, message).send(res);
 }
 
-// ---------- Admin / Vendor: email + password ----------
-
-const registerVendor = catchAsync(async (req, res) => {
-  const { name, email, phone, password, storeName, address, lat, lng, deviceId, platform } = req.body;
-
-  const existing = await User.findOne({ email });
-  if (existing) throw new ApiError(409, 'Email already registered');
-
-  const hashed = await bcrypt.hash(password, 10);
-  const user = await User.create({ name, email, phone, password: hashed, role: 'vendor', isVerified: true });
-
-  const vendor = await Vendor.create({
-    user: user._id,
-    businessName: storeName,
-    commissionPercent: Number(process.env.DEFAULT_COMMISSION_PERCENT || 10),
-  });
-
-  await Store.create({ vendor: vendor._id, name: storeName, address, lat, lng });
-  await Wallet.create({ user: user._id, balance: 0 });
-
-  await respondWithTokens(res, user, { deviceId, platform }, 201, 'Vendor registered successfully. Awaiting admin approval.');
-});
+// ---------- Admin: email + password ----------
+// (Admin accounts, including store-scoped inventory-manager sub-admins, are created by
+// another admin via POST /admin/admins — there is no public/self-service registration.)
 
 const loginWithPassword = catchAsync(async (req, res) => {
   const { email, password, deviceId, platform } = req.body;
@@ -47,13 +28,6 @@ const loginWithPassword = catchAsync(async (req, res) => {
   if (!match) throw new ApiError(401, 'Invalid email or password');
 
   if (!user.isActive) throw new ApiError(403, 'Your account has been disabled');
-
-  if (user.role === 'vendor') {
-    const vendor = await Vendor.findOne({ user: user._id });
-    if (vendor && vendor.status !== 'approved') {
-      throw new ApiError(403, `Your vendor account is ${vendor.status}. Please wait for admin approval.`);
-    }
-  }
 
   await respondWithTokens(res, user, { deviceId, platform }, 200, 'Login successful');
 });
@@ -99,20 +73,23 @@ const verifyOtp = catchAsync(async (req, res) => {
   let isNewUser = false;
 
   if (!user) {
-    isNewUser = true;
     const effectiveRole = role || 'customer';
     if (!['customer', 'picker', 'delivery'].includes(effectiveRole)) {
       throw new ApiError(400, 'role must be one of customer, picker, delivery');
     }
+    // Picker/delivery accounts are created by Admin only (see admin/pickers.controller.js) —
+    // there is no public self-registration for staff roles, only for customers.
+    if (effectiveRole !== 'customer') {
+      throw new ApiError(404, 'No account found for this number. Please contact your admin.');
+    }
+
+    isNewUser = true;
     user = await User.create({
       name: name || 'User',
       phone,
       role: effectiveRole,
       isVerified: true,
     });
-
-    if (effectiveRole === 'picker') await PickerProfile.create({ user: user._id });
-    if (effectiveRole === 'delivery') await DeliveryProfile.create({ user: user._id });
     await Wallet.create({ user: user._id, balance: 0 });
   } else if (!user.isActive) {
     throw new ApiError(403, 'Your account has been disabled');
@@ -179,4 +156,4 @@ const updateMe = catchAsync(async (req, res) => {
   new ApiResponse(200, safeUser, 'Profile updated').send(res);
 });
 
-module.exports = { registerVendor, loginWithPassword, sendOtp, resendOtp, verifyOtp, refresh, logout, logoutAll, me, updateMe };
+module.exports = { loginWithPassword, sendOtp, resendOtp, verifyOtp, refresh, logout, logoutAll, me, updateMe };

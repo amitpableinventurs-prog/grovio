@@ -6,6 +6,8 @@ router.use(authenticate, authorize('picker'));
 
 router.get('/profile', ctrl.getProfile);
 router.patch('/availability', ctrl.toggleAvailability);
+router.post('/location', ctrl.updateLocation);
+router.get('/location', ctrl.getLocation);
 
 router.get('/jobs', ctrl.listJobs);
 router.get('/jobs/:id', ctrl.getJobDetail);

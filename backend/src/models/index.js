@@ -1,7 +1,6 @@
 module.exports = {
   User: require('./user.model'),
   Otp: require('./otp.model'),
-  Vendor: require('./vendor.model'),
   Store: require('./store.model'),
   DeliveryProfile: require('./deliveryProfile.model'),
   PickerProfile: require('./pickerProfile.model'),

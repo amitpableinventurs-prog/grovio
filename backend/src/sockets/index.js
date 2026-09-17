@@ -32,6 +32,16 @@ function initSocket(server) {
       io.to(`order:${orderId}`).emit('delivery:location', { orderId, lat, lng });
     });
 
+    // Live picker GPS ping, relayed to anyone watching this order (e.g. admin's
+    // consolidation monitoring view). Persisting to PickerProfile happens via
+    // POST /picker/location — this event is just the real-time broadcast.
+    socket.on('picker:location', (payload) => {
+      if (role !== 'picker') return;
+      const { orderId, lat, lng } = payload || {};
+      if (!orderId) return;
+      io.to(`order:${orderId}`).emit('picker:location', { orderId, pickerId: id, lat, lng });
+    });
+
     socket.on('order:subscribe', (orderId) => {
       if (orderId) socket.join(`order:${orderId}`);
     });

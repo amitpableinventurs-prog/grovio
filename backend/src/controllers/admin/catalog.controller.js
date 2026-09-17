@@ -4,6 +4,7 @@ const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const { logAdminActivity } = require('../../services/audit.service');
+const { resolveStoreScope } = require('../../utils/storeScope');
 
 // ---------- Categories ----------
 
@@ -49,23 +50,23 @@ const deleteCategory = catchAsync(async (req, res) => {
   new ApiResponse(200, null, 'Category deleted').send(res);
 });
 
-// ---------- Products (admin moderation view across all vendors) ----------
+// ---------- Products ----------
+// A full MANAGE_CATALOG admin sees/edits any store's products. A restricted
+// MANAGE_OWN_STORE_INVENTORY admin (assignedStore set) is locked to their one store —
+// see utils/storeScope.js.
 
 const listAllProducts = catchAsync(async (req, res) => {
   const { page, limit, offset } = getPagination(req.query);
-  const { status, storeId, vendorId } = req.query;
+  const { status } = req.query;
 
   const where = {};
+  const scopedStoreId = resolveStoreScope(req.user, req.query.storeId);
+  if (scopedStoreId) where.store = scopedStoreId;
   if (status) where.status = status;
-  if (storeId) where.store = storeId;
-  else if (vendorId) {
-    const stores = await Store.find({ vendor: vendorId }).select('_id');
-    where.store = { $in: stores.map((s) => s._id) };
-  }
 
   const [rows, count] = await Promise.all([
     Product.find(where)
-      .populate('store', 'name vendor')
+      .populate('store', 'name')
       .populate('category', 'name')
       .sort({ createdAt: -1 })
       .skip(offset)
@@ -82,6 +83,7 @@ const setProductStatus = catchAsync(async (req, res) => {
 
   const product = await Product.findById(req.params.id);
   if (!product) throw new ApiError(404, 'Product not found');
+  resolveStoreScope(req.user, product.store);
 
   product.status = status;
   await product.save();
@@ -89,9 +91,11 @@ const setProductStatus = catchAsync(async (req, res) => {
   new ApiResponse(200, product, 'Product status updated').send(res);
 });
 
-// POST /admin/products  (admin can create a product under any store — support/onboarding use case)
+// POST /admin/products  (full admin can create under any store; a store-scoped
+// inventory-manager may omit storeId — it defaults to their assigned store)
 const createProduct = catchAsync(async (req, res) => {
-  const { storeId, name, description, categoryId, unit, price, discountPrice, stockQty, sku } = req.body;
+  const { name, description, categoryId, unit, price, discountPrice, stockQty, sku } = req.body;
+  const storeId = resolveStoreScope(req.user, req.body.storeId);
   if (!storeId) throw new ApiError(400, 'storeId is required');
 
   const store = await Store.findById(storeId);
@@ -121,13 +125,15 @@ const createProduct = catchAsync(async (req, res) => {
 const updateProduct = catchAsync(async (req, res) => {
   const product = await Product.findById(req.params.id);
   if (!product) throw new ApiError(404, 'Product not found');
+  resolveStoreScope(req.user, product.store);
 
   const fields = ['name', 'description', 'unit', 'price', 'discountPrice', 'stockQty', 'sku', 'isAvailable', 'status'];
   fields.forEach((f) => {
     if (req.body[f] !== undefined) product[f] = req.body[f];
   });
   if (req.body.categoryId !== undefined) product.category = req.body.categoryId;
-  if (req.body.storeId !== undefined) product.store = req.body.storeId;
+  // Only a full MANAGE_CATALOG admin may move a product to a different store.
+  if (req.body.storeId !== undefined) product.store = resolveStoreScope(req.user, req.body.storeId);
   if (req.files?.length) product.images = req.files.map((f) => `/uploads/${f.filename}`);
 
   await product.save();
@@ -140,6 +146,7 @@ const updateProduct = catchAsync(async (req, res) => {
 const deleteProduct = catchAsync(async (req, res) => {
   const product = await Product.findById(req.params.id);
   if (!product) throw new ApiError(404, 'Product not found');
+  resolveStoreScope(req.user, product.store);
   await product.deleteOne();
 
   await logAdminActivity({ adminId: req.user.id, action: 'product.delete', entityType: 'Product', entityId: product._id });

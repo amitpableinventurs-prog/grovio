@@ -21,6 +21,33 @@ const toggleAvailability = catchAsync(async (req, res) => {
   new ApiResponse(200, profile, 'Availability updated').send(res);
 });
 
+// POST /picker/location  { lat, lng }  -> live GPS, used to pick the dynamic Apex consolidation point
+const updateLocation = catchAsync(async (req, res) => {
+  const { lat, lng } = req.body;
+  const profile = await PickerProfile.findOne({ user: req.user.id });
+  if (!profile) throw new ApiError(404, 'Picker profile not found');
+
+  profile.currentLat = lat;
+  profile.currentLng = lng;
+  profile.locationUpdatedAt = new Date();
+  profile.onlineStatus = 'online';
+  await profile.save();
+
+  new ApiResponse(200, profile, 'Location updated').send(res);
+});
+
+const getLocation = catchAsync(async (req, res) => {
+  const profile = await PickerProfile.findOne({ user: req.user.id });
+  if (!profile) throw new ApiError(404, 'Picker profile not found');
+
+  new ApiResponse(200, {
+    lat: profile.currentLat,
+    lng: profile.currentLng,
+    updatedAt: profile.locationUpdatedAt,
+    onlineStatus: profile.onlineStatus,
+  }).send(res);
+});
+
 // Pick-lists (jobs) currently assigned to this picker
 const listJobs = catchAsync(async (req, res) => {
   const { page, limit, offset } = getPagination(req.query);
@@ -183,6 +210,8 @@ const completeJob = catchAsync(async (req, res) => {
 module.exports = {
   getProfile,
   toggleAvailability,
+  updateLocation,
+  getLocation,
   listJobs,
   listHistory,
   getPerformance,

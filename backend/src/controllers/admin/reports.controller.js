@@ -1,4 +1,4 @@
-const { Order, Vendor, User, WalletTransaction } = require('../../models');
+const { Order } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiResponse = require('../../utils/apiResponse');
 
@@ -29,32 +29,6 @@ const salesReport = catchAsync(async (req, res) => {
     totalRevenue: summary?.totalRevenue || 0,
     totalItemSales: summary?.totalItemSales || 0,
   }).send(res);
-});
-
-// GET /admin/reports/vendor-commission
-const vendorCommissionReport = catchAsync(async (req, res) => {
-  const vendors = await Vendor.find().select('businessName commissionPercent');
-
-  const results = [];
-  for (const vendor of vendors) {
-    const [summary] = await Order.aggregate([
-      { $match: { vendor: vendor._id, orderStatus: 'delivered' } },
-      { $group: { _id: null, totalSales: { $sum: '$grandTotal' }, totalOrders: { $sum: 1 } } },
-    ]);
-
-    const totalSales = summary?.totalSales || 0;
-    results.push({
-      vendorId: vendor._id,
-      businessName: vendor.businessName,
-      totalOrders: summary?.totalOrders || 0,
-      totalSales,
-      commissionPercent: vendor.commissionPercent,
-      commissionAmount: Number(((totalSales * vendor.commissionPercent) / 100).toFixed(2)),
-      payoutAmount: Number((totalSales - (totalSales * vendor.commissionPercent) / 100).toFixed(2)),
-    });
-  }
-
-  new ApiResponse(200, results).send(res);
 });
 
 // GET /admin/reports/products?limit=20  -> best-sellers platform-wide
@@ -110,4 +84,4 @@ const deliveryReport = catchAsync(async (req, res) => {
   new ApiResponse(200, results).send(res);
 });
 
-module.exports = { salesReport, vendorCommissionReport, productReport, customerReport, deliveryReport };
+module.exports = { salesReport, productReport, customerReport, deliveryReport };

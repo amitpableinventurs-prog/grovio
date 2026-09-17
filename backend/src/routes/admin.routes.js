@@ -18,6 +18,7 @@ const inventoryCtrl = require('../controllers/admin/inventory.controller');
 const paymentsCtrl = require('../controllers/admin/payments.controller');
 const settlementsCtrl = require('../controllers/admin/settlements.controller');
 const adminsCtrl = require('../controllers/admin/admins.controller');
+const pickersCtrl = require('../controllers/admin/pickers.controller');
 
 router.use(authenticate, authorize('admin'));
 
@@ -26,32 +27,72 @@ router.get('/dashboard', dashboardCtrl.getStats);
 
 // Users by role
 const p = requirePermission;
-router.get('/vendors', p(PERMISSIONS.MANAGE_VENDORS), usersCtrl.listByRole('vendor'));
 router.get('/customers', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.VIEW_REPORTS), usersCtrl.listByRole('customer'));
 router.get('/pickers', p(PERMISSIONS.MANAGE_PICKERS), usersCtrl.listByRole('picker'));
+router.post(
+  '/pickers',
+  p(PERMISSIONS.MANAGE_PICKERS),
+  upload.fields([{ name: 'profilePhoto', maxCount: 1 }, { name: 'idProofDocument', maxCount: 1 }]),
+  pickersCtrl.createPicker
+);
+router.put(
+  '/pickers/:id',
+  p(PERMISSIONS.MANAGE_PICKERS),
+  upload.fields([{ name: 'profilePhoto', maxCount: 1 }, { name: 'idProofDocument', maxCount: 1 }]),
+  pickersCtrl.updatePicker
+);
 router.get('/delivery-partners', p(PERMISSIONS.MANAGE_DELIVERY), usersCtrl.listByRole('delivery'));
-router.get('/users/:id', p(PERMISSIONS.MANAGE_VENDORS, PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_DELIVERY), usersCtrl.getUserDetail);
-router.patch('/vendors/:id/status', p(PERMISSIONS.MANAGE_VENDORS), usersCtrl.updateProfileStatus('vendor'));
+router.get('/users/:id', p(PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_DELIVERY), usersCtrl.getUserDetail);
 router.patch('/pickers/:id/status', p(PERMISSIONS.MANAGE_PICKERS), usersCtrl.updateProfileStatus('picker'));
 router.patch('/pickers/:id/assign-store', p(PERMISSIONS.MANAGE_PICKERS), usersCtrl.assignPickerToStore);
 router.patch('/delivery-partners/:id/status', p(PERMISSIONS.MANAGE_DELIVERY), usersCtrl.updateProfileStatus('delivery'));
-router.patch('/users/:id/active', p(PERMISSIONS.MANAGE_VENDORS, PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_DELIVERY), usersCtrl.toggleActive);
+router.patch('/users/:id/active', p(PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_DELIVERY), usersCtrl.toggleActive);
 
-// Stores
-router.get('/stores', p(PERMISSIONS.MANAGE_STORES), storesCtrl.listStores);
-router.get('/stores/:id', p(PERMISSIONS.MANAGE_STORES), storesCtrl.getStore);
-router.patch('/stores/:id', p(PERMISSIONS.MANAGE_STORES), storesCtrl.updateStore);
+// Stores (admin-owned — no vendor/store login)
+router.post(
+  '/stores',
+  p(PERMISSIONS.MANAGE_STORES),
+  upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'banner', maxCount: 1 }]),
+  storesCtrl.createStore
+);
+router.get('/stores', p(PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), storesCtrl.listStores);
+router.get('/stores/:id', p(PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), storesCtrl.getStore);
+router.patch(
+  '/stores/:id',
+  p(PERMISSIONS.MANAGE_STORES),
+  upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'banner', maxCount: 1 }]),
+  storesCtrl.updateStore
+);
 
-// Catalog
+// Catalog (categories stay full-admin-only; products/inventory also allow the
+// store-scoped MANAGE_OWN_STORE_INVENTORY sub-role — see catalog.controller.js for the scoping)
 router.post('/categories', p(PERMISSIONS.MANAGE_CATALOG), upload.single('image'), catalogCtrl.createCategory);
-router.get('/categories', p(PERMISSIONS.MANAGE_CATALOG), catalogCtrl.listCategories);
+router.get('/categories', p(PERMISSIONS.MANAGE_CATALOG, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), catalogCtrl.listCategories);
 router.patch('/categories/:id', p(PERMISSIONS.MANAGE_CATALOG), upload.single('image'), catalogCtrl.updateCategory);
 router.delete('/categories/:id', p(PERMISSIONS.MANAGE_CATALOG), catalogCtrl.deleteCategory);
-router.get('/products', p(PERMISSIONS.MANAGE_CATALOG), catalogCtrl.listAllProducts);
-router.post('/products', p(PERMISSIONS.MANAGE_CATALOG), upload.array('images', 5), catalogCtrl.createProduct);
-router.patch('/products/:id', p(PERMISSIONS.MANAGE_CATALOG), upload.array('images', 5), catalogCtrl.updateProduct);
-router.patch('/products/:id/status', p(PERMISSIONS.MANAGE_CATALOG), catalogCtrl.setProductStatus);
-router.delete('/products/:id', p(PERMISSIONS.MANAGE_CATALOG), catalogCtrl.deleteProduct);
+router.get('/products', p(PERMISSIONS.MANAGE_CATALOG, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), catalogCtrl.listAllProducts);
+router.post(
+  '/products',
+  p(PERMISSIONS.MANAGE_CATALOG, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY),
+  upload.array('images', 5),
+  catalogCtrl.createProduct
+);
+router.patch(
+  '/products/:id',
+  p(PERMISSIONS.MANAGE_CATALOG, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY),
+  upload.array('images', 5),
+  catalogCtrl.updateProduct
+);
+router.patch(
+  '/products/:id/status',
+  p(PERMISSIONS.MANAGE_CATALOG, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY),
+  catalogCtrl.setProductStatus
+);
+router.delete(
+  '/products/:id',
+  p(PERMISSIONS.MANAGE_CATALOG, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY),
+  catalogCtrl.deleteProduct
+);
 
 // Orders
 router.get('/orders', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.listOrders);
@@ -78,7 +119,6 @@ router.put('/settings', p(PERMISSIONS.MANAGE_SETTINGS), settingsCtrl.updateSetti
 
 // Reports
 router.get('/reports/sales', p(PERMISSIONS.VIEW_REPORTS), reportsCtrl.salesReport);
-router.get('/reports/vendor-commission', p(PERMISSIONS.VIEW_REPORTS), reportsCtrl.vendorCommissionReport);
 router.get('/reports/products', p(PERMISSIONS.VIEW_REPORTS), reportsCtrl.productReport);
 router.get('/reports/customers', p(PERMISSIONS.VIEW_REPORTS), reportsCtrl.customerReport);
 router.get('/reports/delivery-partners', p(PERMISSIONS.VIEW_REPORTS), reportsCtrl.deliveryReport);
@@ -88,15 +128,14 @@ router.get('/support-tickets', p(PERMISSIONS.MANAGE_ORDERS), supportCtrl.listAll
 router.patch('/support-tickets/:id', p(PERMISSIONS.MANAGE_ORDERS), supportCtrl.replyToTicket);
 
 // Inventory
-router.get('/inventory', p(PERMISSIONS.MANAGE_INVENTORY), inventoryCtrl.listInventory);
+router.get('/inventory', p(PERMISSIONS.MANAGE_INVENTORY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), inventoryCtrl.listInventory);
 
 // Payments
 router.get('/payments', p(PERMISSIONS.MANAGE_PAYMENTS), paymentsCtrl.listPayments);
 router.get('/payments/cod-reconciliation', p(PERMISSIONS.MANAGE_PAYMENTS), paymentsCtrl.codReconciliation);
 router.get('/refunds', p(PERMISSIONS.MANAGE_PAYMENTS), paymentsCtrl.listRefunds);
 
-// Settlements
-router.post('/settlements/generate', p(PERMISSIONS.MANAGE_SETTLEMENTS), settlementsCtrl.generateVendorSettlement);
+// Settlements (picker/delivery payouts only — there is no vendor to settle with anymore)
 router.get('/settlements', p(PERMISSIONS.MANAGE_SETTLEMENTS), settlementsCtrl.listSettlements);
 router.patch('/settlements/:id/pay', p(PERMISSIONS.MANAGE_SETTLEMENTS), settlementsCtrl.markSettlementPaid);
 

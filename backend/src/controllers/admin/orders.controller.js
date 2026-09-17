@@ -8,17 +8,15 @@ const { notifyUser } = require('../../services/notification.service');
 
 const listOrders = catchAsync(async (req, res) => {
   const { page, limit, offset } = getPagination(req.query);
-  const { status, vendorId, storeId } = req.query;
+  const { status, storeId } = req.query;
 
   const where = {};
   if (status) where.orderStatus = status;
-  if (vendorId) where.vendor = vendorId;
   if (storeId) where.store = storeId;
 
   const [rows, count] = await Promise.all([
     Order.find(where)
       .populate('customer', 'name phone')
-      .populate('vendor', 'businessName')
       .populate('store', 'name')
       .sort({ createdAt: -1 })
       .skip(offset)
@@ -32,7 +30,6 @@ const listOrders = catchAsync(async (req, res) => {
 const getOrderDetail = catchAsync(async (req, res) => {
   const order = await Order.findById(req.params.id)
     .populate('customer', 'name phone')
-    .populate('vendor')
     .populate('store')
     .populate('picker', 'name phone')
     .populate('delivery', 'name phone');

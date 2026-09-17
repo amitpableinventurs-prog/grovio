@@ -1,4 +1,4 @@
-const { Order, DeliveryProfile, Vendor, Wallet, WalletTransaction } = require('../../models');
+const { Order, DeliveryProfile, Wallet, WalletTransaction } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
@@ -156,17 +156,6 @@ const completeJob = catchAsync(async (req, res) => {
   const deliveryEarning = Number(order.deliveryFee);
   if (deliveryEarning > 0) {
     await creditWallet({ userId: req.user.id, amount: deliveryEarning, reason: 'Delivery earning', refOrderId: order._id });
-  }
-
-  // Credit the vendor's wallet with their net sale amount (item sales minus platform commission).
-  // This becomes the running "amount owed" balance that admin settlements later pay out and clear.
-  const vendor = await Vendor.findById(order.vendor);
-  if (vendor) {
-    const commission = (Number(order.itemTotal) * Number(vendor.commissionPercent)) / 100;
-    const netAmount = Number((Number(order.itemTotal) - commission).toFixed(2));
-    if (netAmount > 0) {
-      await creditWallet({ userId: vendor.user, amount: netAmount, reason: 'Order sale (net of commission)', refOrderId: order._id });
-    }
   }
 
   new ApiResponse(200, order, 'Order delivered').send(res);

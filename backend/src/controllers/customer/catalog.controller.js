@@ -1,4 +1,4 @@
-const { Category, Product, Store, Vendor } = require('../../models');
+const { Category, Product, Store } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
@@ -19,20 +19,19 @@ const listCategories = catchAsync(async (req, res) => {
   new ApiResponse(200, categories).send(res);
 });
 
-// GET /customer/stores?lat=&lng=&radiusKm=&search=  -> only stores whose vendor is approved
+// GET /customer/stores?lat=&lng=&radiusKm=&search=
 const listStores = catchAsync(async (req, res) => {
   const { page, limit, offset } = getPagination(req.query);
   const { search, lat, lng, radiusKm } = req.query;
 
-  const approvedVendorIds = (await Vendor.find({ status: 'approved' }).select('_id')).map((v) => v._id);
-  const where = { vendor: { $in: approvedVendorIds }, status: 'active' };
+  const where = { status: 'active' };
   if (search) where.name = new RegExp(search, 'i');
 
   if (lat && lng) {
     // Location filter: fetch the candidate set, then filter/sort in-memory by real
     // distance — store counts are small enough per query that this beats maintaining
     // a 2dsphere index for now.
-    const stores = await Store.find(where).populate('vendor', 'businessName');
+    const stores = await Store.find(where);
     const withDistance = stores
       .map((s) => ({ store: s, distance: distanceKm(Number(lat), Number(lng), s.lat, s.lng) }))
       .filter((s) => !radiusKm || s.distance <= Number(radiusKm))
@@ -46,7 +45,7 @@ const listStores = catchAsync(async (req, res) => {
   }
 
   const [rows, count] = await Promise.all([
-    Store.find(where).populate('vendor', 'businessName').sort({ name: 1 }).skip(offset).limit(limit),
+    Store.find(where).sort({ name: 1 }).skip(offset).limit(limit),
     Store.countDocuments(where),
   ]);
 
@@ -54,8 +53,8 @@ const listStores = catchAsync(async (req, res) => {
 });
 
 const getStoreDetail = catchAsync(async (req, res) => {
-  const store = await Store.findOne({ _id: req.params.id, status: 'active' }).populate('vendor', 'businessName status');
-  if (!store || store.vendor?.status !== 'approved') throw new ApiError(404, 'Store not found');
+  const store = await Store.findOne({ _id: req.params.id, status: 'active' });
+  if (!store) throw new ApiError(404, 'Store not found');
   new ApiResponse(200, store).send(res);
 });
 

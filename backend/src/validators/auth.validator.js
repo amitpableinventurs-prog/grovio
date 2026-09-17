@@ -1,13 +1,5 @@
 const { body } = require('express-validator');
 
-const registerVendorRules = [
-  body('name').trim().notEmpty().withMessage('Name is required'),
-  body('email').isEmail().withMessage('Valid email is required'),
-  body('phone').notEmpty().withMessage('Phone is required'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('storeName').trim().notEmpty().withMessage('Store name is required'),
-];
-
 const loginRules = [
   body('email').isEmail().withMessage('Valid email is required'),
   body('password').notEmpty().withMessage('Password is required'),
@@ -31,4 +23,4 @@ const verifyOtpRules = [
   body('role').optional().isIn(['customer', 'picker', 'delivery']),
 ];
 
-module.exports = { registerVendorRules, loginRules, sendOtpRules, verifyOtpRules };
+module.exports = { loginRules, sendOtpRules, verifyOtpRules };

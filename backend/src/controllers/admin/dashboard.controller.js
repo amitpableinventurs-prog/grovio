@@ -1,4 +1,4 @@
-const { Order, User, Vendor, Store, Product, PickerProfile, DeliveryProfile } = require('../../models');
+const { Order, User, Store, Product, PickerProfile, DeliveryProfile } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiResponse = require('../../utils/apiResponse');
 
@@ -6,8 +6,6 @@ const getStats = catchAsync(async (req, res) => {
   const [
     totalOrders,
     totalCustomers,
-    totalVendors,
-    pendingVendors,
     activeStores,
     activePickers,
     activeDeliveryPartners,
@@ -18,8 +16,6 @@ const getStats = catchAsync(async (req, res) => {
   ] = await Promise.all([
     Order.countDocuments(),
     User.countDocuments({ role: 'customer' }),
-    User.countDocuments({ role: 'vendor' }),
-    Vendor.countDocuments({ status: 'pending' }),
     Store.countDocuments({ status: 'active' }),
     PickerProfile.countDocuments({ status: 'approved', isAvailable: true }),
     DeliveryProfile.countDocuments({ status: 'approved', isAvailable: true }),
@@ -38,8 +34,6 @@ const getStats = catchAsync(async (req, res) => {
   new ApiResponse(200, {
     totalOrders,
     totalCustomers,
-    totalVendors,
-    pendingVendors,
     activeStores,
     activePickers,
     activeDeliveryPartners,

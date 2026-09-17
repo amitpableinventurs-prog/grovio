@@ -22,9 +22,6 @@ const statusLogSchema = new Schema({
 const orderSchema = new Schema({
   orderNumber: { type: String, required: true, unique: true },
   customer: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  // `vendor` is denormalized at order-creation time (from store.vendor) so financial
-  // records (commission/settlement) stay stable even if a store is later reassigned or removed.
-  vendor: { type: Schema.Types.ObjectId, ref: 'Vendor', required: true },
   store: { type: Schema.Types.ObjectId, ref: 'Store', required: true },
   address: { type: Schema.Types.ObjectId, ref: 'Address', required: true },
   picker: { type: Schema.Types.ObjectId, ref: 'User', default: null },
