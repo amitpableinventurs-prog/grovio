@@ -1,10 +1,12 @@
-const { Order, DeliveryProfile, Wallet, WalletTransaction } = require('../../models');
+const { Order, DeliveryProfile, Payment, Wallet, WalletTransaction } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const { transitionOrder } = require('../../services/order.service');
 const { creditWallet } = require('../../services/payment.service');
+
+const COD_COLLECTION_METHODS = ['cash', 'upi'];
 
 const getProfile = catchAsync(async (req, res) => {
   const profile = await DeliveryProfile.findOne({ user: req.user.id });
@@ -136,18 +138,35 @@ const markArrivedAtDrop = catchAsync(async (req, res) => {
   new ApiResponse(200, order, 'Arrival at customer recorded').send(res);
 });
 
-// POST /delivery/jobs/:id/complete { pin }
+// POST /delivery/jobs/:id/complete { pin, collectionMethod }
+// `collectionMethod` ('cash' | 'upi') is required only for COD orders — it records how the
+// delivery partner actually collected payment at the door: physical cash they now hold and must
+// hand over to the store, or UPI paid directly (nothing physical to settle). See order.model.js.
 const completeJob = catchAsync(async (req, res) => {
   const order = await findAssignedOrder(req, { withPin: true });
 
-  const { pin } = req.body;
+  const { pin, collectionMethod } = req.body;
   if (!pin || pin !== order.deliveryPin) {
     throw new ApiError(400, 'Incorrect delivery PIN. Ask the customer for the PIN sent to them.');
   }
 
   if (order.paymentMethod === 'COD') {
+    if (!COD_COLLECTION_METHODS.includes(collectionMethod)) {
+      throw new ApiError(400, `collectionMethod is required for COD orders and must be one of: ${COD_COLLECTION_METHODS.join(', ')}`);
+    }
+
     order.paymentStatus = 'paid';
+    order.codCollectionMethod = collectionMethod;
     await order.save();
+
+    await Payment.create({
+      order: order._id,
+      user: order.customer,
+      amount: order.grandTotal,
+      method: 'COD',
+      collectionMethod,
+      status: 'paid',
+    });
   }
 
   await transitionOrder({ order, toStatus: 'delivered', changedBy: req.user.id, note: 'Delivered to customer' });

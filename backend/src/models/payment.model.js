@@ -5,6 +5,8 @@ const paymentSchema = new Schema({
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   amount: { type: Number, required: true },
   method: { type: String, enum: ['COD', 'RAZORPAY', 'WALLET'], required: true },
+  // Only set for method === 'COD': how the delivery partner actually collected it at the door.
+  collectionMethod: { type: String, enum: ['cash', 'upi'], default: null },
   gatewayOrderId: { type: String, default: null },
   gatewayPaymentId: { type: String, default: null },
   status: { type: String, enum: ['created', 'paid', 'failed', 'refunded'], default: 'created' },

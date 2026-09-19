@@ -5,7 +5,6 @@ import { PERMISSIONS } from './utils/permissions';
 
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
-import VendorsPage from './pages/VendorsPage';
 import StoresPage from './pages/StoresPage';
 import CustomersPage from './pages/CustomersPage';
 import PickersPage from './pages/PickersPage';
@@ -40,17 +39,9 @@ export default function App() {
         >
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route
-            path="/vendors"
-            element={
-              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_VENDORS]}>
-                <VendorsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/stores"
             element={
-              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_STORES]}>
+              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY]}>
                 <StoresPage />
               </ProtectedRoute>
             }
@@ -90,7 +81,7 @@ export default function App() {
           <Route
             path="/products"
             element={
-              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_CATALOG]}>
+              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_CATALOG, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY]}>
                 <ProductsPage />
               </ProtectedRoute>
             }
@@ -98,7 +89,7 @@ export default function App() {
           <Route
             path="/orders"
             element={
-              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_ORDERS]}>
+              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY]}>
                 <OrdersPage />
               </ProtectedRoute>
             }
@@ -106,7 +97,7 @@ export default function App() {
           <Route
             path="/inventory"
             element={
-              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_INVENTORY]}>
+              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_INVENTORY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY]}>
                 <InventoryPage />
               </ProtectedRoute>
             }

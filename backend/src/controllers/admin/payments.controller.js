@@ -29,27 +29,39 @@ const listPayments = catchAsync(async (req, res) => {
   new ApiResponse(200, { items: rows, meta: buildPageMeta({ page, limit, count }) }).send(res);
 });
 
-// GET /admin/payments/cod-reconciliation?from=&to=
-// COD orders are "collected" by the delivery partner in cash — this reconciles what should
-// have been collected (delivered COD orders) against what's been formally settled already.
+// GET /admin/payments/cod-reconciliation?from=&to=&collectionMethod=
+// COD orders are collected by the delivery partner at the door — either as physical cash (which
+// they now hold and must hand over to the store) or via UPI (already digital, nothing to hand
+// over). `cashCollected` is what actually needs settling; `upiCollected` is informational.
 const codReconciliation = catchAsync(async (req, res) => {
-  const { from, to } = req.query;
+  const { from, to, collectionMethod } = req.query;
   const match = { paymentMethod: 'COD', orderStatus: 'delivered', paymentStatus: 'paid' };
   if (from || to) {
     match.deliveredAt = {};
     if (from) match.deliveredAt.$gte = new Date(from);
     if (to) match.deliveredAt.$lte = new Date(to);
   }
+  if (collectionMethod) match.codCollectionMethod = collectionMethod;
 
-  const orders = await Order.find(match).select('orderNumber grandTotal delivery deliveredAt settled').populate('delivery', 'name phone');
+  const orders = await Order.find(match)
+    .select('orderNumber grandTotal delivery deliveredAt settled codCollectionMethod')
+    .populate('delivery', 'name phone');
 
+  const cashOrders = orders.filter((o) => o.codCollectionMethod === 'cash');
+  const upiOrders = orders.filter((o) => o.codCollectionMethod === 'upi');
   const totalCollected = orders.reduce((sum, o) => sum + Number(o.grandTotal), 0);
+  const cashCollected = cashOrders.reduce((sum, o) => sum + Number(o.grandTotal), 0);
+  const upiCollected = upiOrders.reduce((sum, o) => sum + Number(o.grandTotal), 0);
   const unsettledCount = orders.filter((o) => !o.settled).length;
+  const unsettledCashCount = cashOrders.filter((o) => !o.settled).length;
 
   new ApiResponse(200, {
     totalOrders: orders.length,
     totalCollected,
+    cashCollected,
+    upiCollected,
     unsettledCount,
+    unsettledCashCount,
     orders,
   }).send(res);
 });

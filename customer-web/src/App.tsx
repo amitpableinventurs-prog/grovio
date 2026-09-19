@@ -14,6 +14,10 @@ import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import AddressesPage from './pages/AddressesPage';
 import ProfilePage from './pages/ProfilePage';
+import HelpSupportPage from './pages/HelpSupportPage';
+import ReturnsRefundsPage from './pages/ReturnsRefundsPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -109,6 +113,38 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/help"
+            element={
+              <ProtectedRoute>
+                <HelpSupportPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/returns-refunds"
+            element={
+              <ProtectedRoute>
+                <ReturnsRefundsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/terms"
+            element={
+              <ProtectedRoute>
+                <TermsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/privacy-policy"
+            element={
+              <ProtectedRoute>
+                <PrivacyPolicyPage />
               </ProtectedRoute>
             }
           />

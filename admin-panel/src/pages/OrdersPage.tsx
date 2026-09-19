@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Table,
   Typography,
@@ -49,6 +49,27 @@ export default function OrdersPage() {
 
   const { data: pickers } = useQuery({ queryKey: ['approved-pickers'], queryFn: () => fetchUsersByRole('picker', { limit: 100, status: 'approved' }) });
   const { data: deliveryPartners } = useQuery({ queryKey: ['approved-delivery'], queryFn: () => fetchUsersByRole('delivery', { limit: 100, status: 'approved' }) });
+
+  // The Select only knows the label for a user in its fetched (approved) options list. If the
+  // order's already-assigned picker/delivery partner isn't in that list for any reason, fall back
+  // to the name the order itself was populated with — otherwise the Select shows the raw user ID.
+  const pickerOptions = useMemo(() => {
+    const base = pickers?.items.map((p) => ({ value: p._id, label: p.name })) ?? [];
+    const assigned = order && typeof order.picker === 'object' ? (order.picker as User) : null;
+    if (assigned && !base.some((o) => o.value === assigned._id)) {
+      base.push({ value: assigned._id, label: assigned.name });
+    }
+    return base;
+  }, [pickers, order]);
+
+  const deliveryOptions = useMemo(() => {
+    const base = deliveryPartners?.items.map((p) => ({ value: p._id, label: p.name })) ?? [];
+    const assigned = order && typeof order.delivery === 'object' ? (order.delivery as User) : null;
+    if (assigned && !base.some((o) => o.value === assigned._id)) {
+      base.push({ value: assigned._id, label: assigned.name });
+    }
+    return base;
+  }, [deliveryPartners, order]);
 
   const invalidateDetail = () => {
     queryClient.invalidateQueries({ queryKey: ['orders'] });
@@ -150,14 +171,14 @@ export default function OrdersPage() {
                 style={{ width: '100%' }}
                 placeholder="Assign picker"
                 value={typeof order.picker === 'object' ? (order.picker as User)?._id : order.picker || undefined}
-                options={pickers?.items.map((p) => ({ value: p._id, label: p.name }))}
+                options={pickerOptions}
                 onChange={(pickerId) => assignPickerMutation.mutate(pickerId)}
               />
               <Select
                 style={{ width: '100%' }}
                 placeholder="Assign delivery partner"
                 value={typeof order.delivery === 'object' ? (order.delivery as User)?._id : order.delivery || undefined}
-                options={deliveryPartners?.items.map((p) => ({ value: p._id, label: p.name }))}
+                options={deliveryOptions}
                 onChange={(deliveryId) => assignDeliveryMutation.mutate(deliveryId)}
               />
             </Space>

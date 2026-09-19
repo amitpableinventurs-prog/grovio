@@ -94,9 +94,12 @@ router.delete(
   catalogCtrl.deleteProduct
 );
 
-// Orders
-router.get('/orders', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.listOrders);
-router.get('/orders/:id', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.getOrderDetail);
+// Orders (store-manager sub-role — MANAGE_OWN_STORE_INVENTORY + assignedStore — can view and
+// accept/reject orders for just their own store; picker/delivery assignment stays admin-only)
+router.get('/orders', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.listOrders);
+router.get('/orders/:id', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.getOrderDetail);
+router.patch('/orders/:id/accept', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.acceptOrder);
+router.patch('/orders/:id/reject', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.rejectOrder);
 router.patch('/orders/:id/assign-picker', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.assignPicker);
 router.patch('/orders/:id/assign-delivery', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.assignDelivery);
 router.post('/orders/:id/refund', p(PERMISSIONS.MANAGE_PAYMENTS), paymentsCtrl.issueRefund);

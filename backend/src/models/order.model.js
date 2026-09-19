@@ -42,6 +42,11 @@ const orderSchema = new Schema({
   couponCode: { type: String, default: null },
   paymentMethod: { type: String, enum: ['COD', 'RAZORPAY', 'WALLET'], default: 'COD' },
   paymentStatus: { type: String, enum: ['pending', 'paid', 'failed', 'refunded'], default: 'pending' },
+  // Only set for paymentMethod === 'COD', by the delivery partner at hand-off (see
+  // delivery.controller.js#completeJob): whether the customer paid in physical cash (which the
+  // delivery partner now holds and must hand over to the store) or via UPI at the door (already
+  // in digital form — no cash to settle). Drives the cash-vs-UPI split in admin COD reconciliation.
+  codCollectionMethod: { type: String, enum: ['cash', 'upi'], default: null },
   orderStatus: {
     type: String,
     enum: ['placed', 'accepted', 'rejected', 'picking', 'packed', 'assigned', 'out_for_delivery', 'delivery_failed', 'delivered', 'cancelled', 'returned'],

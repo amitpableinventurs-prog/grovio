@@ -2,8 +2,7 @@ import { apiClient, unwrap } from './client';
 import type { Paginated, Role, UserWithProfile } from '../types';
 import type { ListParams } from './common';
 
-const ROLE_PATH: Record<Extract<Role, 'vendor' | 'customer' | 'picker' | 'delivery'>, string> = {
-  vendor: 'vendors',
+const ROLE_PATH: Record<Extract<Role, 'customer' | 'picker' | 'delivery'>, string> = {
   customer: 'customers',
   picker: 'pickers',
   delivery: 'delivery-partners',
@@ -15,10 +14,6 @@ export function fetchUsersByRole(role: keyof typeof ROLE_PATH, params: ListParam
 
 export function fetchUserDetail(id: string) {
   return unwrap<UserWithProfile>(apiClient.get(`/admin/users/${id}`));
-}
-
-export function updateVendorStatus(userId: string, status: string) {
-  return unwrap(apiClient.patch(`/admin/vendors/${userId}/status`, { status }));
 }
 
 export function updatePickerStatus(userId: string, status: string) {

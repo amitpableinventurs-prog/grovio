@@ -34,29 +34,29 @@ interface NavItem {
   path: string;
   label: string;
   icon: React.ReactNode;
-  permission?: string;
+  // Visible if the user holds ANY one of these (matches backend's OR-of-permissions check).
+  permissions?: string[];
 }
 
 const NAV_ITEMS: NavItem[] = [
   { key: 'dashboard', path: '/dashboard', label: 'Dashboard', icon: <DashboardOutlined /> },
-  { key: 'vendors', path: '/vendors', label: 'Vendors', icon: <ShopOutlined />, permission: PERMISSIONS.MANAGE_VENDORS },
-  { key: 'stores', path: '/stores', label: 'Stores', icon: <ShopOutlined />, permission: PERMISSIONS.MANAGE_STORES },
-  { key: 'customers', path: '/customers', label: 'Customers', icon: <UserOutlined />, permission: PERMISSIONS.MANAGE_ORDERS },
-  { key: 'pickers', path: '/pickers', label: 'Pickers', icon: <TeamOutlined />, permission: PERMISSIONS.MANAGE_PICKERS },
-  { key: 'delivery', path: '/delivery-partners', label: 'Delivery Partners', icon: <CarOutlined />, permission: PERMISSIONS.MANAGE_DELIVERY },
-  { key: 'categories', path: '/categories', label: 'Categories', icon: <AppstoreOutlined />, permission: PERMISSIONS.MANAGE_CATALOG },
-  { key: 'products', path: '/products', label: 'Products', icon: <AppstoreOutlined />, permission: PERMISSIONS.MANAGE_CATALOG },
-  { key: 'orders', path: '/orders', label: 'Orders', icon: <ShoppingCartOutlined />, permission: PERMISSIONS.MANAGE_ORDERS },
-  { key: 'inventory', path: '/inventory', label: 'Inventory', icon: <DatabaseOutlined />, permission: PERMISSIONS.MANAGE_INVENTORY },
-  { key: 'coupons', path: '/coupons', label: 'Coupons', icon: <TagsOutlined />, permission: PERMISSIONS.MANAGE_PROMOTIONS },
-  { key: 'banners', path: '/banners', label: 'Banners', icon: <PictureOutlined />, permission: PERMISSIONS.MANAGE_PROMOTIONS },
-  { key: 'payments', path: '/payments', label: 'Payments & Refunds', icon: <CreditCardOutlined />, permission: PERMISSIONS.MANAGE_PAYMENTS },
-  { key: 'settlements', path: '/settlements', label: 'Settlements', icon: <WalletOutlined />, permission: PERMISSIONS.MANAGE_SETTLEMENTS },
-  { key: 'reports', path: '/reports', label: 'Reports', icon: <BarChartOutlined />, permission: PERMISSIONS.VIEW_REPORTS },
-  { key: 'support', path: '/support-tickets', label: 'Support Tickets', icon: <CustomerServiceOutlined />, permission: PERMISSIONS.MANAGE_ORDERS },
-  { key: 'settings', path: '/settings', label: 'Settings', icon: <SettingOutlined />, permission: PERMISSIONS.MANAGE_SETTINGS },
-  { key: 'admins', path: '/admins', label: 'Admins & Roles', icon: <SafetyCertificateOutlined />, permission: PERMISSIONS.MANAGE_ADMINS },
-  { key: 'activity-logs', path: '/activity-logs', label: 'Activity Logs', icon: <FileSearchOutlined />, permission: PERMISSIONS.MANAGE_ADMINS },
+  { key: 'stores', path: '/stores', label: 'Stores', icon: <ShopOutlined />, permissions: [PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
+  { key: 'customers', path: '/customers', label: 'Customers', icon: <UserOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS] },
+  { key: 'pickers', path: '/pickers', label: 'Pickers', icon: <TeamOutlined />, permissions: [PERMISSIONS.MANAGE_PICKERS] },
+  { key: 'delivery', path: '/delivery-partners', label: 'Delivery Partners', icon: <CarOutlined />, permissions: [PERMISSIONS.MANAGE_DELIVERY] },
+  { key: 'categories', path: '/categories', label: 'Categories', icon: <AppstoreOutlined />, permissions: [PERMISSIONS.MANAGE_CATALOG] },
+  { key: 'products', path: '/products', label: 'Products', icon: <AppstoreOutlined />, permissions: [PERMISSIONS.MANAGE_CATALOG, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
+  { key: 'orders', path: '/orders', label: 'Orders', icon: <ShoppingCartOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
+  { key: 'inventory', path: '/inventory', label: 'Inventory', icon: <DatabaseOutlined />, permissions: [PERMISSIONS.MANAGE_INVENTORY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
+  { key: 'coupons', path: '/coupons', label: 'Coupons', icon: <TagsOutlined />, permissions: [PERMISSIONS.MANAGE_PROMOTIONS] },
+  { key: 'banners', path: '/banners', label: 'Banners', icon: <PictureOutlined />, permissions: [PERMISSIONS.MANAGE_PROMOTIONS] },
+  { key: 'payments', path: '/payments', label: 'Payments & Refunds', icon: <CreditCardOutlined />, permissions: [PERMISSIONS.MANAGE_PAYMENTS] },
+  { key: 'settlements', path: '/settlements', label: 'Settlements', icon: <WalletOutlined />, permissions: [PERMISSIONS.MANAGE_SETTLEMENTS] },
+  { key: 'reports', path: '/reports', label: 'Reports', icon: <BarChartOutlined />, permissions: [PERMISSIONS.VIEW_REPORTS] },
+  { key: 'support', path: '/support-tickets', label: 'Support Tickets', icon: <CustomerServiceOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS] },
+  { key: 'settings', path: '/settings', label: 'Settings', icon: <SettingOutlined />, permissions: [PERMISSIONS.MANAGE_SETTINGS] },
+  { key: 'admins', path: '/admins', label: 'Admins & Roles', icon: <SafetyCertificateOutlined />, permissions: [PERMISSIONS.MANAGE_ADMINS] },
+  { key: 'activity-logs', path: '/activity-logs', label: 'Activity Logs', icon: <FileSearchOutlined />, permissions: [PERMISSIONS.MANAGE_ADMINS] },
 ];
 
 export default function AdminLayout() {
@@ -66,7 +66,7 @@ export default function AdminLayout() {
   const location = useLocation();
 
   const visibleItems = useMemo(
-    () => NAV_ITEMS.filter((item) => !item.permission || hasPermission(user?.permissions, item.permission)),
+    () => NAV_ITEMS.filter((item) => !item.permissions || hasPermission(user?.permissions, ...item.permissions)),
     [user]
   );
 

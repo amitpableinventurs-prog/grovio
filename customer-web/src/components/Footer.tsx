@@ -40,8 +40,8 @@ export default function Footer() {
           <ul className="flex flex-col gap-2 text-sm text-gray-500">
             <li><Link to="/profile" className="hover:text-brand-700">My Account</Link></li>
             <li><Link to="/addresses" className="hover:text-brand-700">My Addresses</Link></li>
-            <li><span className="hover:text-brand-700 cursor-default">Help &amp; Support</span></li>
-            <li><span className="hover:text-brand-700 cursor-default">Returns &amp; Refunds</span></li>
+            <li><Link to="/help" className="hover:text-brand-700">Help &amp; Support</Link></li>
+            <li><Link to="/returns-refunds" className="hover:text-brand-700">Returns &amp; Refunds</Link></li>
           </ul>
         </div>
 
@@ -61,8 +61,12 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-gray-100 py-4 text-center text-xs text-gray-400">
-        © {new Date().getFullYear()} Grovio · Quick groceries, delivered fast
+      <div className="border-t border-gray-100 py-4 flex flex-col items-center gap-2 text-xs text-gray-400 sm:flex-row sm:justify-between sm:px-6">
+        <span>© {new Date().getFullYear()} Grovio · Quick groceries, delivered fast</span>
+        <span className="flex items-center gap-4">
+          <Link to="/terms" className="hover:text-brand-700">Terms &amp; Conditions</Link>
+          <Link to="/privacy-policy" className="hover:text-brand-700">Privacy Policy</Link>
+        </span>
       </div>
     </footer>
   );

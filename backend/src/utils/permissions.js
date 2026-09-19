@@ -4,7 +4,9 @@ const PERMISSIONS = {
   MANAGE_STORES: 'manage_stores',
   MANAGE_CATALOG: 'manage_catalog',
   MANAGE_INVENTORY: 'manage_inventory',
-  // Restricted admin sub-role: scoped to only the one store on that admin's `assignedStore`.
+  // Restricted store-manager sub-role: scoped to only the one store on that admin's
+  // `assignedStore` — covers that store's catalog/inventory AND accepting/rejecting its
+  // incoming orders (see storeScope.js and admin/orders.controller.js).
   MANAGE_OWN_STORE_INVENTORY: 'manage_own_store_inventory',
   MANAGE_ORDERS: 'manage_orders',
   MANAGE_PICKERS: 'manage_pickers',

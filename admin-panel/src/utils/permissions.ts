@@ -1,9 +1,11 @@
 // Mirrors backend/src/utils/permissions.js
 export const PERMISSIONS = {
-  MANAGE_VENDORS: 'manage_vendors',
   MANAGE_STORES: 'manage_stores',
   MANAGE_CATALOG: 'manage_catalog',
   MANAGE_INVENTORY: 'manage_inventory',
+  // Restricted store-manager sub-role: scoped to just the one store on that admin's
+  // assignedStore — unlocks Stores/Products/Inventory/Orders pages for that store only.
+  MANAGE_OWN_STORE_INVENTORY: 'manage_own_store_inventory',
   MANAGE_ORDERS: 'manage_orders',
   MANAGE_PICKERS: 'manage_pickers',
   MANAGE_DELIVERY: 'manage_delivery',

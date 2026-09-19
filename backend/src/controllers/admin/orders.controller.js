@@ -5,14 +5,22 @@ const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const { transitionOrder } = require('../../services/order.service');
 const { notifyUser } = require('../../services/notification.service');
+const { findAvailablePicker } = require('../../services/assignment.service');
+const { resolveStoreScope } = require('../../utils/storeScope');
+const { PERMISSIONS } = require('../../utils/permissions');
 
+// GET /admin/orders?storeId=&status=
+// A full MANAGE_ORDERS admin sees everything (optionally filtered by storeId). A restricted
+// store-manager (MANAGE_OWN_STORE_INVENTORY + assignedStore) only ever sees their own store's orders.
 const listOrders = catchAsync(async (req, res) => {
   const { page, limit, offset } = getPagination(req.query);
-  const { status, storeId } = req.query;
+  const { status } = req.query;
+
+  const scopedStoreId = resolveStoreScope(req.user, req.query.storeId, PERMISSIONS.MANAGE_ORDERS);
 
   const where = {};
   if (status) where.orderStatus = status;
-  if (storeId) where.store = storeId;
+  if (scopedStoreId) where.store = scopedStoreId;
 
   const [rows, count] = await Promise.all([
     Order.find(where)
@@ -34,7 +42,46 @@ const getOrderDetail = catchAsync(async (req, res) => {
     .populate('picker', 'name phone')
     .populate('delivery', 'name phone');
   if (!order) throw new ApiError(404, 'Order not found');
+  resolveStoreScope(req.user, order.store._id, PERMISSIONS.MANAGE_ORDERS);
   new ApiResponse(200, order).send(res);
+});
+
+// PATCH /admin/orders/:id/accept — store accepts an incoming ('placed') order.
+// Open to full MANAGE_ORDERS admins and to the store-manager who owns this order's store.
+const acceptOrder = catchAsync(async (req, res) => {
+  const order = await Order.findById(req.params.id);
+  if (!order) throw new ApiError(404, 'Order not found');
+  resolveStoreScope(req.user, order.store, PERMISSIONS.MANAGE_ORDERS);
+
+  await transitionOrder({ order, toStatus: 'accepted', changedBy: req.user.id, note: 'Accepted by store' });
+
+  // Best-effort auto-assign a picker linked to the fulfilling store.
+  const picker = await findAvailablePicker(order.store);
+  if (picker) {
+    order.picker = picker.user;
+    await order.save();
+    await notifyUser(picker.user, {
+      title: 'New pick-list assigned',
+      body: `Order ${order.orderNumber} is ready to be picked.`,
+      type: 'picker_assignment',
+      data: { orderId: order._id },
+    });
+  }
+
+  new ApiResponse(200, order, 'Order accepted').send(res);
+});
+
+// PATCH /admin/orders/:id/reject { reason }
+const rejectOrder = catchAsync(async (req, res) => {
+  const order = await Order.findById(req.params.id);
+  if (!order) throw new ApiError(404, 'Order not found');
+  resolveStoreScope(req.user, order.store, PERMISSIONS.MANAGE_ORDERS);
+
+  order.cancelReason = req.body.reason || 'Rejected by store';
+  await order.save();
+  await transitionOrder({ order, toStatus: 'rejected', changedBy: req.user.id, note: order.cancelReason });
+
+  new ApiResponse(200, order, 'Order rejected').send(res);
 });
 
 // PATCH /admin/orders/:id/assign-picker { pickerId }
@@ -82,4 +129,4 @@ const assignDelivery = catchAsync(async (req, res) => {
   new ApiResponse(200, order, 'Delivery partner assigned').send(res);
 });
 
-module.exports = { listOrders, getOrderDetail, assignPicker, assignDelivery };
+module.exports = { listOrders, getOrderDetail, acceptOrder, rejectOrder, assignPicker, assignDelivery };

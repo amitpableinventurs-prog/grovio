@@ -192,7 +192,7 @@ export default function ProductsPage() {
                 formatCurrency(r.price)
               ),
           },
-          { title: 'Stock', render: (_, r) => `${r.stockQty} ${r.unit}` },
+          { title: 'Stock', dataIndex: 'stockQty' },
           { title: 'Status', render: (_, r) => <StatusTag status={r.status} /> },
           {
             title: 'Actions',

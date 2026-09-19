@@ -101,6 +101,18 @@ export default function ProfilePage() {
         <Link to="/addresses" className="p-4 text-sm font-medium text-gray-700 hover:bg-gray-50">
           My Addresses
         </Link>
+        <Link to="/help" className="p-4 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          Help &amp; Support
+        </Link>
+        <Link to="/returns-refunds" className="p-4 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          Returns &amp; Refunds
+        </Link>
+        <Link to="/terms" className="p-4 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          Terms &amp; Conditions
+        </Link>
+        <Link to="/privacy-policy" className="p-4 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          Privacy Policy
+        </Link>
       </div>
 
       <button
