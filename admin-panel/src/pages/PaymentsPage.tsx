@@ -20,8 +20,9 @@ function PaymentsTab() {
         { title: 'Order', render: (_, r) => (typeof r.order === 'object' ? (r.order as Order).orderNumber : r.order) },
         { title: 'User', render: (_, r) => (typeof r.user === 'object' ? (r.user as User).name : r.user) },
         { title: 'Amount', render: (_, r) => formatCurrency(r.amount) },
-        { title: 'Method', dataIndex: 'method' },
+        { title: 'Method', render: (_, r) => r.method === 'RAZORPAY' && r.instrument ? `${r.method} (${r.instrument})` : r.method },
         { title: 'Status', render: (_, r) => <StatusTag status={r.status} /> },
+        { title: 'Failure Reason', render: (_, r) => r.failureReason || '—' },
         { title: 'Date', render: (_, r) => formatDateTime(r.createdAt) },
       ]}
     />
@@ -34,19 +35,36 @@ function CodReconciliationTab() {
   return (
     <div>
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={8}>
+        <Col span={6}>
           <Card loading={isLoading}>
             <Statistic title="Total COD Orders" value={data?.totalOrders || 0} />
           </Card>
         </Col>
-        <Col span={8}>
+        <Col span={6}>
           <Card loading={isLoading}>
             <Statistic title="Total Collected" value={formatCurrency(data?.totalCollected)} />
           </Card>
         </Col>
-        <Col span={8}>
+        <Col span={6}>
+          <Card loading={isLoading}>
+            <Statistic title="Cash Collected" value={formatCurrency(data?.cashCollected)} />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card loading={isLoading}>
+            <Statistic title="UPI Collected" value={formatCurrency(data?.upiCollected)} />
+          </Card>
+        </Col>
+      </Row>
+      <Row gutter={16}>
+        <Col span={12}>
           <Card loading={isLoading}>
             <Statistic title="Unsettled Orders" value={data?.unsettledCount || 0} />
+          </Card>
+        </Col>
+        <Col span={12}>
+          <Card loading={isLoading}>
+            <Statistic title="Unsettled Cash (needs hand-over)" value={data?.unsettledCashCount || 0} />
           </Card>
         </Col>
       </Row>

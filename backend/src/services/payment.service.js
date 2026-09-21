@@ -44,6 +44,19 @@ function verifyWebhookSignature(rawBody, signature) {
   return generated === signature;
 }
 
+// Razorpay's checkout widget is what actually lets the customer pick card/UPI/netbanking/etc —
+// the only way to know which one they used is to ask Razorpay after the fact.
+async function fetchPaymentInstrument(razorpayPaymentId) {
+  try {
+    const razorpay = getRazorpayInstance();
+    if (!razorpay) return null;
+    const entity = await razorpay.payments.fetch(razorpayPaymentId);
+    return entity?.method || null;
+  } catch (err) {
+    return null;
+  }
+}
+
 async function creditWallet({ userId, amount, reason, refOrderId = null }) {
   let wallet = await Wallet.findOne({ user: userId });
   if (!wallet) wallet = await Wallet.create({ user: userId, balance: 0 });
@@ -90,6 +103,7 @@ module.exports = {
   createRazorpayOrder,
   verifySignature,
   verifyWebhookSignature,
+  fetchPaymentInstrument,
   creditWallet,
   debitWallet,
 };

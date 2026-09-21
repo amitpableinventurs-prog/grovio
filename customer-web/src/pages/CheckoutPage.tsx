@@ -3,13 +3,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import * as addressApi from '../api/addresses';
 import * as ordersApi from '../api/orders';
+import * as paymentsApi from '../api/payments';
 import { apiErrorMessage } from '../api/client';
 import { CART_QUERY_KEY } from '../hooks/useCart';
 import { formatPrice } from '../utils/format';
+import { loadRazorpayScript, openRazorpayCheckout } from '../utils/razorpay';
+import { useAuthStore } from '../store/authStore';
 import AddressForm from '../components/AddressForm';
 import Loader from '../components/Loader';
+import type { Order } from '../types';
 
-type PaymentMethod = 'COD' | 'WALLET';
+type PaymentMethod = 'COD' | 'WALLET' | 'RAZORPAY';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -18,6 +22,7 @@ export default function CheckoutPage() {
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('COD');
   const [error, setError] = useState<string | null>(null);
+  const [payingViaGateway, setPayingViaGateway] = useState(false);
 
   const { data: addresses, isLoading: addressesLoading } = useQuery({
     queryKey: ['addresses'],
@@ -40,9 +45,67 @@ export default function CheckoutPage() {
     },
   });
 
+  // Runs after an order is placed with paymentMethod: 'RAZORPAY'. The order already exists
+  // (paymentStatus 'pending') at this point — a dismissed/failed attempt here just reports the
+  // failure and leaves the customer on this page; it does not create a duplicate order.
+  const startRazorpayCheckout = async (order: Order) => {
+    setPayingViaGateway(true);
+    setError(null);
+    try {
+      await loadRazorpayScript();
+      const rzpOrder = await paymentsApi.createRazorpayOrder(order._id);
+      const user = useAuthStore.getState().user;
+
+      openRazorpayCheckout({
+        key: rzpOrder.keyId,
+        amount: rzpOrder.amount,
+        currency: rzpOrder.currency,
+        order_id: rzpOrder.razorpayOrderId,
+        name: 'Grovio',
+        description: `Order ${order.orderNumber}`,
+        prefill: { name: user?.name, email: user?.email ?? undefined, contact: user?.phone ?? undefined },
+        theme: { color: '#16a34a' },
+        handler: async (response) => {
+          try {
+            await paymentsApi.verifyRazorpayPayment({
+              orderId: order._id,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            });
+            queryClient.invalidateQueries({ queryKey: CART_QUERY_KEY });
+            navigate(`/order-placed/${order._id}`);
+          } catch (err) {
+            setError(apiErrorMessage(err, 'Payment could not be verified. Check "My Orders" for this order\'s status.'));
+          } finally {
+            setPayingViaGateway(false);
+          }
+        },
+        modal: {
+          ondismiss: async () => {
+            setPayingViaGateway(false);
+            setError('Payment was cancelled. You can try again or choose a different payment method.');
+            await paymentsApi.reportRazorpayFailure({
+              orderId: order._id,
+              razorpayOrderId: rzpOrder.razorpayOrderId,
+              reason: 'Payment cancelled by user',
+            });
+          },
+        },
+      });
+    } catch (err) {
+      setPayingViaGateway(false);
+      setError(apiErrorMessage(err, 'Could not start the payment gateway'));
+    }
+  };
+
   const placeOrderMutation = useMutation({
     mutationFn: () => ordersApi.placeOrder(activeAddressId as string, paymentMethod),
-    onSuccess: (order) => {
+    onSuccess: async (order) => {
+      if (paymentMethod === 'RAZORPAY') {
+        await startRazorpayCheckout(order);
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: CART_QUERY_KEY });
       navigate(`/order-placed/${order._id}`);
     },
@@ -106,6 +169,7 @@ export default function CheckoutPage() {
             {([
               { value: 'COD', label: 'Cash on Delivery', hint: 'Pay when you receive your order' },
               { value: 'WALLET', label: 'Wallet', hint: 'Pay using your Grovio wallet balance' },
+              { value: 'RAZORPAY', label: 'UPI / Card / Netbanking', hint: 'Pay online via UPI, debit/credit card or netbanking' },
             ] as const).map((opt) => (
               <label
                 key={opt.value}
@@ -153,10 +217,14 @@ export default function CheckoutPage() {
 
         <button
           onClick={() => placeOrderMutation.mutate()}
-          disabled={!activeAddressId || placeOrderMutation.isPending}
+          disabled={!activeAddressId || placeOrderMutation.isPending || payingViaGateway}
           className="mt-5 w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
         >
-          {placeOrderMutation.isPending ? 'Placing Order...' : `Pay ${summary ? formatPrice(summary.grandTotal) : ''}`}
+          {payingViaGateway
+            ? 'Waiting for payment...'
+            : placeOrderMutation.isPending
+              ? 'Placing Order...'
+              : `Pay ${summary ? formatPrice(summary.grandTotal) : ''}`}
         </button>
       </div>
     </div>

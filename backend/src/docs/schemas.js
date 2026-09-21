@@ -367,9 +367,12 @@ const Payment = {
     user: id,
     amount: money,
     method: { type: 'string', enum: ['COD', 'RAZORPAY', 'WALLET'] },
+    collectionMethod: { type: 'string', enum: ['cash', 'upi'], nullable: true, description: 'Only for COD' },
+    instrument: { type: 'string', enum: ['card', 'upi', 'netbanking', 'wallet', 'emi'], nullable: true, description: 'Only for RAZORPAY — the instrument the customer actually used' },
     gatewayOrderId: { type: 'string', nullable: true },
     gatewayPaymentId: { type: 'string', nullable: true },
     status: { type: 'string', enum: ['created', 'paid', 'failed', 'refunded'] },
+    failureReason: { type: 'string', nullable: true },
     createdAt: dateTime,
   },
 };

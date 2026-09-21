@@ -283,10 +283,25 @@ paths['/admin/inventory'] = {
 
 // ---------- Payments / Refunds ----------
 paths['/admin/payments'] = {
-  get: { tags: TAG_PAYMENTS, summary: 'List all payment records', ...bearer(), parameters: [...PAGE_QS, statusParam, q('method')], responses: { 200: envelope(paginated(ref('Payment'))), 401: RESPONSES_401 } },
+  get: { tags: TAG_PAYMENTS, summary: 'List all payment records', ...bearer(), parameters: [...PAGE_QS, statusParam, q('method'), q('instrument', 'card | upi | netbanking | wallet | emi — only meaningful for method=RAZORPAY')], responses: { 200: envelope(paginated(ref('Payment'))), 401: RESPONSES_401 } },
 };
 paths['/admin/payments/cod-reconciliation'] = {
-  get: { tags: TAG_PAYMENTS, summary: 'Reconcile delivered COD orders against settlements', ...bearer(), parameters: [q('from'), q('to')], responses: { 200: envelope({ type: 'object', properties: { totalOrders: { type: 'integer' }, totalCollected: { type: 'number' }, unsettledCount: { type: 'integer' }, orders: { type: 'array', items: { type: 'object' } } } }), 401: RESPONSES_401 } },
+  get: {
+    tags: TAG_PAYMENTS, summary: 'Reconcile delivered COD orders — splits what was collected as physical cash (needs settling) vs UPI (already digital)', ...bearer(),
+    parameters: [q('from'), q('to'), q('collectionMethod', 'cash | upi')],
+    responses: {
+      200: envelope({
+        type: 'object',
+        properties: {
+          totalOrders: { type: 'integer' }, totalCollected: { type: 'number' },
+          cashCollected: { type: 'number' }, upiCollected: { type: 'number' },
+          unsettledCount: { type: 'integer' }, unsettledCashCount: { type: 'integer' },
+          orders: { type: 'array', items: { type: 'object' } },
+        },
+      }),
+      401: RESPONSES_401,
+    },
+  },
 };
 paths['/admin/refunds'] = {
   get: { tags: TAG_PAYMENTS, summary: 'List all refunds', ...bearer(), parameters: [...PAGE_QS, statusParam], responses: { 200: envelope(paginated(ref('Refund'))), 401: RESPONSES_401 } },

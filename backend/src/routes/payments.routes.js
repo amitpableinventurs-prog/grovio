@@ -8,6 +8,7 @@ const ctrl = require('../controllers/payments/payments.controller');
 // routes here parse JSON themselves.
 router.post('/razorpay/create', express.json(), authenticate, authorize('customer'), ctrl.createRazorpayOrder);
 router.post('/razorpay/verify', express.json(), authenticate, authorize('customer'), ctrl.verifyRazorpayPayment);
+router.post('/razorpay/failure', express.json(), authenticate, authorize('customer'), ctrl.reportRazorpayFailure);
 
 router.post('/razorpay/webhook', express.raw({ type: 'application/json' }), (req, res, next) => {
   req.rawBody = req.body;

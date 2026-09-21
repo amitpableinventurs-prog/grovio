@@ -251,9 +251,23 @@ paths['/payments/razorpay/verify'] = {
     responses: { 200: envelope(ref('Order'), 'Payment verified successfully'), 400: errorResponse('Payment signature verification failed'), 401: RESPONSES_401 },
   },
 };
+paths['/payments/razorpay/failure'] = {
+  post: {
+    tags: ['Payments'],
+    summary: 'Report a failed/cancelled Razorpay checkout attempt from the client',
+    description: 'Call this from the checkout widget\'s failure handler so a failed attempt is recorded instead of leaving the order stuck at paymentStatus "pending". This is a best-effort client report — the payment.failed webhook is the authoritative version and will record the same failure even if the app never calls this (e.g. connectivity lost, app killed). Never downgrades an order that\'s already paid.',
+    ...bearer(),
+    requestBody: jsonBody({
+      orderId: { type: 'string' }, razorpayOrderId: { type: 'string' }, razorpayPaymentId: { type: 'string' }, reason: { type: 'string', example: 'Payment cancelled by user' },
+    }, ['orderId', 'razorpayOrderId']),
+    responses: { 200: envelope(ref('Order'), 'Payment failure recorded'), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
+};
 paths['/payments/razorpay/webhook'] = {
   post: {
-    tags: ['Payments'], summary: 'Razorpay server-to-server webhook (not called by clients)',
+    tags: ['Payments'],
+    summary: 'Razorpay server-to-server webhook (not called by clients)',
+    description: 'Handles payment.captured (marks Payment+Order paid, records the instrument used) and payment.failed (marks both failed, with failureReason). This is the authoritative source of truth for payment status — the client-side create/verify/failure calls are a faster-feeling optimistic path, but this webhook is what guarantees status is correct even if the client never calls back.',
     responses: { 200: { description: 'Acknowledged' }, 400: errorResponse('Invalid webhook signature') },
   },
 };

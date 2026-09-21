@@ -6,10 +6,16 @@ export function fetchPayments(params: ListParams = {}) {
   return unwrap<Paginated<Payment>>(apiClient.get('/admin/payments', { params }));
 }
 
-export function fetchCodReconciliation(params: { from?: string; to?: string } = {}) {
-  return unwrap<{ totalOrders: number; totalCollected: number; unsettledCount: number; orders: unknown[] }>(
-    apiClient.get('/admin/payments/cod-reconciliation', { params })
-  );
+export function fetchCodReconciliation(params: { from?: string; to?: string; collectionMethod?: 'cash' | 'upi' } = {}) {
+  return unwrap<{
+    totalOrders: number;
+    totalCollected: number;
+    cashCollected: number;
+    upiCollected: number;
+    unsettledCount: number;
+    unsettledCashCount: number;
+    orders: unknown[];
+  }>(apiClient.get('/admin/payments/cod-reconciliation', { params }));
 }
 
 export function fetchRefunds(params: ListParams = {}) {

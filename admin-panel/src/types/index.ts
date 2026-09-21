@@ -242,9 +242,12 @@ export interface Payment {
   user: string | User;
   amount: number;
   method: 'COD' | 'RAZORPAY' | 'WALLET';
+  collectionMethod?: 'cash' | 'upi' | null;
+  instrument?: 'card' | 'upi' | 'netbanking' | 'wallet' | 'emi' | null;
   gatewayOrderId?: string | null;
   gatewayPaymentId?: string | null;
   status: 'created' | 'paid' | 'failed' | 'refunded';
+  failureReason?: string | null;
   createdAt: string;
 }
 
