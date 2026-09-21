@@ -276,7 +276,7 @@ paths['/payments/razorpay/webhook'] = {
   post: {
     tags: ['Payments'],
     summary: 'Razorpay server-to-server webhook (not called by clients)',
-    description: 'Handles payment.captured (marks Payment+Order paid, records the instrument used) and payment.failed (marks both failed, with failureReason). This is the authoritative source of truth for payment status — the client-side create/verify/failure calls are a faster-feeling optimistic path, but this webhook is what guarantees status is correct even if the client never calls back.',
+    description: 'Orders are created with payment_capture: 0 (manual capture), so handles: payment.authorized (re-validates the amount, then explicitly captures via the Capture Payment API — this is the only thing that captures a payment in this app), payment.captured (marks Payment+Order/Wallet paid, records the instrument used), and payment.failed (marks both failed, with failureReason). This is the authoritative source of truth for payment status — the client-side create/verify/failure calls are a faster-feeling optimistic path, but this webhook is what guarantees status is correct even if the client never calls back.',
     responses: { 200: { description: 'Acknowledged' }, 400: errorResponse('Invalid webhook signature') },
   },
 };

@@ -15,6 +15,11 @@ async function createRazorpayOrder({ order, userId }) {
     amount: amountInPaise,
     currency: 'INR',
     receipt: order.orderNumber,
+    // Explicit manual capture rather than relying on the Razorpay account's dashboard-level
+    // auto-capture setting (which this codebase has no visibility into and could be toggled
+    // independently). We capture ourselves on the payment.authorized webhook below, after
+    // re-validating the amount server-side — see capturePayment().
+    payment_capture: 0,
   });
 
   const payment = await Payment.create({
@@ -42,6 +47,7 @@ async function createWalletTopupOrder({ userId, amount, retryOf = null }) {
     amount: amountInPaise,
     currency: 'INR',
     receipt: `wallet-${userId}-${Date.now()}`,
+    payment_capture: 0, // see the matching comment in createRazorpayOrder above
   });
 
   const payment = await Payment.create({
@@ -75,6 +81,17 @@ async function verifyWebhookSignature(rawBody, signature) {
     .update(rawBody)
     .digest('hex');
   return generated === signature;
+}
+
+// Called from the payment.authorized webhook handler, after re-checking the authorized amount
+// against what we actually expected — orders are created with payment_capture: 0, so nothing is
+// captured until this runs. Razorpay follows a successful capture with its own payment.captured
+// webhook, which is what actually marks the Payment/Order/Wallet paid — this function only moves
+// the money from "authorized" to "captured" on Razorpay's side.
+async function capturePayment(razorpayPaymentId, amountInPaise, currency = 'INR') {
+  const razorpay = await getRazorpayInstance();
+  if (!razorpay) throw new ApiError(500, 'Razorpay is not configured');
+  return razorpay.payments.capture(razorpayPaymentId, amountInPaise, currency);
 }
 
 // Razorpay's checkout widget is what actually lets the customer pick card/UPI/netbanking/etc —
@@ -135,6 +152,7 @@ async function debitWallet({ userId, amount, reason, refOrderId = null }) {
 module.exports = {
   createRazorpayOrder,
   createWalletTopupOrder,
+  capturePayment,
   verifySignature,
   verifyWebhookSignature,
   fetchPaymentInstrument,

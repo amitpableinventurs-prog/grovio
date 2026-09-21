@@ -86,6 +86,28 @@ const razorpayWebhook = catchAsync(async (req, res) => {
   const event = req.body.event;
   const paymentEntity = req.body.payload?.payment?.entity;
 
+  // Orders are created with payment_capture: 0 (see payment.service.js), so a successful payment
+  // lands here as 'authorized' first — nothing is actually captured (or paid for) until we
+  // explicitly capture it. Re-validating the amount before capturing is the whole reason to do
+  // this ourselves instead of just turning on auto-capture: it stops a tampered/mismatched amount
+  // from ever being captured. The payment.captured event Razorpay sends after a successful
+  // capture (handled below) is what actually marks the Payment/Order/Wallet paid.
+  if (event === 'payment.authorized' && paymentEntity) {
+    const payment = await Payment.findOne({ gatewayOrderId: paymentEntity.order_id });
+    if (payment && payment.status !== 'paid') {
+      const expectedPaise = Math.round(Number(payment.amount) * 100);
+      if (paymentEntity.amount !== expectedPaise) {
+        console.error(`Razorpay authorized amount mismatch for payment ${payment._id}: expected ${expectedPaise}, got ${paymentEntity.amount} — not capturing`);
+      } else {
+        try {
+          await paymentService.capturePayment(paymentEntity.id, expectedPaise, paymentEntity.currency || 'INR');
+        } catch (err) {
+          console.error(`Failed to capture Razorpay payment ${paymentEntity.id}:`, err.message);
+        }
+      }
+    }
+  }
+
   if (event === 'payment.captured' && paymentEntity) {
     const payment = await Payment.findOne({ gatewayOrderId: paymentEntity.order_id });
     // Idempotency: a webhook can be delivered more than once, and the client's own verify call
