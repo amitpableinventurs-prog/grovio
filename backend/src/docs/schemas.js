@@ -200,6 +200,24 @@ const Cart = {
   },
 };
 
+const WishlistItem = {
+  type: 'object',
+  properties: {
+    _id: id,
+    product: id,
+    createdAt: { type: 'string', format: 'date-time' },
+  },
+};
+
+const Wishlist = {
+  type: 'object',
+  properties: {
+    _id: id,
+    user: id,
+    items: { type: 'array', items: WishlistItem },
+  },
+};
+
 const OrderItem = {
   type: 'object',
   properties: {
@@ -446,6 +464,8 @@ module.exports = {
   Address,
   CartItem,
   Cart,
+  WishlistItem,
+  Wishlist,
   OrderItem,
   StatusLog,
   Order,

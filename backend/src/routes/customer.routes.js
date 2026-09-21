@@ -4,6 +4,7 @@ const { authenticate, authorize } = require('../middleware/auth.middleware');
 const homeCtrl = require('../controllers/customer/home.controller');
 const catalogCtrl = require('../controllers/customer/catalog.controller');
 const cartCtrl = require('../controllers/customer/cart.controller');
+const wishlistCtrl = require('../controllers/customer/wishlist.controller');
 const addressCtrl = require('../controllers/customer/address.controller');
 const ordersCtrl = require('../controllers/customer/orders.controller');
 const walletCtrl = require('../controllers/customer/wallet.controller');
@@ -29,6 +30,12 @@ router.delete('/cart/items/:id', cartCtrl.removeCartItem);
 router.delete('/cart', cartCtrl.clearCart);
 router.post('/cart/apply-coupon', cartCtrl.applyCoupon);
 router.delete('/cart/coupon', cartCtrl.removeCoupon);
+
+// Wishlist
+router.get('/wishlist', wishlistCtrl.getWishlist);
+router.post('/wishlist/items', wishlistCtrl.addToWishlist);
+router.delete('/wishlist/items/:productId', wishlistCtrl.removeFromWishlist);
+router.delete('/wishlist', wishlistCtrl.clearWishlist);
 
 // Addresses
 router.get('/addresses', addressCtrl.listAddresses);

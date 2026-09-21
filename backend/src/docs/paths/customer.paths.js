@@ -7,6 +7,7 @@ const {
 const paths = {};
 const TAG_HOME = ['Customer - Home & Catalog'];
 const TAG_CART = ['Customer - Cart'];
+const TAG_WISHLIST = ['Customer - Wishlist'];
 const TAG_ADDR = ['Customer - Addresses'];
 const TAG_ORDERS = ['Customer - Checkout & Orders'];
 const TAG_WALLET = ['Customer - Wallet'];
@@ -52,6 +53,17 @@ paths['/customer/cart/apply-coupon'] = {
 };
 paths['/customer/cart/coupon'] = {
   delete: { tags: TAG_CART, summary: 'Remove the applied coupon', ...bearer(), responses: { 200: envelope(ref('Cart'), 'Coupon removed'), 401: RESPONSES_401 } },
+};
+
+paths['/customer/wishlist'] = {
+  get: { tags: TAG_WISHLIST, summary: 'Get my wishlist', ...bearer(), responses: { 200: envelope(ref('Wishlist')), 401: RESPONSES_401 } },
+  delete: { tags: TAG_WISHLIST, summary: 'Clear my wishlist', ...bearer(), responses: { 200: envelope(ref('Wishlist'), 'Wishlist cleared'), 401: RESPONSES_401 } },
+};
+paths['/customer/wishlist/items'] = {
+  post: { tags: TAG_WISHLIST, summary: 'Add a product to the wishlist (no-op if already present)', ...bearer(), requestBody: jsonBody({ productId: { type: 'string' } }, ['productId']), responses: { 200: envelope(ref('Wishlist'), 'Added to wishlist'), 401: RESPONSES_401, 404: errorResponse('Product not found') } },
+};
+paths['/customer/wishlist/items/{productId}'] = {
+  delete: { tags: TAG_WISHLIST, summary: 'Remove a product from the wishlist', ...bearer(), parameters: [idParam('productId', 'Product ID')], responses: { 200: envelope(ref('Wishlist'), 'Removed from wishlist'), 401: RESPONSES_401 } },
 };
 
 paths['/customer/addresses'] = {

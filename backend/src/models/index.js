@@ -8,6 +8,7 @@ module.exports = {
   Product: require('./product.model'),
   Address: require('./address.model'),
   Cart: require('./cart.model'),
+  Wishlist: require('./wishlist.model'),
   Order: require('./order.model'),
   Payment: require('./payment.model'),
   Refund: require('./refund.model'),
