@@ -15,6 +15,7 @@ import OrderDetailPage from './pages/OrderDetailPage';
 import AddressesPage from './pages/AddressesPage';
 import ProfilePage from './pages/ProfilePage';
 import HelpSupportPage from './pages/HelpSupportPage';
+import AboutUsPage from './pages/AboutUsPage';
 import ReturnsRefundsPage from './pages/ReturnsRefundsPage';
 import TermsPage from './pages/TermsPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
@@ -121,6 +122,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <HelpSupportPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/about"
+            element={
+              <ProtectedRoute>
+                <AboutUsPage />
               </ProtectedRoute>
             }
           />

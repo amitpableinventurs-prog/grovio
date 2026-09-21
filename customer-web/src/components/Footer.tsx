@@ -1,5 +1,10 @@
 import { Link } from 'react-router-dom';
-import { Globe, Mail, MapPin, MessageCircle, Phone, Send, ShoppingCart } from 'lucide-react';
+import { Globe, Mail, MapPin, MessageCircle, Phone, Send, ShoppingCart, Store } from 'lucide-react';
+import { ASSET_BASE_URL } from '../api/client';
+
+// Standalone static page (backend/../vendor-signup), not a route in this app — it must be
+// reachable without logging in, so it's served directly by the backend at this path.
+const VENDOR_SIGNUP_URL = `${ASSET_BASE_URL}/vendor-signup`;
 
 export default function Footer() {
   return (
@@ -23,11 +28,21 @@ export default function Footer() {
               </span>
             ))}
           </div>
+          <a
+            href={VENDOR_SIGNUP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+          >
+            <Store size={16} />
+            Sell on Grovio
+          </a>
         </div>
 
         <div>
           <h3 className="text-sm font-semibold text-gray-900 mb-3">Quick Links</h3>
           <ul className="flex flex-col gap-2 text-sm text-gray-500">
+            <li><Link to="/about" className="hover:text-brand-700">About Us</Link></li>
             <li><Link to="/" className="hover:text-brand-700">Home</Link></li>
             <li><Link to="/categories" className="hover:text-brand-700">Categories</Link></li>
             <li><Link to="/products" className="hover:text-brand-700">All Products</Link></li>
