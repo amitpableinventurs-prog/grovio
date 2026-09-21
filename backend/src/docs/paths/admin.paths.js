@@ -383,6 +383,25 @@ paths['/admin/inventory'] = {
     responses: { 200: envelope(paginated(ref('Product'))), 401: RESPONSES_401 },
   },
 };
+paths['/admin/inventory/export'] = {
+  get: {
+    tags: TAG_INVENTORY, summary: 'Export inventory as a CSV file', ...bearer(),
+    description: 'Columns: productId, sku, name, store, category, price, discountPrice, stockQty, isAvailable, status. store/category/name are for readability only — re-importing this file only ever uses productId to match rows back to products.',
+    parameters: [q('storeId')],
+    responses: { 200: { description: 'CSV file (text/csv)', content: { 'text/csv': { schema: { type: 'string' } } } }, 401: RESPONSES_401 },
+  },
+};
+paths['/admin/inventory/import'] = {
+  post: {
+    tags: TAG_INVENTORY, summary: 'Bulk-update stock/price/availability from a CSV file (same shape as the export)', ...bearer(),
+    description: 'Only stockQty, price, discountPrice, isAvailable, and status are applied — name/store/category columns are ignored so a bad row can never relocate or rename a product. Rows are matched by productId; unmatched/invalid rows are reported per-row rather than failing the whole import.',
+    requestBody: formBody({ file: { type: 'string', format: 'binary', description: 'CSV file' } }, ['file']),
+    responses: {
+      200: envelope({ type: 'object', properties: { updated: { type: 'integer' }, errors: { type: 'array', items: { type: 'object', properties: { row: { type: 'integer' }, productId: { type: 'string' }, message: { type: 'string' } } } } } }, 'Import summary'),
+      400: errorResponse('A CSV file is required'), 401: RESPONSES_401,
+    },
+  },
+};
 
 // ---------- Payments / Refunds ----------
 paths['/admin/payments'] = {

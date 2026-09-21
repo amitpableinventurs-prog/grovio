@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { authenticate, authorize } = require('../middleware/auth.middleware');
 const { requirePermission } = require('../middleware/permission.middleware');
 const upload = require('../middleware/upload.middleware');
+const csvUpload = require('../middleware/csvUpload.middleware');
 const { PERMISSIONS } = require('../utils/permissions');
 
 const dashboardCtrl = require('../controllers/admin/dashboard.controller');
@@ -151,6 +152,8 @@ router.patch('/support-tickets/:id', p(PERMISSIONS.MANAGE_ORDERS), supportCtrl.r
 
 // Inventory
 router.get('/inventory', p(PERMISSIONS.MANAGE_INVENTORY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), inventoryCtrl.listInventory);
+router.get('/inventory/export', p(PERMISSIONS.MANAGE_INVENTORY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), inventoryCtrl.exportInventory);
+router.post('/inventory/import', p(PERMISSIONS.MANAGE_INVENTORY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), csvUpload.single('file'), inventoryCtrl.importInventory);
 
 // Payments
 router.get('/payments', p(PERMISSIONS.MANAGE_PAYMENTS), paymentsCtrl.listPayments);
