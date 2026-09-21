@@ -253,10 +253,39 @@ paths['/admin/banners/{id}'] = {
 
 // ---------- Settings ----------
 paths['/admin/settings'] = {
-  get: { tags: TAG_SETTINGS, summary: 'Get all app settings as a key-value map', ...bearer(), responses: { 200: envelope({ type: 'object', additionalProperties: { type: 'string' }, example: { deliveryFee: '25', commissionPercent: '10', minOrderAmount: '0', appVersion: '1.0.0' } }), 401: RESPONSES_401 } },
+  get: {
+    tags: TAG_SETTINGS,
+    summary: 'Get all app settings as a key-value map',
+    description: 'Secret keys (razorpayKeySecret, razorpayWebhookSecret, smsApiKey, smsApiSecret, googleMapsApiKey) come back masked to their last 4 characters, or null if never set — never the real value. These credentials override the equivalent .env vars at runtime (see settings.service.js) without a restart.',
+    ...bearer(),
+    responses: {
+      200: envelope({
+        type: 'object', additionalProperties: { type: 'string', nullable: true },
+        example: {
+          deliveryFee: '25', commissionPercent: '10', minOrderAmount: '0', appVersion: '1.0.0',
+          razorpayKeyId: 'rzp_live_abc123', razorpayKeySecret: '••••1234', razorpayWebhookSecret: null,
+          smsProvider: 'msg91', smsApiKey: '••••wxyz', smsSenderId: 'GROVIO', smsTemplateId: 'flow_123',
+          googleMapsApiKey: null,
+        },
+      }),
+      401: RESPONSES_401,
+    },
+  },
   put: {
-    tags: TAG_SETTINGS, summary: 'Upsert one or more settings', ...bearer(),
-    requestBody: jsonBody({ deliveryFee: { type: 'string' }, commissionPercent: { type: 'string' }, minOrderAmount: { type: 'string' }, appVersion: { type: 'string' } }),
+    tags: TAG_SETTINGS,
+    summary: 'Upsert one or more settings',
+    description: "A blank/omitted value for a secret key (see GET above) is treated as \"leave unchanged\", not \"clear it\" — this lets the Settings page submit real edits alongside untouched secret fields left empty.",
+    ...bearer(),
+    requestBody: jsonBody({
+      deliveryFee: { type: 'string' }, commissionPercent: { type: 'string' }, minOrderAmount: { type: 'string' }, appVersion: { type: 'string' },
+      razorpayKeyId: { type: 'string' }, razorpayKeySecret: { type: 'string', description: 'Omit/blank to keep existing' }, razorpayWebhookSecret: { type: 'string', description: 'Omit/blank to keep existing' },
+      smsProvider: { type: 'string', enum: ['none', 'msg91', 'twilio'] },
+      smsApiKey: { type: 'string', description: 'MSG91 auth key or Twilio Account SID — omit/blank to keep existing' },
+      smsApiSecret: { type: 'string', description: 'Twilio Auth Token only — omit/blank to keep existing' },
+      smsSenderId: { type: 'string', description: 'MSG91 sender ID or Twilio From number' },
+      smsTemplateId: { type: 'string', description: 'MSG91 DLT flow/template ID' },
+      googleMapsApiKey: { type: 'string', description: 'Omit/blank to keep existing' },
+    }),
     responses: { 200: envelope({ type: 'object' }, 'Settings updated'), 401: RESPONSES_401 },
   },
 };

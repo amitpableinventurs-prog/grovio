@@ -4,6 +4,7 @@ const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const paymentService = require('../../services/payment.service');
 const { notifyUser } = require('../../services/notification.service');
+const { getSetting } = require('../../services/settings.service');
 
 // POST /payments/razorpay/create  { orderId }
 const createRazorpayOrder = catchAsync(async (req, res) => {
@@ -19,7 +20,7 @@ const createRazorpayOrder = catchAsync(async (req, res) => {
     razorpayOrderId: razorpayOrder.id,
     amount: razorpayOrder.amount,
     currency: razorpayOrder.currency,
-    keyId: process.env.RAZORPAY_KEY_ID,
+    keyId: await getSetting('razorpayKeyId', 'RAZORPAY_KEY_ID'),
     orderId: order._id,
   }, 'Razorpay order created').send(res);
 });
@@ -28,7 +29,7 @@ const createRazorpayOrder = catchAsync(async (req, res) => {
 const verifyRazorpayPayment = catchAsync(async (req, res) => {
   const { orderId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
 
-  const valid = paymentService.verifySignature({ razorpayOrderId, razorpayPaymentId, razorpaySignature });
+  const valid = await paymentService.verifySignature({ razorpayOrderId, razorpayPaymentId, razorpaySignature });
   if (!valid) throw new ApiError(400, 'Payment signature verification failed');
 
   const order = await Order.findOne({ _id: orderId, customer: req.user.id });
@@ -78,7 +79,7 @@ const reportRazorpayFailure = catchAsync(async (req, res) => {
 // POST /payments/razorpay/webhook  (raw body, verified via header signature)
 const razorpayWebhook = catchAsync(async (req, res) => {
   const signature = req.headers['x-razorpay-signature'];
-  const isValid = paymentService.verifyWebhookSignature(req.rawBody, signature);
+  const isValid = await paymentService.verifyWebhookSignature(req.rawBody, signature);
   if (!isValid) throw new ApiError(400, 'Invalid webhook signature');
 
   const event = req.body.event;

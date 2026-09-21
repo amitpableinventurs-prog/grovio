@@ -1,12 +1,13 @@
 const crypto = require('crypto');
 const { getRazorpayInstance } = require('../config/razorpay');
+const { getSetting } = require('./settings.service');
 const { Payment, Wallet, WalletTransaction } = require('../models');
 const ApiError = require('../utils/apiError');
 
 async function createRazorpayOrder({ order, userId }) {
-  const razorpay = getRazorpayInstance();
+  const razorpay = await getRazorpayInstance();
   if (!razorpay) {
-    throw new ApiError(500, 'Razorpay is not configured. Set RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET in .env');
+    throw new ApiError(500, 'Razorpay is not configured. Set it up in Admin > Settings > Integrations, or RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET in .env');
   }
 
   const amountInPaise = Math.round(Number(order.grandTotal) * 100);
@@ -28,17 +29,21 @@ async function createRazorpayOrder({ order, userId }) {
   return { razorpayOrder: rzpOrder, payment };
 }
 
-function verifySignature({ razorpayOrderId, razorpayPaymentId, razorpaySignature }) {
+async function verifySignature({ razorpayOrderId, razorpayPaymentId, razorpaySignature }) {
+  const keySecret = await getSetting('razorpayKeySecret', 'RAZORPAY_KEY_SECRET');
+  if (!keySecret) throw new ApiError(500, 'Razorpay is not configured');
   const generated = crypto
-    .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+    .createHmac('sha256', keySecret)
     .update(`${razorpayOrderId}|${razorpayPaymentId}`)
     .digest('hex');
   return generated === razorpaySignature;
 }
 
-function verifyWebhookSignature(rawBody, signature) {
+async function verifyWebhookSignature(rawBody, signature) {
+  const webhookSecret = await getSetting('razorpayWebhookSecret', 'RAZORPAY_WEBHOOK_SECRET');
+  if (!webhookSecret) return false;
   const generated = crypto
-    .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET)
+    .createHmac('sha256', webhookSecret)
     .update(rawBody)
     .digest('hex');
   return generated === signature;
@@ -48,7 +53,7 @@ function verifyWebhookSignature(rawBody, signature) {
 // the only way to know which one they used is to ask Razorpay after the fact.
 async function fetchPaymentInstrument(razorpayPaymentId) {
   try {
-    const razorpay = getRazorpayInstance();
+    const razorpay = await getRazorpayInstance();
     if (!razorpay) return null;
     const entity = await razorpay.payments.fetch(razorpayPaymentId);
     return entity?.method || null;

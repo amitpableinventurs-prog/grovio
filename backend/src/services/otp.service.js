@@ -1,5 +1,6 @@
 const { Otp } = require('../models');
 const ApiError = require('../utils/apiError');
+const { sendSms } = require('./sms.service');
 
 const RESEND_COOLDOWN_SECONDS = Number(process.env.OTP_RESEND_COOLDOWN_SECONDS || 30);
 const MAX_VERIFY_ATTEMPTS = Number(process.env.OTP_MAX_VERIFY_ATTEMPTS || 5);
@@ -14,7 +15,7 @@ function generateCode() {
 
 // POST /auth/send-otp and /auth/resend-otp both call this. Enforces the same
 // server-side cooldown the Flutter UI's countdown assumes, so a client can't
-// hammer the (future) SMS provider by bypassing the UI timer.
+// hammer the SMS provider by bypassing the UI timer.
 async function sendOtp(phone) {
   const last = await Otp.findOne({ phone }).sort({ createdAt: -1 });
   if (last) {
@@ -30,14 +31,24 @@ async function sendOtp(phone) {
 
   await Otp.create({ phone, code, expiresAt });
 
-  // TODO: plug in a real SMS provider (MSG91 / Twilio) here.
-  // Until then, dev mode logs the OTP and (optionally) returns it in the API response.
+  // Dev mode always logs the OTP too, regardless of whether an SMS provider is configured —
+  // handy when testing against a provider sandbox that doesn't actually deliver to your phone.
   console.log(`[OTP] ${phone} -> ${code}`);
+
+  const debugMode = process.env.OTP_DEBUG_MODE === 'true';
+  const result = await sendSms(phone, `Your Grovio verification code is ${code}. It expires in ${process.env.OTP_EXPIRY_MINUTES || 5} minutes.`, { otpCode: code });
+
+  // No provider configured (Admin > Settings > Integrations): fall back to the existing
+  // dev-mode behavior below. A provider IS configured but the send actually failed: don't lie
+  // and say it was sent unless debug mode is also on to give the tester another way to get the code.
+  if (!result.sent && result.reason !== 'not_configured' && !debugMode) {
+    throw new ApiError(502, 'Could not send the OTP SMS. Please try again shortly.');
+  }
 
   return {
     sent: true,
     resendCooldownSeconds: RESEND_COOLDOWN_SECONDS,
-    debugOtp: process.env.OTP_DEBUG_MODE === 'true' ? code : undefined,
+    debugOtp: debugMode ? code : undefined,
   };
 }
 

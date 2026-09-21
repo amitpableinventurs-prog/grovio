@@ -1,19 +1,15 @@
 const Razorpay = require('razorpay');
-require('dotenv').config();
+const { getSetting } = require('../services/settings.service');
 
-let instance = null;
+// Credentials can come from the Settings panel (DB) or .env — see settings.service.js. No
+// singleton caching here: constructing a Razorpay client is just an object literal (no network
+// call), and caching would mean a key changed in the panel wouldn't take effect until restart.
+async function getRazorpayInstance() {
+  const keyId = await getSetting('razorpayKeyId', 'RAZORPAY_KEY_ID');
+  const keySecret = await getSetting('razorpayKeySecret', 'RAZORPAY_KEY_SECRET');
+  if (!keyId || !keySecret) return null;
 
-function getRazorpayInstance() {
-  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-    return null;
-  }
-  if (!instance) {
-    instance = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
-    });
-  }
-  return instance;
+  return new Razorpay({ key_id: keyId, key_secret: keySecret });
 }
 
 module.exports = { getRazorpayInstance };
