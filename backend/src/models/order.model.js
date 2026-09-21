@@ -28,6 +28,15 @@ const orderSchema = new Schema({
   delivery: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   deliveryAcceptedAt: { type: Date, default: null },
   deliveryPin: { type: String, default: null, select: false },
+  // Picker <-> Delivery Boy handover OTP (distinct from deliveryPin above, which is the
+  // Delivery Boy <-> Customer PIN at drop-off). Auto-generated alongside deliveryPin as soon as
+  // a delivery partner is assigned (see order.service.js#transitionOrder); the Picker reads it
+  // out to the Delivery Boy in person, who submits it via POST /delivery/jobs/:id/otp/verify.
+  // This is the only path allowed to move an order into 'picked_up' — see
+  // delivery.controller.js#verifyHandoverOtp.
+  handoverOtp: { type: String, default: null, select: false },
+  handoverOtpExpiresAt: { type: Date, default: null, select: false },
+  handoverOtpAttempts: { type: Number, default: 0, select: false },
   pickerHandoverAt: { type: Date, default: null },
   arrivedAtPickupAt: { type: Date, default: null },
   arrivedAtDropAt: { type: Date, default: null },
@@ -49,7 +58,7 @@ const orderSchema = new Schema({
   codCollectionMethod: { type: String, enum: ['cash', 'upi'], default: null },
   orderStatus: {
     type: String,
-    enum: ['placed', 'accepted', 'rejected', 'picking', 'packed', 'assigned', 'out_for_delivery', 'delivery_failed', 'delivered', 'cancelled', 'returned'],
+    enum: ['placed', 'accepted', 'rejected', 'picking', 'packed', 'assigned', 'picked_up', 'out_for_delivery', 'delivery_failed', 'delivered', 'cancelled', 'returned'],
     default: 'placed',
   },
   cancelReason: { type: String, default: null },
@@ -59,16 +68,19 @@ const orderSchema = new Schema({
   settlementId: { type: Schema.Types.ObjectId, ref: 'Settlement', default: null },
 }, { timestamps: true });
 
-// `select: false` on deliveryPin only keeps it out of query results — it does NOT hide a value
+// `select: false` on these fields only keeps them out of query results — it does NOT hide a value
 // that code has set on an in-memory document (e.g. right after generating it in order.service.js).
-// Strip it unconditionally on every serialization so it can never leak through a normal order
-// response; the only sanctioned way to read it back is the dedicated customer delivery-pin endpoint,
-// which reads `order.deliveryPin` directly off the document rather than through toJSON/toObject.
-function stripDeliveryPin(doc, ret) {
+// Strip them unconditionally on every serialization so they can never leak through a normal order
+// response; the only sanctioned ways to read them back are the dedicated endpoints that select
+// them explicitly (customer delivery-pin endpoint, picker handover-OTP endpoint).
+function stripSensitiveFields(doc, ret) {
   delete ret.deliveryPin;
+  delete ret.handoverOtp;
+  delete ret.handoverOtpExpiresAt;
+  delete ret.handoverOtpAttempts;
   return ret;
 }
-orderSchema.set('toJSON', { transform: stripDeliveryPin });
-orderSchema.set('toObject', { transform: stripDeliveryPin });
+orderSchema.set('toJSON', { transform: stripSensitiveFields });
+orderSchema.set('toObject', { transform: stripSensitiveFields });
 
 module.exports = model('Order', orderSchema);

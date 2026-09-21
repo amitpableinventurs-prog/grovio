@@ -3,12 +3,16 @@ const { notifyUser } = require('./notification.service');
 const ApiError = require('../utils/apiError');
 
 // Allowed forward transitions. Cancellation is handled separately (allowed from most pre-delivery states).
+// 'assigned' -> 'picked_up' is gated behind a verified handover OTP (see verifyHandoverOtp below) —
+// there is no other path to 'picked_up', per the business rule that the delivery app must never
+// self-report a pickup without backend validation.
 const TRANSITIONS = {
   placed: ['accepted', 'rejected', 'cancelled'],
   accepted: ['picking', 'cancelled'],
   picking: ['packed', 'cancelled'],
   packed: ['assigned', 'cancelled'],
-  assigned: ['out_for_delivery', 'cancelled'],
+  assigned: ['picked_up', 'cancelled'],
+  picked_up: ['out_for_delivery', 'cancelled'],
   out_for_delivery: ['delivered', 'delivery_failed', 'returned'],
   delivery_failed: ['out_for_delivery', 'returned', 'cancelled'],
   delivered: [],
@@ -23,6 +27,7 @@ const STATUS_MESSAGES = {
   picking: 'Your order is being picked and packed.',
   packed: 'Your order has been packed and is awaiting pickup.',
   assigned: 'A delivery partner has been assigned to your order.',
+  picked_up: 'Your order has been picked up and will be out for delivery shortly.',
   out_for_delivery: 'Your order is out for delivery.',
   delivery_failed: 'We could not deliver your order. Our team will follow up shortly.',
   delivered: 'Your order has been delivered. Enjoy!',
@@ -30,8 +35,50 @@ const STATUS_MESSAGES = {
   returned: 'Your order has been marked as returned.',
 };
 
+const HANDOVER_OTP_EXPIRY_MINUTES = Number(process.env.OTP_EXPIRY_MINUTES || 5);
+const MAX_HANDOVER_OTP_ATTEMPTS = Number(process.env.OTP_MAX_VERIFY_ATTEMPTS || 5);
+
 function generatePin() {
   return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
+function generateOtpCode() {
+  if (process.env.OTP_FIXED_CODE) return process.env.OTP_FIXED_CODE;
+  return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
+// Ensures `order` has a live (non-expired) handover OTP, generating a fresh one if there isn't
+// one yet or the existing one has expired. Returns the code only when it actually generated a
+// new one, so callers can tell "freshly generated" apart from "already had a valid one" without
+// re-reading the field. Caller is responsible for persisting (order.save()).
+function ensureHandoverOtp(order) {
+  const expired = !order.handoverOtp || !order.handoverOtpExpiresAt || order.handoverOtpExpiresAt < new Date();
+  if (!expired) return null;
+  order.handoverOtp = generateOtpCode();
+  order.handoverOtpExpiresAt = new Date(Date.now() + HANDOVER_OTP_EXPIRY_MINUTES * 60 * 1000);
+  order.handoverOtpAttempts = 0;
+  return order.handoverOtp;
+}
+
+// Validates the code the Delivery Boy enters against the Picker's handover OTP. On success this
+// is the ONLY path that transitions an order to 'picked_up' (see TRANSITIONS above) — the mobile
+// app itself never sets that status directly, the backend does after verifying here.
+async function verifyHandoverOtp({ order, code, changedBy }) {
+  if (!order.handoverOtp) return { valid: false, reason: 'not_generated' };
+  if (order.handoverOtpExpiresAt < new Date()) return { valid: false, reason: 'expired' };
+  if (order.handoverOtpAttempts >= MAX_HANDOVER_OTP_ATTEMPTS) return { valid: false, reason: 'max_attempts' };
+
+  if (order.handoverOtp !== String(code)) {
+    order.handoverOtpAttempts += 1;
+    await order.save();
+    const attemptsLeft = MAX_HANDOVER_OTP_ATTEMPTS - order.handoverOtpAttempts;
+    return { valid: false, reason: attemptsLeft <= 0 ? 'max_attempts' : 'invalid', attemptsLeft: Math.max(attemptsLeft, 0) };
+  }
+
+  order.handoverOtp = null;
+  order.handoverOtpExpiresAt = null;
+  await transitionOrder({ order, toStatus: 'picked_up', changedBy, note: 'Handover OTP verified' });
+  return { valid: true };
 }
 
 async function transitionOrder({ order, toStatus, changedBy, note }) {
@@ -42,14 +89,17 @@ async function transitionOrder({ order, toStatus, changedBy, note }) {
 
   order.orderStatus = toStatus;
   if (toStatus === 'delivered') order.deliveredAt = new Date();
+  if (toStatus === 'picked_up') order.pickerHandoverAt = order.pickerHandoverAt || new Date();
 
-  // Generate the hand-off PIN as soon as a delivery partner is assigned; the delivery
-  // partner must collect this from the customer at the doorstep to confirm delivery.
+  // Generate the customer hand-off PIN and the picker/delivery handover OTP as soon as a
+  // delivery partner is assigned. The PIN is collected from the customer at the doorstep to
+  // confirm delivery; the OTP is read out by the Picker to the Delivery Boy at pickup time.
   let pin = null;
   if (toStatus === 'assigned' && !order.deliveryPin) {
     pin = generatePin();
     order.deliveryPin = pin;
   }
+  const handoverOtp = toStatus === 'assigned' ? ensureHandoverOtp(order) : null;
 
   order.statusLogs.push({ status: toStatus, changedBy, note });
   await order.save();
@@ -66,7 +116,16 @@ async function transitionOrder({ order, toStatus, changedBy, note }) {
     });
   }
 
+  if (handoverOtp && order.picker) {
+    await notifyUser(order.picker, {
+      title: `Order ${order.orderNumber}`,
+      body: `Give this handover OTP to the delivery partner when they arrive: ${handoverOtp}`,
+      type: 'handover_otp',
+      data: { orderId: order._id, handoverOtp },
+    });
+  }
+
   return order;
 }
 
-module.exports = { transitionOrder, TRANSITIONS };
+module.exports = { transitionOrder, TRANSITIONS, ensureHandoverOtp, verifyHandoverOtp };

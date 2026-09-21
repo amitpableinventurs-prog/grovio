@@ -109,6 +109,7 @@ export type OrderStatus =
   | 'picking'
   | 'packed'
   | 'assigned'
+  | 'picked_up'
   | 'out_for_delivery'
   | 'delivery_failed'
   | 'delivered'

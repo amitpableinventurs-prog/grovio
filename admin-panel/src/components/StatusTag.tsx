@@ -25,6 +25,7 @@ const COLOR_MAP: Record<string, string> = {
   picking: 'blue',
   packed: 'geekblue',
   assigned: 'purple',
+  picked_up: 'lime',
   out_for_delivery: 'orange',
 };
 

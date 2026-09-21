@@ -1,9 +1,9 @@
-const { Order, DeliveryProfile, Payment, Wallet, WalletTransaction } = require('../../models');
+const { Order, PickerProfile, DeliveryProfile, Payment, Wallet, WalletTransaction } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
-const { transitionOrder } = require('../../services/order.service');
+const { transitionOrder, verifyHandoverOtp } = require('../../services/order.service');
 const { creditWallet } = require('../../services/payment.service');
 
 const COD_COLLECTION_METHODS = ['cash', 'upi'];
@@ -84,9 +84,10 @@ const listHistory = catchAsync(async (req, res) => {
   new ApiResponse(200, { items: rows, meta: buildPageMeta({ page, limit, count }) }).send(res);
 });
 
-async function findAssignedOrder(req, { withPin = false } = {}) {
+async function findAssignedOrder(req, { withPin = false, withOtp = false } = {}) {
   let query = Order.findOne({ _id: req.params.id, delivery: req.user.id }).populate('address').populate('store');
   if (withPin) query = query.select('+deliveryPin');
+  if (withOtp) query = query.select('+handoverOtp +handoverOtpExpiresAt +handoverOtpAttempts');
   const order = await query;
   if (!order) throw new ApiError(404, 'Order not found or not assigned to you');
   return order;
@@ -123,10 +124,45 @@ const markArrivedAtPickup = catchAsync(async (req, res) => {
   new ApiResponse(200, order, 'Arrival at store recorded').send(res);
 });
 
-// POST /delivery/jobs/:id/picked-up -> out_for_delivery
-const markPickedUp = catchAsync(async (req, res) => {
+// GET /delivery/jobs/:id/pickers -> the picker(s) assigned to this order (currently always one,
+// per the current single-picker-per-order model — returned as an array so a future multi-picker
+// order-to-picker mapping is a purely additive change on top of this same endpoint).
+const listAssignedPickers = catchAsync(async (req, res) => {
   const order = await findAssignedOrder(req);
-  await transitionOrder({ order, toStatus: 'out_for_delivery', changedBy: req.user.id, note: 'Picked up from store' });
+  if (!order.picker) return new ApiResponse(200, []).send(res);
+
+  const profile = await PickerProfile.findOne({ user: order.picker }).populate('user', 'name phone');
+  new ApiResponse(200, profile ? [profile] : []).send(res);
+});
+
+// POST /delivery/jobs/:id/otp/verify { otp } -> validates the handover OTP the Picker read out
+// in person. This is the only way an order can move to 'picked_up' (see order.service.js).
+const verifyHandoverOtpCtrl = catchAsync(async (req, res) => {
+  const order = await findAssignedOrder(req, { withOtp: true });
+  if (!order.deliveryAcceptedAt) throw new ApiError(400, 'Accept this job before verifying the handover OTP');
+
+  const { otp } = req.body;
+  if (!otp) throw new ApiError(400, 'otp is required');
+
+  const result = await verifyHandoverOtp({ order, code: otp, changedBy: req.user.id });
+  if (!result.valid) {
+    const messages = {
+      not_generated: 'No handover OTP has been generated for this order yet',
+      expired: 'This handover OTP has expired. Ask the picker to refresh it.',
+      max_attempts: 'Too many incorrect attempts. Ask the picker to refresh the OTP.',
+      invalid: `Incorrect OTP.${result.attemptsLeft != null ? ` ${result.attemptsLeft} attempt(s) left.` : ''}`,
+    };
+    throw new ApiError(400, messages[result.reason] || 'Invalid handover OTP');
+  }
+
+  new ApiResponse(200, order, 'Handover confirmed. Order picked up.').send(res);
+});
+
+// POST /delivery/jobs/:id/out-for-delivery -> picked_up -> out_for_delivery (departing the hub
+// with the package). Requires the OTP-verified 'picked_up' status — see verifyHandoverOtpCtrl.
+const markOutForDelivery = catchAsync(async (req, res) => {
+  const order = await findAssignedOrder(req);
+  await transitionOrder({ order, toStatus: 'out_for_delivery', changedBy: req.user.id, note: 'Departed for delivery' });
   new ApiResponse(200, order, 'Marked as out for delivery').send(res);
 });
 
@@ -210,7 +246,9 @@ module.exports = {
   acceptJob,
   rejectAssignment,
   markArrivedAtPickup,
-  markPickedUp,
+  listAssignedPickers,
+  verifyHandoverOtpCtrl,
+  markOutForDelivery,
   markArrivedAtDrop,
   completeJob,
   markFailed,

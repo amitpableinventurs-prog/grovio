@@ -3,7 +3,7 @@ const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
-const { transitionOrder } = require('../../services/order.service');
+const { transitionOrder, ensureHandoverOtp } = require('../../services/order.service');
 const { findNearestDeliveryPartner } = require('../../services/assignment.service');
 const { notifyUser } = require('../../services/notification.service');
 
@@ -168,22 +168,22 @@ const recordSubstitution = catchAsync(async (req, res) => {
   new ApiResponse(200, item, 'Substitution recorded').send(res);
 });
 
-// POST /picker/jobs/:id/handover -> picker confirms physical hand-off to the delivery partner
-const confirmHandover = catchAsync(async (req, res) => {
-  const order = await findAssignedJob(req);
+// GET /picker/jobs/:id/otp -> the handover OTP to read out to the delivery partner in person.
+// Auto-generated when a delivery partner is first assigned (see order.service.js#transitionOrder);
+// this endpoint just redisplays it, regenerating on the fly if it has since expired.
+const getHandoverOtp = catchAsync(async (req, res) => {
+  const order = await Order.findOne({ _id: req.params.id, picker: req.user.id })
+    .select('+handoverOtp +handoverOtpExpiresAt orderStatus delivery orderNumber');
+  if (!order) throw new ApiError(404, 'Job not found or not assigned to you');
   if (!order.delivery) throw new ApiError(400, 'No delivery partner assigned to this order yet');
+  if (!['assigned', 'packed'].includes(order.orderStatus)) {
+    throw new ApiError(400, `Handover OTP is not applicable while order is '${order.orderStatus}'`);
+  }
 
-  order.pickerHandoverAt = new Date();
-  await order.save();
+  const freshlyGenerated = ensureHandoverOtp(order);
+  if (freshlyGenerated) await order.save();
 
-  await notifyUser(order.delivery, {
-    title: 'Package ready for pickup',
-    body: `Order ${order.orderNumber} has been handed over by the store and is ready to collect.`,
-    type: 'handover_confirmed',
-    data: { orderId: order._id },
-  });
-
-  new ApiResponse(200, order, 'Handover confirmed').send(res);
+  new ApiResponse(200, { otp: order.handoverOtp, expiresAt: order.handoverOtpExpiresAt }).send(res);
 });
 
 // POST /picker/jobs/:id/complete -> moves order to 'packed' and best-effort assigns delivery
@@ -219,6 +219,6 @@ module.exports = {
   startPicking,
   updateJobItem,
   recordSubstitution,
-  confirmHandover,
+  getHandoverOtp,
   completeJob,
 };

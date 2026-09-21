@@ -23,7 +23,7 @@ import StatusTag from '../components/StatusTag';
 import { formatCurrency, formatDateTime, titleCase } from '../utils/format';
 
 const ORDER_STATUSES = [
-  'placed', 'accepted', 'rejected', 'picking', 'packed', 'assigned',
+  'placed', 'accepted', 'rejected', 'picking', 'packed', 'assigned', 'picked_up',
   'out_for_delivery', 'delivery_failed', 'delivered', 'cancelled', 'returned',
 ];
 

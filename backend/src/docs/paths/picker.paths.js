@@ -31,8 +31,8 @@ paths['/picker/jobs/{id}/substitutions'] = {
 paths['/picker/jobs/{id}/complete'] = {
   post: { tags: TAG, summary: 'Complete packing (order -> packed, best-effort auto-assigns delivery)', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('Order'), 'Order packed'), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
-paths['/picker/jobs/{id}/handover'] = {
-  post: { tags: TAG, summary: 'Confirm physical hand-off to the assigned delivery partner', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('Order'), 'Handover confirmed'), 400: errorResponse('No delivery partner assigned yet'), 401: RESPONSES_401, 404: RESPONSES_404 } },
+paths['/picker/jobs/{id}/otp'] = {
+  get: { tags: TAG, summary: 'Get the handover OTP to read out to the delivery partner in person (auto-generated on delivery assignment; refreshed here if expired)', ...bearer(), parameters: [idParam()], responses: { 200: envelope({ type: 'object', properties: { otp: { type: 'string', example: '4821' }, expiresAt: { type: 'string', format: 'date-time' } } }), 400: errorResponse('No delivery partner assigned yet'), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
 paths['/picker/history'] = {
   get: { tags: TAG, summary: 'Completed/cancelled/failed jobs history', ...bearer(), parameters: PAGE_QS, responses: { 200: envelope(paginated(ref('Order'))), 401: RESPONSES_401 } },
