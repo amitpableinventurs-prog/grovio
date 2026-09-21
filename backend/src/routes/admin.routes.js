@@ -19,6 +19,7 @@ const paymentsCtrl = require('../controllers/admin/payments.controller');
 const settlementsCtrl = require('../controllers/admin/settlements.controller');
 const adminsCtrl = require('../controllers/admin/admins.controller');
 const pickersCtrl = require('../controllers/admin/pickers.controller');
+const deliveryPartnersCtrl = require('../controllers/admin/deliveryPartners.controller');
 const scannerLogsCtrl = require('../controllers/admin/scannerLogs.controller');
 
 router.use(authenticate, authorize('admin'));
@@ -43,6 +44,9 @@ router.put(
   pickersCtrl.updatePicker
 );
 router.get('/delivery-partners', p(PERMISSIONS.MANAGE_DELIVERY), usersCtrl.listByRole('delivery'));
+router.post('/delivery-partners', p(PERMISSIONS.MANAGE_DELIVERY), deliveryPartnersCtrl.createDeliveryPartner);
+router.put('/delivery-partners/:id', p(PERMISSIONS.MANAGE_DELIVERY), deliveryPartnersCtrl.updateDeliveryPartner);
+router.delete('/delivery-partners/:id', p(PERMISSIONS.MANAGE_DELIVERY), deliveryPartnersCtrl.deleteDeliveryPartner);
 router.get('/users/:id', p(PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_DELIVERY), usersCtrl.getUserDetail);
 router.patch('/pickers/:id/status', p(PERMISSIONS.MANAGE_PICKERS), usersCtrl.updateProfileStatus('picker'));
 router.patch('/pickers/:id/assign-store', p(PERMISSIONS.MANAGE_PICKERS), usersCtrl.assignPickerToStore);

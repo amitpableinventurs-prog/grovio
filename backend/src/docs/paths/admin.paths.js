@@ -39,7 +39,50 @@ function userListPath(role, description) {
 paths['/admin/vendors'] = userListPath('vendor', 'Requires manage_vendors permission');
 paths['/admin/customers'] = userListPath('customer', 'Requires manage_orders or view_reports permission');
 paths['/admin/pickers'] = userListPath('picker', 'Requires manage_pickers permission');
+paths['/admin/pickers'].post = {
+  tags: TAG_USERS, summary: 'Onboard a picker directly (admin-only — pickers never self-register)', ...bearer(),
+  requestBody: formBody({
+    name: { type: 'string' }, phone: { type: 'string' }, email: { type: 'string' }, employeeId: { type: 'string' },
+    address: { type: 'string' }, idProofType: { type: 'string' }, idProofNumber: { type: 'string' },
+    emergencyContactName: { type: 'string' }, emergencyContactPhone: { type: 'string' },
+    joiningDate: { type: 'string', format: 'date' }, shift: { type: 'string' }, assignedStore: { type: 'string' },
+    profilePhoto: { type: 'string', format: 'binary' }, idProofDocument: { type: 'string', format: 'binary' },
+  }, ['name', 'phone']),
+  responses: { 201: envelope({ type: 'object', properties: { user: ref('User'), pickerProfile: ref('PickerProfile') } }, 'Picker created'), 409: errorResponse('A user with this mobile number already exists'), 401: RESPONSES_401 },
+};
+paths['/admin/pickers/{id}'] = {
+  put: {
+    tags: TAG_USERS, summary: "Full edit of a picker's profile", ...bearer(), parameters: [idParam('id', 'Picker USER ID')],
+    requestBody: formBody({
+      name: { type: 'string' }, email: { type: 'string' }, address: { type: 'string' }, idProofType: { type: 'string' },
+      idProofNumber: { type: 'string' }, emergencyContactName: { type: 'string' }, emergencyContactPhone: { type: 'string' },
+      employeeId: { type: 'string' }, joiningDate: { type: 'string', format: 'date' }, shift: { type: 'string' }, assignedStore: { type: 'string' },
+      profilePhoto: { type: 'string', format: 'binary' }, idProofDocument: { type: 'string', format: 'binary' },
+    }),
+    responses: { 200: envelope({ type: 'object', properties: { user: ref('User'), pickerProfile: ref('PickerProfile') } }, 'Picker updated'), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
+};
+
 paths['/admin/delivery-partners'] = userListPath('delivery', 'Requires manage_delivery permission');
+paths['/admin/delivery-partners'].post = {
+  tags: TAG_USERS, summary: 'Onboard a delivery partner directly (alongside the existing self-registration path)', ...bearer(),
+  requestBody: jsonBody({
+    name: { type: 'string' }, phone: { type: 'string' }, email: { type: 'string' },
+    vehicleType: { type: 'string' }, vehicleNumber: { type: 'string' }, licenseNumber: { type: 'string' },
+  }, ['name', 'phone']),
+  responses: { 201: envelope({ type: 'object', properties: { user: ref('User'), deliveryProfile: ref('DeliveryProfile') } }, 'Delivery partner created'), 409: errorResponse('A user with this mobile number already exists'), 401: RESPONSES_401 },
+};
+paths['/admin/delivery-partners/{id}'] = {
+  put: {
+    tags: TAG_USERS, summary: 'Full edit of a delivery partner', ...bearer(), parameters: [idParam('id', 'Delivery USER ID')],
+    requestBody: jsonBody({ name: { type: 'string' }, email: { type: 'string' }, vehicleType: { type: 'string' }, vehicleNumber: { type: 'string' }, licenseNumber: { type: 'string' } }),
+    responses: { 200: envelope({ type: 'object', properties: { user: ref('User'), deliveryProfile: ref('DeliveryProfile') } }, 'Delivery partner updated'), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
+  delete: {
+    tags: TAG_USERS, summary: 'Delete a delivery partner (refused if a job is still in progress with them)', ...bearer(), parameters: [idParam('id', 'Delivery USER ID')],
+    responses: { 200: envelope(null, 'Delivery partner deleted'), 400: errorResponse('Cannot delete — an order is still in progress with this delivery partner'), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
+};
 
 paths['/admin/users/{id}'] = {
   get: {

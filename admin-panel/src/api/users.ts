@@ -28,6 +28,27 @@ export function updateDeliveryStatus(userId: string, status: string) {
   return unwrap(apiClient.patch(`/admin/delivery-partners/${userId}/status`, { status }));
 }
 
+export interface DeliveryPartnerInput {
+  name: string;
+  phone?: string;
+  email?: string;
+  vehicleType?: string;
+  vehicleNumber?: string;
+  licenseNumber?: string;
+}
+
+export function createDeliveryPartner(data: DeliveryPartnerInput) {
+  return unwrap(apiClient.post('/admin/delivery-partners', data));
+}
+
+export function updateDeliveryPartner(userId: string, data: Partial<DeliveryPartnerInput>) {
+  return unwrap(apiClient.put(`/admin/delivery-partners/${userId}`, data));
+}
+
+export function deleteDeliveryPartner(userId: string) {
+  return unwrap(apiClient.delete(`/admin/delivery-partners/${userId}`));
+}
+
 export function toggleUserActive(userId: string, isActive: boolean) {
   return unwrap(apiClient.patch(`/admin/users/${userId}/active`, { isActive }));
 }
