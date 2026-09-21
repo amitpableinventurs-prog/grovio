@@ -30,6 +30,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Standalone public vendor-signup page (calls POST /api/v1/auth/register-vendor directly) —
+// deliberately kept as a separate plain-HTML directory rather than a route inside admin-panel's
+// React app, since it needs to be reachable without logging in.
+app.use('/vendor-signup', express.static(path.join(__dirname, '../vendor-signup')));
+
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/', (req, res) => {
   res.json({

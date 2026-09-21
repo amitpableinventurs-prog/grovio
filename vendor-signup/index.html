@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Become a Grovio Vendor</title>
+<style>
+  :root {
+    --brand: #16a34a;
+    --brand-dark: #15803d;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --border: #d1d5db;
+    --bg: #f9fafb;
+    --danger: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+  .card {
+    width: 100%;
+    max-width: 480px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
+    padding: 32px;
+  }
+  h1 {
+    font-size: 22px;
+    margin: 0 0 4px;
+  }
+  p.subtitle {
+    color: var(--muted);
+    margin: 0 0 28px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  fieldset {
+    border: none;
+    padding: 0;
+    margin: 0 0 20px;
+  }
+  legend {
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    margin-bottom: 10px;
+    padding: 0;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    margin-top: 14px;
+  }
+  label:first-of-type { margin-top: 0; }
+  input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  input:focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(22,163,74,0.15);
+  }
+  .hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  button[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    background: var(--brand);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  button[type="submit"]:hover { background: var(--brand-dark); }
+  button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
+  .location-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--text);
+    margin-top: 10px;
+  }
+  .location-btn:hover { background: #f3f4f6; }
+  .location-status {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .alert {
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    margin-bottom: 20px;
+    line-height: 1.5;
+    display: none;
+  }
+  .alert.error {
+    background: #fef2f2;
+    color: var(--danger);
+    border: 1px solid #fecaca;
+  }
+  .alert.success {
+    background: #f0fdf4;
+    color: var(--brand-dark);
+    border: 1px solid #bbf7d0;
+  }
+  .success-view { display: none; text-align: center; }
+  .success-view h2 { font-size: 18px; margin-bottom: 8px; }
+  .success-view p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .success-view a {
+    display: inline-block;
+    margin-top: 16px;
+    color: var(--brand-dark);
+    font-weight: 600;
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div id="form-view">
+      <h1>Become a Grovio Vendor</h1>
+      <p class="subtitle">Register your store to start selling on Grovio. Your store stays hidden from customers until our team reviews and approves it — you'll be able to log in and set up your catalog right away.</p>
+
+      <div id="alert" class="alert"></div>
+
+      <form id="signup-form">
+        <fieldset>
+          <legend>Your Details</legend>
+          <label for="name">Full Name</label>
+          <input id="name" name="name" type="text" required autocomplete="name" />
+
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" required autocomplete="email" />
+
+          <label for="phone">Phone (optional)</label>
+          <input id="phone" name="phone" type="tel" autocomplete="tel" />
+
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" required minlength="6" autocomplete="new-password" />
+          <div class="hint">At least 6 characters.</div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Store Details</legend>
+          <label for="storeName">Store Name</label>
+          <input id="storeName" name="storeName" type="text" required />
+
+          <label for="address">Store Address</label>
+          <input id="address" name="address" type="text" />
+
+          <button type="button" class="location-btn" id="locate-btn">📍 Use my current location</button>
+          <div class="location-status" id="location-status"></div>
+        </fieldset>
+
+        <button type="submit" id="submit-btn">Register</button>
+      </form>
+    </div>
+
+    <div id="success-view" class="success-view">
+      <h2>You're registered 🎉</h2>
+      <p>Your account and store have been created. The store is pending admin review before it goes live to customers — you can log in now and start setting up your catalog while you wait.</p>
+      <p>Open the Admin Panel and log in with the email and password you just set.</p>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('signup-form');
+    const alertBox = document.getElementById('alert');
+    const submitBtn = document.getElementById('submit-btn');
+    const locateBtn = document.getElementById('locate-btn');
+    const locationStatus = document.getElementById('location-status');
+
+    let lat = null;
+    let lng = null;
+
+    locateBtn.addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        locationStatus.textContent = 'Location is not supported by this browser.';
+        return;
+      }
+      locationStatus.textContent = 'Detecting…';
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          lat = pos.coords.latitude;
+          lng = pos.coords.longitude;
+          locationStatus.textContent = `Location set (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+        },
+        () => {
+          locationStatus.textContent = 'Could not get your location — you can skip this, an admin can set it later.';
+        }
+      );
+    });
+
+    function showAlert(message, type) {
+      alertBox.textContent = message;
+      alertBox.className = `alert ${type}`;
+      alertBox.style.display = 'block';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertBox.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Registering…';
+
+      const payload = {
+        name: form.name.value.trim(),
+        email: form.email.value.trim(),
+        password: form.password.value,
+        storeName: form.storeName.value.trim(),
+      };
+      if (form.phone.value.trim()) payload.phone = form.phone.value.trim();
+      if (form.address.value.trim()) payload.address = form.address.value.trim();
+      if (lat !== null) payload.lat = lat;
+      if (lng !== null) payload.lng = lng;
+
+      try {
+        // Served from the same backend/Express origin, so a relative path avoids any CORS setup.
+        const res = await fetch('/api/v1/auth/register-vendor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const body = await res.json();
+
+        if (!res.ok || !body.success) {
+          throw new Error(body.message || 'Registration failed. Please try again.');
+        }
+
+        document.getElementById('form-view').style.display = 'none';
+        document.getElementById('success-view').style.display = 'block';
+      } catch (err) {
+        showAlert(err.message || 'Something went wrong. Please try again.', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Register';
+      }
+    });
+  </script>
+</body>
+</html>
