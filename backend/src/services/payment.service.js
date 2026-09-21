@@ -29,6 +29,34 @@ async function createRazorpayOrder({ order, userId }) {
   return { razorpayOrder: rzpOrder, payment };
 }
 
+// Same idea as createRazorpayOrder above, but for a wallet top-up rather than an existing Order —
+// there's no order to attach the Payment record to, and the receipt just needs to be unique.
+async function createWalletTopupOrder({ userId, amount, retryOf = null }) {
+  const razorpay = await getRazorpayInstance();
+  if (!razorpay) {
+    throw new ApiError(500, 'Razorpay is not configured. Set it up in Admin > Settings > Integrations, or RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET in .env');
+  }
+
+  const amountInPaise = Math.round(Number(amount) * 100);
+  const rzpOrder = await razorpay.orders.create({
+    amount: amountInPaise,
+    currency: 'INR',
+    receipt: `wallet-${userId}-${Date.now()}`,
+  });
+
+  const payment = await Payment.create({
+    user: userId,
+    amount,
+    method: 'RAZORPAY',
+    purpose: 'wallet_topup',
+    gatewayOrderId: rzpOrder.id,
+    status: 'created',
+    retryOf,
+  });
+
+  return { razorpayOrder: rzpOrder, payment };
+}
+
 async function verifySignature({ razorpayOrderId, razorpayPaymentId, razorpaySignature }) {
   const keySecret = await getSetting('razorpayKeySecret', 'RAZORPAY_KEY_SECRET');
   if (!keySecret) throw new ApiError(500, 'Razorpay is not configured');
@@ -106,6 +134,7 @@ async function debitWallet({ userId, amount, reason, refOrderId = null }) {
 
 module.exports = {
   createRazorpayOrder,
+  createWalletTopupOrder,
   verifySignature,
   verifyWebhookSignature,
   fetchPaymentInstrument,

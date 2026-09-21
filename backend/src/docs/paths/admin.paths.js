@@ -386,7 +386,7 @@ paths['/admin/inventory'] = {
 
 // ---------- Payments / Refunds ----------
 paths['/admin/payments'] = {
-  get: { tags: TAG_PAYMENTS, summary: 'List all payment records', ...bearer(), parameters: [...PAGE_QS, statusParam, q('method'), q('instrument', 'card | upi | netbanking | wallet | emi — only meaningful for method=RAZORPAY')], responses: { 200: envelope(paginated(ref('Payment'))), 401: RESPONSES_401 } },
+  get: { tags: TAG_PAYMENTS, summary: 'List all payment records', ...bearer(), parameters: [...PAGE_QS, statusParam, q('method'), q('instrument', 'card | upi | netbanking | wallet | emi — only meaningful for method=RAZORPAY'), q('purpose', 'order | wallet_topup')], responses: { 200: envelope(paginated(ref('Payment'))), 401: RESPONSES_401 } },
 };
 paths['/admin/payments/cod-reconciliation'] = {
   get: {

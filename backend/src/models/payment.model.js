@@ -1,10 +1,17 @@
 const { Schema, model } = require('mongoose');
 
 const paymentSchema = new Schema({
-  order: { type: Schema.Types.ObjectId, ref: 'Order', required: true },
+  // null for purpose 'wallet_topup' — a top-up isn't tied to any order.
+  order: { type: Schema.Types.ObjectId, ref: 'Order', default: null },
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   amount: { type: Number, required: true },
   method: { type: String, enum: ['COD', 'RAZORPAY', 'WALLET'], required: true },
+  // What this payment is for. Lets order payments and wallet top-ups share one Payment
+  // collection (and the same Razorpay create/verify/webhook plumbing) instead of duplicating it.
+  purpose: { type: String, enum: ['order', 'wallet_topup'], default: 'order' },
+  // Set when this attempt is a retry of an earlier failed one (see wallet.controller.js#retryAddMoney)
+  // — each attempt still gets its own Razorpay order, this just links them for traceability.
+  retryOf: { type: Schema.Types.ObjectId, ref: 'Payment', default: null },
   // Only set for method === 'COD': how the delivery partner actually collected it at the door.
   collectionMethod: { type: String, enum: ['cash', 'upi'], default: null },
   // Only set for method === 'RAZORPAY': the actual instrument Razorpay reports the customer paid

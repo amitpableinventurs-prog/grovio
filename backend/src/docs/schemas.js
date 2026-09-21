@@ -375,10 +375,12 @@ const Payment = {
   type: 'object',
   properties: {
     _id: id,
-    order: id,
+    order: { ...id, nullable: true, description: 'null for purpose: wallet_topup' },
     user: id,
     amount: money,
     method: { type: 'string', enum: ['COD', 'RAZORPAY', 'WALLET'] },
+    purpose: { type: 'string', enum: ['order', 'wallet_topup'] },
+    retryOf: { ...id, nullable: true, description: 'Set when this attempt is a retry of an earlier failed wallet top-up' },
     collectionMethod: { type: 'string', enum: ['cash', 'upi'], nullable: true, description: 'Only for COD' },
     instrument: { type: 'string', enum: ['card', 'upi', 'netbanking', 'wallet', 'emi'], nullable: true, description: 'Only for RAZORPAY — the instrument the customer actually used' },
     gatewayOrderId: { type: 'string', nullable: true },

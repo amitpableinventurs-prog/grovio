@@ -98,6 +98,9 @@ export default function ProfilePage() {
         <Link to="/orders" className="p-4 text-sm font-medium text-gray-700 hover:bg-gray-50">
           My Orders
         </Link>
+        <Link to="/wallet" className="p-4 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          My Wallet
+        </Link>
         <Link to="/addresses" className="p-4 text-sm font-medium text-gray-700 hover:bg-gray-50">
           My Addresses
         </Link>

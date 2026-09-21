@@ -56,6 +56,11 @@ router.post('/orders/:orderId/rating', reviewsCtrl.submitReview);
 // Wallet
 router.get('/wallet', walletCtrl.getWallet);
 router.get('/wallet/transactions', walletCtrl.getTransactions);
+router.get('/wallet/transactions/:id', walletCtrl.getTransactionDetail);
+router.post('/wallet/add-money/create', walletCtrl.createAddMoney);
+router.post('/wallet/add-money/verify', walletCtrl.verifyAddMoney);
+router.post('/wallet/add-money/:id/retry', walletCtrl.retryAddMoney);
+router.get('/wallet/add-money/:id/status', walletCtrl.getAddMoneyStatus);
 
 // Coupons
 router.get('/coupons', couponsCtrl.listAvailableCoupons);

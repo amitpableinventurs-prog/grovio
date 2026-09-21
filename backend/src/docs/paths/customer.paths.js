@@ -104,6 +104,44 @@ paths['/customer/wallet'] = {
 paths['/customer/wallet/transactions'] = {
   get: { tags: TAG_WALLET, summary: 'Wallet transaction history', ...bearer(), parameters: PAGE_QS, responses: { 200: envelope(paginated(ref('WalletTransaction'))), 401: RESPONSES_401 } },
 };
+paths['/customer/wallet/transactions/{id}'] = {
+  get: { tags: TAG_WALLET, summary: 'Get one wallet transaction', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('WalletTransaction')), 401: RESPONSES_401, 404: RESPONSES_404 } },
+};
+paths['/customer/wallet/add-money/create'] = {
+  post: {
+    tags: TAG_WALLET, summary: 'Start a wallet top-up — creates a Razorpay order', ...bearer(),
+    requestBody: jsonBody({ amount: { type: 'number', example: 500 } }, ['amount']),
+    responses: {
+      200: envelope({ type: 'object', properties: { paymentId: { type: 'string' }, razorpayOrderId: { type: 'string' }, amount: { type: 'integer' }, currency: { type: 'string' }, keyId: { type: 'string' } } }, 'Add-money order created'),
+      400: errorResponse('amount must be between 10 and 50000'), 401: RESPONSES_401,
+    },
+  },
+};
+paths['/customer/wallet/add-money/verify'] = {
+  post: {
+    tags: TAG_WALLET, summary: 'Verify a completed top-up payment and credit the wallet', ...bearer(),
+    requestBody: jsonBody({ razorpayOrderId: { type: 'string' }, razorpayPaymentId: { type: 'string' }, razorpaySignature: { type: 'string' } }, ['razorpayOrderId', 'razorpayPaymentId', 'razorpaySignature']),
+    responses: {
+      200: envelope({ type: 'object', properties: { payment: ref('Payment'), balance: { type: 'number' } } }, 'Money added to wallet'),
+      400: errorResponse('Payment signature verification failed'), 401: RESPONSES_401, 404: RESPONSES_404,
+    },
+  },
+};
+paths['/customer/wallet/add-money/{id}/retry'] = {
+  post: {
+    tags: TAG_WALLET, summary: 'Retry a failed top-up — creates a fresh Razorpay order for the same amount', ...bearer(), parameters: [idParam('id', 'The earlier (failed) Payment ID')],
+    responses: {
+      200: envelope({ type: 'object', properties: { paymentId: { type: 'string' }, razorpayOrderId: { type: 'string' }, amount: { type: 'integer' }, currency: { type: 'string' }, keyId: { type: 'string' } } }, 'Add-money order created'),
+      400: errorResponse('This payment already succeeded'), 401: RESPONSES_401, 404: RESPONSES_404,
+    },
+  },
+};
+paths['/customer/wallet/add-money/{id}/status'] = {
+  get: {
+    tags: TAG_WALLET, summary: 'Check a top-up payment\'s status', ...bearer(), parameters: [idParam('id', 'The Payment ID returned by add-money/create')],
+    responses: { 200: envelope({ type: 'object', properties: { status: { type: 'string', enum: ['created', 'paid', 'failed', 'refunded'] }, amount: { type: 'number' }, failureReason: { type: 'string', nullable: true } } }), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
+};
 
 paths['/customer/coupons'] = {
   get: { tags: TAG_COUPONS, summary: 'List available coupons (platform + that store\'s own offers)', ...bearer(), parameters: [q('storeId')], responses: { 200: envelope({ type: 'array', items: ref('Coupon') }), 401: RESPONSES_401 } },

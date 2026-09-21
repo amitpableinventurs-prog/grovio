@@ -7,15 +7,16 @@ const { creditWallet } = require('../../services/payment.service');
 const { logAdminActivity } = require('../../services/audit.service');
 const { notifyUser } = require('../../services/notification.service');
 
-// GET /admin/payments?status=&method=&instrument=
+// GET /admin/payments?status=&method=&instrument=&purpose=
 const listPayments = catchAsync(async (req, res) => {
   const { page, limit, offset } = getPagination(req.query);
-  const { status, method, instrument } = req.query;
+  const { status, method, instrument, purpose } = req.query;
 
   const where = {};
   if (status) where.status = status;
   if (method) where.method = method;
   if (instrument) where.instrument = instrument;
+  if (purpose) where.purpose = purpose;
 
   const [rows, count] = await Promise.all([
     Payment.find(where)

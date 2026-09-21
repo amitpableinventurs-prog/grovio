@@ -14,6 +14,7 @@ import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import AddressesPage from './pages/AddressesPage';
 import ProfilePage from './pages/ProfilePage';
+import WalletPage from './pages/WalletPage';
 import HelpSupportPage from './pages/HelpSupportPage';
 import AboutUsPage from './pages/AboutUsPage';
 import ReturnsRefundsPage from './pages/ReturnsRefundsPage';
@@ -114,6 +115,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/wallet"
+            element={
+              <ProtectedRoute>
+                <WalletPage />
               </ProtectedRoute>
             }
           />

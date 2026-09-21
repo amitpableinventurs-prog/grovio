@@ -3,6 +3,7 @@ const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const paymentService = require('../../services/payment.service');
+const { creditWallet } = require('../../services/payment.service');
 const { notifyUser } = require('../../services/notification.service');
 const { getSetting } = require('../../services/settings.service');
 
@@ -87,30 +88,42 @@ const razorpayWebhook = catchAsync(async (req, res) => {
 
   if (event === 'payment.captured' && paymentEntity) {
     const payment = await Payment.findOne({ gatewayOrderId: paymentEntity.order_id });
-    if (payment) {
+    // Idempotency: a webhook can be delivered more than once, and the client's own verify call
+    // (see verifyRazorpayPayment/verifyAddMoney) may have already processed this payment first.
+    if (payment && payment.status !== 'paid') {
       payment.status = 'paid';
       payment.gatewayPaymentId = paymentEntity.id;
       payment.instrument = paymentEntity.method || null;
       payment.rawResponse = paymentEntity;
       await payment.save();
 
-      const order = await Order.findById(payment.order);
-      if (order && order.paymentStatus !== 'paid') {
-        order.paymentStatus = 'paid';
-        await order.save();
-        await notifyUser(order.customer, {
-          title: 'Payment received',
-          body: `Payment for order ${order.orderNumber} was successful.`,
-          type: 'payment_success',
-          data: { orderId: order._id },
+      if (payment.purpose === 'wallet_topup') {
+        await creditWallet({ userId: payment.user, amount: payment.amount, reason: 'Wallet top-up' });
+        await notifyUser(payment.user, {
+          title: 'Money added',
+          body: `₹${payment.amount} was added to your Grovio Wallet.`,
+          type: 'wallet_topup_success',
+          data: { paymentId: payment._id },
         });
+      } else {
+        const order = await Order.findById(payment.order);
+        if (order && order.paymentStatus !== 'paid') {
+          order.paymentStatus = 'paid';
+          await order.save();
+          await notifyUser(order.customer, {
+            title: 'Payment received',
+            body: `Payment for order ${order.orderNumber} was successful.`,
+            type: 'payment_success',
+            data: { orderId: order._id },
+          });
+        }
       }
     }
   }
 
   // Authoritative failure signal — a customer can close the checkout widget or lose connectivity
-  // before the client-side failure callback (see reportRazorpayFailure above) ever fires, so this
-  // webhook is what actually guarantees a failed attempt gets recorded.
+  // before the client-side failure callback (see reportRazorpayFailure/retryAddMoney below) ever
+  // fires, so this webhook is what actually guarantees a failed attempt gets recorded.
   if (event === 'payment.failed' && paymentEntity) {
     const payment = await Payment.findOne({ gatewayOrderId: paymentEntity.order_id });
     if (payment && payment.status !== 'paid') {
@@ -120,16 +133,25 @@ const razorpayWebhook = catchAsync(async (req, res) => {
       payment.rawResponse = paymentEntity;
       await payment.save();
 
-      const order = await Order.findById(payment.order);
-      if (order && order.paymentStatus !== 'paid') {
-        order.paymentStatus = 'failed';
-        await order.save();
-        await notifyUser(order.customer, {
-          title: 'Payment failed',
-          body: `Payment for order ${order.orderNumber} could not be completed. Please try again.`,
-          type: 'payment_failed',
-          data: { orderId: order._id },
+      if (payment.purpose === 'wallet_topup') {
+        await notifyUser(payment.user, {
+          title: 'Add money failed',
+          body: `We couldn't add ₹${payment.amount} to your wallet. Please try again.`,
+          type: 'wallet_topup_failed',
+          data: { paymentId: payment._id },
         });
+      } else {
+        const order = await Order.findById(payment.order);
+        if (order && order.paymentStatus !== 'paid') {
+          order.paymentStatus = 'failed';
+          await order.save();
+          await notifyUser(order.customer, {
+            title: 'Payment failed',
+            body: `Payment for order ${order.orderNumber} could not be completed. Please try again.`,
+            type: 'payment_failed',
+            data: { orderId: order._id },
+          });
+        }
       }
     }
   }
