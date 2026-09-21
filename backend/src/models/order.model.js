@@ -37,6 +37,12 @@ const orderSchema = new Schema({
   handoverOtp: { type: String, default: null, select: false },
   handoverOtpExpiresAt: { type: Date, default: null, select: false },
   handoverOtpAttempts: { type: Number, default: 0, select: false },
+  // Alternative to handoverOtp above — either one completes the same Picker->Delivery handover.
+  // The Picker's app displays this as a QR code (see GET /picker/jobs/:id/qr); the Delivery Boy
+  // scans it and submits the decoded token via POST /delivery/jobs/:id/scan. Every scan attempt,
+  // successful or not, is recorded in ScannerLog regardless of which method completes the handover.
+  handoverQrToken: { type: String, default: null, select: false },
+  handoverQrTokenExpiresAt: { type: Date, default: null, select: false },
   pickerHandoverAt: { type: Date, default: null },
   arrivedAtPickupAt: { type: Date, default: null },
   arrivedAtDropAt: { type: Date, default: null },
@@ -78,6 +84,8 @@ function stripSensitiveFields(doc, ret) {
   delete ret.handoverOtp;
   delete ret.handoverOtpExpiresAt;
   delete ret.handoverOtpAttempts;
+  delete ret.handoverQrToken;
+  delete ret.handoverQrTokenExpiresAt;
   return ret;
 }
 orderSchema.set('toJSON', { transform: stripSensitiveFields });

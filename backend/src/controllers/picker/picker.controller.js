@@ -3,7 +3,7 @@ const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
-const { transitionOrder, ensureHandoverOtp } = require('../../services/order.service');
+const { transitionOrder, ensureHandoverOtp, ensureHandoverQrToken } = require('../../services/order.service');
 const { findNearestDeliveryPartner } = require('../../services/assignment.service');
 const { notifyUser } = require('../../services/notification.service');
 
@@ -186,6 +186,24 @@ const getHandoverOtp = catchAsync(async (req, res) => {
   new ApiResponse(200, { otp: order.handoverOtp, expiresAt: order.handoverOtpExpiresAt }).send(res);
 });
 
+// GET /picker/jobs/:id/qr -> the handover QR token to render as a QR code for the delivery
+// partner to scan in person. Alternative to GET .../otp — either one completes the same handover.
+// Auto-generated when a delivery partner is first assigned; refreshed here if expired.
+const getHandoverQr = catchAsync(async (req, res) => {
+  const order = await Order.findOne({ _id: req.params.id, picker: req.user.id })
+    .select('+handoverQrToken +handoverQrTokenExpiresAt orderStatus delivery orderNumber');
+  if (!order) throw new ApiError(404, 'Job not found or not assigned to you');
+  if (!order.delivery) throw new ApiError(400, 'No delivery partner assigned to this order yet');
+  if (!['assigned', 'packed'].includes(order.orderStatus)) {
+    throw new ApiError(400, `Handover QR is not applicable while order is '${order.orderStatus}'`);
+  }
+
+  const freshlyGenerated = ensureHandoverQrToken(order);
+  if (freshlyGenerated) await order.save();
+
+  new ApiResponse(200, { qrToken: order.handoverQrToken, expiresAt: order.handoverQrTokenExpiresAt }).send(res);
+});
+
 // POST /picker/jobs/:id/complete -> moves order to 'packed' and best-effort assigns delivery
 const completeJob = catchAsync(async (req, res) => {
   const order = await findAssignedJob(req);
@@ -220,5 +238,6 @@ module.exports = {
   updateJobItem,
   recordSubstitution,
   getHandoverOtp,
+  getHandoverQr,
   completeJob,
 };

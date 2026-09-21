@@ -1,5 +1,5 @@
 import { apiClient, unwrap } from './client';
-import type { Order, Paginated } from '../types';
+import type { Order, Paginated, ScannerLog } from '../types';
 import type { ListParams } from './common';
 
 export function fetchOrders(params: ListParams = {}) {
@@ -20,4 +20,8 @@ export function assignDeliveryToOrder(orderId: string, deliveryId: string) {
 
 export function issueRefund(orderId: string, amount: number, reason: string) {
   return unwrap(apiClient.post(`/admin/orders/${orderId}/refund`, { amount, reason }));
+}
+
+export function fetchScannerLogs(orderId: string) {
+  return unwrap<Paginated<ScannerLog>>(apiClient.get('/admin/scanner-logs', { params: { orderId, limit: 50 } }));
 }

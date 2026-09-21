@@ -36,7 +36,18 @@ paths['/delivery/jobs/{id}/pickers'] = {
   get: { tags: TAG, summary: 'Get the picker(s) assigned to this order (for handover identification)', ...bearer(), parameters: [idParam()], responses: { 200: envelope({ type: 'array', items: ref('PickerProfile') }), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
 paths['/delivery/jobs/{id}/otp/verify'] = {
-  post: { tags: TAG, summary: 'Verify the picker\'s handover OTP (order -> picked_up). The only path to this status.', ...bearer(), parameters: [idParam()], requestBody: jsonBody({ otp: { type: 'string', example: '4821' } }, ['otp']), responses: { 200: envelope(ref('Order'), 'Handover confirmed. Order picked up.'), 400: errorResponse('Incorrect or expired OTP'), 401: RESPONSES_401, 404: RESPONSES_404 } },
+  post: { tags: TAG, summary: 'Verify the picker\'s handover OTP (order -> picked_up)', ...bearer(), parameters: [idParam()], requestBody: jsonBody({ otp: { type: 'string', example: '4821' } }, ['otp']), responses: { 200: envelope(ref('Order'), 'Handover confirmed. Order picked up.'), 400: errorResponse('Incorrect or expired OTP'), 401: RESPONSES_401, 404: RESPONSES_404 } },
+};
+paths['/delivery/jobs/{id}/scan'] = {
+  post: {
+    tags: TAG, summary: 'Scan the picker\'s handover QR code (order -> picked_up) — alternative to otp/verify above; either one completes the handover', ...bearer(), parameters: [idParam()],
+    requestBody: jsonBody({
+      qrToken: { type: 'string', description: 'Decoded content of the scanned QR code' },
+      deviceId: { type: 'string' },
+      location: { type: 'object', properties: { lat: { type: 'number' }, lng: { type: 'number' } } },
+    }, ['qrToken']),
+    responses: { 200: envelope(ref('Order'), 'Handover confirmed. Order picked up.'), 400: errorResponse('Invalid, expired, or unrelated QR code'), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
 };
 paths['/delivery/jobs/{id}/out-for-delivery'] = {
   post: { tags: TAG, summary: 'Depart with the package after a verified handover (order -> out_for_delivery)', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('Order'), 'Marked as out for delivery'), 401: RESPONSES_401, 404: RESPONSES_404 } },

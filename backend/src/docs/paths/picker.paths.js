@@ -34,6 +34,9 @@ paths['/picker/jobs/{id}/complete'] = {
 paths['/picker/jobs/{id}/otp'] = {
   get: { tags: TAG, summary: 'Get the handover OTP to read out to the delivery partner in person (auto-generated on delivery assignment; refreshed here if expired)', ...bearer(), parameters: [idParam()], responses: { 200: envelope({ type: 'object', properties: { otp: { type: 'string', example: '4821' }, expiresAt: { type: 'string', format: 'date-time' } } }), 400: errorResponse('No delivery partner assigned yet'), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
+paths['/picker/jobs/{id}/qr'] = {
+  get: { tags: TAG, summary: 'Get the handover QR token to render as a QR code for the delivery partner to scan (alternative to the OTP above; auto-generated on delivery assignment, refreshed here if expired)', ...bearer(), parameters: [idParam()], responses: { 200: envelope({ type: 'object', properties: { qrToken: { type: 'string' }, expiresAt: { type: 'string', format: 'date-time' } } }), 400: errorResponse('No delivery partner assigned yet'), 401: RESPONSES_401, 404: RESPONSES_404 } },
+};
 paths['/picker/history'] = {
   get: { tags: TAG, summary: 'Completed/cancelled/failed jobs history', ...bearer(), parameters: PAGE_QS, responses: { 200: envelope(paginated(ref('Order'))), 401: RESPONSES_401 } },
 };

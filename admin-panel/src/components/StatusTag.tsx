@@ -3,6 +3,7 @@ import { titleCase } from '../utils/format';
 
 const COLOR_MAP: Record<string, string> = {
   pending: 'gold',
+  success: 'green',
   approved: 'green',
   active: 'green',
   open: 'green',

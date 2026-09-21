@@ -85,6 +85,27 @@ const PickerProfile = {
   },
 };
 
+const ScannerLog = {
+  type: 'object',
+  properties: {
+    _id: id,
+    order: id,
+    qrType: { type: 'string', enum: ['handover'] },
+    qrToken: { type: 'string', nullable: true },
+    scannedBy: id,
+    userType: { type: 'string', enum: ['picker', 'delivery'] },
+    deviceId: { type: 'string', nullable: true },
+    location: {
+      type: 'object',
+      nullable: true,
+      properties: { lat: { type: 'number', nullable: true }, lng: { type: 'number', nullable: true } },
+    },
+    status: { type: 'string', enum: ['success', 'failed'] },
+    failureReason: { type: 'string', nullable: true },
+    createdAt: { type: 'string', format: 'date-time' },
+  },
+};
+
 const DeliveryProfile = {
   type: 'object',
   properties: {
@@ -457,6 +478,7 @@ module.exports = {
   Store,
   PickerProfile,
   DeliveryProfile,
+  ScannerLog,
   UserWithProfile,
   Category,
   ProductVariant,

@@ -16,6 +16,7 @@ router.post('/jobs/:id/reject', ctrl.rejectAssignment);
 router.post('/jobs/:id/arrived-pickup', ctrl.markArrivedAtPickup);
 router.get('/jobs/:id/pickers', ctrl.listAssignedPickers);
 router.post('/jobs/:id/otp/verify', ctrl.verifyHandoverOtpCtrl);
+router.post('/jobs/:id/scan', ctrl.scanHandoverQr);
 router.post('/jobs/:id/out-for-delivery', ctrl.markOutForDelivery);
 router.post('/jobs/:id/arrived-drop', ctrl.markArrivedAtDrop);
 router.post('/jobs/:id/complete', ctrl.completeJob);

@@ -159,6 +159,20 @@ export interface StatusLog {
   createdAt: string;
 }
 
+export interface ScannerLog {
+  _id: string;
+  order: string | { _id: string; orderNumber: string };
+  qrType: 'handover';
+  qrToken?: string | null;
+  scannedBy: string | User;
+  userType: 'picker' | 'delivery';
+  deviceId?: string | null;
+  location?: { lat: number | null; lng: number | null } | null;
+  status: 'success' | 'failed';
+  failureReason?: string | null;
+  createdAt: string;
+}
+
 export interface Order {
   _id: string;
   orderNumber: string;

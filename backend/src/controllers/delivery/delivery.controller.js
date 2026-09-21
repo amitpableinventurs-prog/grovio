@@ -3,7 +3,7 @@ const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
-const { transitionOrder, verifyHandoverOtp } = require('../../services/order.service');
+const { transitionOrder, verifyHandoverOtp, verifyHandoverQr } = require('../../services/order.service');
 const { creditWallet } = require('../../services/payment.service');
 
 const COD_COLLECTION_METHODS = ['cash', 'upi'];
@@ -86,10 +86,11 @@ const listHistory = catchAsync(async (req, res) => {
   new ApiResponse(200, { items: rows, meta: buildPageMeta({ page, limit, count }) }).send(res);
 });
 
-async function findAssignedOrder(req, { withPin = false, withOtp = false } = {}) {
+async function findAssignedOrder(req, { withPin = false, withOtp = false, withQr = false } = {}) {
   let query = Order.findOne({ _id: req.params.id, delivery: req.user.id }).populate('address').populate('store');
   if (withPin) query = query.select('+deliveryPin');
   if (withOtp) query = query.select('+handoverOtp +handoverOtpExpiresAt +handoverOtpAttempts');
+  if (withQr) query = query.select('+handoverQrToken +handoverQrTokenExpiresAt');
   const order = await query;
   if (!order) throw new ApiError(404, 'Order not found or not assigned to you');
   return order;
@@ -155,6 +156,29 @@ const verifyHandoverOtpCtrl = catchAsync(async (req, res) => {
       invalid: `Incorrect OTP.${result.attemptsLeft != null ? ` ${result.attemptsLeft} attempt(s) left.` : ''}`,
     };
     throw new ApiError(400, messages[result.reason] || 'Invalid handover OTP');
+  }
+
+  new ApiResponse(200, order, 'Handover confirmed. Order picked up.').send(res);
+});
+
+// POST /delivery/jobs/:id/scan { qrToken, deviceId?, location?: { lat, lng } } -> scans the
+// Picker's handover QR code. Alternative to POST .../otp/verify — either one completes the same
+// handover (order -> picked_up). Every attempt, successful or not, is recorded in ScannerLog.
+const scanHandoverQr = catchAsync(async (req, res) => {
+  const order = await findAssignedOrder(req, { withQr: true });
+  if (!order.deliveryAcceptedAt) throw new ApiError(400, 'Accept this job before scanning the handover QR');
+
+  const { qrToken, deviceId, location } = req.body;
+  if (!qrToken) throw new ApiError(400, 'qrToken is required');
+
+  const result = await verifyHandoverQr({ order, qrToken, scannedBy: req.user.id, userType: 'delivery', deviceId, location });
+  if (!result.valid) {
+    const messages = {
+      not_generated: 'No handover QR has been generated for this order yet',
+      expired: 'This QR code has expired. Ask the picker to refresh it.',
+      invalid: 'This QR code does not belong to this order',
+    };
+    throw new ApiError(400, messages[result.reason] || 'Invalid QR code');
   }
 
   new ApiResponse(200, order, 'Handover confirmed. Order picked up.').send(res);
@@ -250,6 +274,7 @@ module.exports = {
   markArrivedAtPickup,
   listAssignedPickers,
   verifyHandoverOtpCtrl,
+  scanHandoverQr,
   markOutForDelivery,
   markArrivedAtDrop,
   completeJob,

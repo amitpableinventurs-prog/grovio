@@ -196,6 +196,14 @@ paths['/admin/orders/{id}/refund'] = {
   },
 };
 
+paths['/admin/scanner-logs'] = {
+  get: {
+    tags: TAG_ORDERS, summary: 'List handover QR scan attempts (success and failure) — see /delivery/jobs/{id}/scan', ...bearer(),
+    parameters: [...PAGE_QS, q('orderId'), q('status', 'success | failed'), q('userType', 'picker | delivery')],
+    responses: { 200: envelope(paginated(ref('ScannerLog'))), 401: RESPONSES_401, 403: RESPONSES_403 },
+  },
+};
+
 // ---------- Promotions: Coupons ----------
 const couponBody = {
   code: { type: 'string', example: 'WELCOME50' },

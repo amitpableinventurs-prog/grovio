@@ -15,7 +15,7 @@ import {
   App as AntApp,
 } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchOrders, fetchOrder, assignPickerToOrder, assignDeliveryToOrder, issueRefund } from '../api/orders';
+import { fetchOrders, fetchOrder, assignPickerToOrder, assignDeliveryToOrder, issueRefund, fetchScannerLogs } from '../api/orders';
 import { fetchUsersByRole } from '../api/users';
 import type { Order, User, Store } from '../types';
 import { usePageState } from '../hooks/usePageState';
@@ -44,6 +44,12 @@ export default function OrdersPage() {
   const { data: order } = useQuery({
     queryKey: ['order-detail', detailId],
     queryFn: () => fetchOrder(detailId as string),
+    enabled: !!detailId,
+  });
+
+  const { data: scannerLogs } = useQuery({
+    queryKey: ['order-scanner-logs', detailId],
+    queryFn: () => fetchScannerLogs(detailId as string),
     enabled: !!detailId,
   });
 
@@ -200,6 +206,25 @@ export default function OrdersPage() {
                 ),
               }))}
             />
+
+            {!!scannerLogs?.items.length && (
+              <>
+                <Typography.Title level={5}>Handover Scans</Typography.Title>
+                <Table
+                  size="small"
+                  rowKey="_id"
+                  pagination={false}
+                  dataSource={scannerLogs.items}
+                  columns={[
+                    { title: 'When', render: (_, r) => formatDateTime(r.createdAt) },
+                    { title: 'By', render: (_, r) => (typeof r.scannedBy === 'object' ? r.scannedBy.name : r.scannedBy) },
+                    { title: 'Role', render: (_, r) => titleCase(r.userType) },
+                    { title: 'Result', render: (_, r) => <StatusTag status={r.status} /> },
+                    { title: 'Reason', render: (_, r) => r.failureReason || '—' },
+                  ]}
+                />
+              </>
+            )}
           </>
         )}
       </Drawer>

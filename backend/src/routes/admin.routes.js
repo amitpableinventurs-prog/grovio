@@ -19,6 +19,7 @@ const paymentsCtrl = require('../controllers/admin/payments.controller');
 const settlementsCtrl = require('../controllers/admin/settlements.controller');
 const adminsCtrl = require('../controllers/admin/admins.controller');
 const pickersCtrl = require('../controllers/admin/pickers.controller');
+const scannerLogsCtrl = require('../controllers/admin/scannerLogs.controller');
 
 router.use(authenticate, authorize('admin'));
 
@@ -103,6 +104,11 @@ router.patch('/orders/:id/reject', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANA
 router.patch('/orders/:id/assign-picker', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.assignPicker);
 router.patch('/orders/:id/assign-delivery', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.assignDelivery);
 router.post('/orders/:id/refund', p(PERMISSIONS.MANAGE_PAYMENTS), paymentsCtrl.issueRefund);
+
+// Scanner logs — every Picker/Delivery handover QR scan attempt, success or failure (section 18
+// of the delivery-panel spec). Not exposed to the store-scoped MANAGE_OWN_STORE_INVENTORY
+// sub-role — this list isn't filtered by store, so scoping it there would leak other stores' logs.
+router.get('/scanner-logs', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY), scannerLogsCtrl.listScannerLogs);
 
 // Coupons / Promotions
 router.post('/coupons', p(PERMISSIONS.MANAGE_PROMOTIONS), couponsCtrl.createCoupon);

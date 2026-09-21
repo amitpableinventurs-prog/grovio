@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+const { ScannerLog } = require('../models');
 const { emitOrderEvent } = require('../sockets');
 const { notifyUser } = require('./notification.service');
 const ApiError = require('../utils/apiError');
@@ -37,6 +39,10 @@ const STATUS_MESSAGES = {
 
 const HANDOVER_OTP_EXPIRY_MINUTES = Number(process.env.OTP_EXPIRY_MINUTES || 5);
 const MAX_HANDOVER_OTP_ATTEMPTS = Number(process.env.OTP_MAX_VERIFY_ATTEMPTS || 5);
+// QR tokens aren't a short digit code someone might brute-force by hand like an OTP, so there's
+// no attempts cap here — just a longer expiry window than the OTP (the picker's screen may sit
+// displayed for a while before the delivery partner physically arrives to scan it).
+const HANDOVER_QR_EXPIRY_MINUTES = Number(process.env.HANDOVER_QR_EXPIRY_MINUTES || 60);
 
 function generatePin() {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -45,6 +51,12 @@ function generatePin() {
 function generateOtpCode() {
   if (process.env.OTP_FIXED_CODE) return process.env.OTP_FIXED_CODE;
   return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
+// A secure opaque token, not customer data, to embed in the handover QR code (see
+// order.model.js#handoverQrToken).
+function generateQrToken() {
+  return crypto.randomBytes(24).toString('hex');
 }
 
 // Ensures `order` has a live (non-expired) handover OTP, generating a fresh one if there isn't
@@ -58,6 +70,15 @@ function ensureHandoverOtp(order) {
   order.handoverOtpExpiresAt = new Date(Date.now() + HANDOVER_OTP_EXPIRY_MINUTES * 60 * 1000);
   order.handoverOtpAttempts = 0;
   return order.handoverOtp;
+}
+
+// Same idea as ensureHandoverOtp, for the QR alternative — see order.model.js#handoverQrToken.
+function ensureHandoverQrToken(order) {
+  const expired = !order.handoverQrToken || !order.handoverQrTokenExpiresAt || order.handoverQrTokenExpiresAt < new Date();
+  if (!expired) return null;
+  order.handoverQrToken = generateQrToken();
+  order.handoverQrTokenExpiresAt = new Date(Date.now() + HANDOVER_QR_EXPIRY_MINUTES * 60 * 1000);
+  return order.handoverQrToken;
 }
 
 // Validates the code the Delivery Boy enters against the Picker's handover OTP. On success this
@@ -75,9 +96,45 @@ async function verifyHandoverOtp({ order, code, changedBy }) {
     return { valid: false, reason: attemptsLeft <= 0 ? 'max_attempts' : 'invalid', attemptsLeft: Math.max(attemptsLeft, 0) };
   }
 
+  // Clear both handover methods on success — QR and OTP verify the same physical handover, so
+  // once either one completes it, the other should stop being valid too.
   order.handoverOtp = null;
   order.handoverOtpExpiresAt = null;
+  order.handoverQrToken = null;
+  order.handoverQrTokenExpiresAt = null;
   await transitionOrder({ order, toStatus: 'picked_up', changedBy, note: 'Handover OTP verified' });
+  return { valid: true };
+}
+
+// Validates the QR token the Delivery Boy scanned against the Picker's handover QR — the other
+// path (alongside verifyHandoverOtp above) that can transition an order to 'picked_up'. Every
+// attempt, successful or not, is written to ScannerLog first, so a failed/rejected scan is never
+// silently dropped (see the "current implementation" delivery-panel spec, section 9/18).
+async function verifyHandoverQr({ order, qrToken, scannedBy, userType, deviceId, location }) {
+  let reason = null;
+  if (!order.handoverQrToken) reason = 'not_generated';
+  else if (order.handoverQrTokenExpiresAt < new Date()) reason = 'expired';
+  else if (order.handoverQrToken !== qrToken) reason = 'invalid';
+
+  await ScannerLog.create({
+    order: order._id,
+    qrType: 'handover',
+    qrToken: qrToken || null,
+    scannedBy,
+    userType,
+    deviceId: deviceId || null,
+    location: location || undefined,
+    status: reason ? 'failed' : 'success',
+    failureReason: reason,
+  });
+
+  if (reason) return { valid: false, reason };
+
+  order.handoverQrToken = null;
+  order.handoverQrTokenExpiresAt = null;
+  order.handoverOtp = null;
+  order.handoverOtpExpiresAt = null;
+  await transitionOrder({ order, toStatus: 'picked_up', changedBy: scannedBy, note: 'Handover QR scanned' });
   return { valid: true };
 }
 
@@ -91,15 +148,17 @@ async function transitionOrder({ order, toStatus, changedBy, note }) {
   if (toStatus === 'delivered') order.deliveredAt = new Date();
   if (toStatus === 'picked_up') order.pickerHandoverAt = order.pickerHandoverAt || new Date();
 
-  // Generate the customer hand-off PIN and the picker/delivery handover OTP as soon as a
+  // Generate the customer hand-off PIN and both handover methods (OTP + QR) as soon as a
   // delivery partner is assigned. The PIN is collected from the customer at the doorstep to
-  // confirm delivery; the OTP is read out by the Picker to the Delivery Boy at pickup time.
+  // confirm delivery; the OTP/QR are used by the Picker and Delivery Boy at pickup time —
+  // whichever one is used first completes the handover (see verifyHandoverOtp/verifyHandoverQr).
   let pin = null;
   if (toStatus === 'assigned' && !order.deliveryPin) {
     pin = generatePin();
     order.deliveryPin = pin;
   }
   const handoverOtp = toStatus === 'assigned' ? ensureHandoverOtp(order) : null;
+  if (toStatus === 'assigned') ensureHandoverQrToken(order);
 
   order.statusLogs.push({ status: toStatus, changedBy, note });
   await order.save();
@@ -128,4 +187,4 @@ async function transitionOrder({ order, toStatus, changedBy, note }) {
   return order;
 }
 
-module.exports = { transitionOrder, TRANSITIONS, ensureHandoverOtp, verifyHandoverOtp };
+module.exports = { transitionOrder, TRANSITIONS, ensureHandoverOtp, verifyHandoverOtp, ensureHandoverQrToken, verifyHandoverQr };
