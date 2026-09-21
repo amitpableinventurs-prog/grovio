@@ -1,4 +1,4 @@
-const { Order, PickerProfile, DeliveryProfile, Payment, Wallet, WalletTransaction } = require('../../models');
+const { Order, PickerProfile, DeliveryProfile, Payment, Wallet, WalletTransaction, Refund } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
@@ -255,6 +255,28 @@ const markFailed = catchAsync(async (req, res) => {
   new ApiResponse(200, order, 'Delivery marked as failed').send(res);
 });
 
+// POST /delivery/jobs/:id/return { reason } -> delivery_failed -> returned. Marks RTO complete:
+// the delivery partner has brought the (never-delivered) item back to the store. Refunds the
+// customer if they'd already paid, since they never received anything.
+const markReturned = catchAsync(async (req, res) => {
+  const order = await findAssignedOrder(req);
+  const { reason } = req.body;
+  if (!reason) throw new ApiError(400, 'A return reason is required');
+
+  order.cancelReason = reason;
+  await order.save();
+  await transitionOrder({ order, toStatus: 'returned', changedBy: req.user.id, note: reason });
+
+  if (order.paymentStatus === 'paid') {
+    await creditWallet({ userId: order.customer, amount: order.grandTotal, reason: 'Order returned - refund', refOrderId: order._id });
+    await Refund.create({ order: order._id, amount: order.grandTotal, reason, initiatedBy: req.user.id });
+    order.paymentStatus = 'refunded';
+    await order.save();
+  }
+
+  new ApiResponse(200, order, 'Order marked as returned').send(res);
+});
+
 const getEarnings = catchAsync(async (req, res) => {
   const wallet = await Wallet.findOne({ user: req.user.id });
   const transactions = await WalletTransaction.find({ user: req.user.id }).sort({ createdAt: -1 }).limit(50);
@@ -279,5 +301,6 @@ module.exports = {
   markArrivedAtDrop,
   completeJob,
   markFailed,
+  markReturned,
   getEarnings,
 };

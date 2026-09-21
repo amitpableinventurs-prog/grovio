@@ -61,6 +61,13 @@ paths['/delivery/jobs/{id}/complete'] = {
 paths['/delivery/jobs/{id}/failed'] = {
   post: { tags: TAG, summary: 'Mark delivery attempt as failed, with a reason', ...bearer(), parameters: [idParam()], requestBody: jsonBody({ reason: { type: 'string' } }, ['reason']), responses: { 200: envelope(ref('Order'), 'Delivery marked as failed'), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
+paths['/delivery/jobs/{id}/return'] = {
+  post: {
+    tags: TAG, summary: 'Mark RTO complete — the never-delivered item has been brought back to the store (delivery_failed -> returned). Refunds the customer if already paid.', ...bearer(), parameters: [idParam()],
+    requestBody: jsonBody({ reason: { type: 'string' } }, ['reason']),
+    responses: { 200: envelope(ref('Order'), 'Order marked as returned'), 400: errorResponse("Cannot move order from '<status>' to 'returned' — only allowed from delivery_failed"), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
+};
 paths['/delivery/history'] = {
   get: { tags: TAG, summary: 'Completed/failed/cancelled deliveries history', ...bearer(), parameters: PAGE_QS, responses: { 200: envelope(paginated(ref('Order'))), 401: RESPONSES_401 } },
 };

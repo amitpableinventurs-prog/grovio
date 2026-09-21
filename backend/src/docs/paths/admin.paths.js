@@ -188,6 +188,20 @@ paths['/admin/orders/{id}/assign-delivery'] = {
     responses: { 200: envelope(ref('Order'), 'Delivery partner assigned'), 400: errorResponse('Delivery partner not found or not approved'), 401: RESPONSES_401, 404: RESPONSES_404 },
   },
 };
+paths['/admin/orders/{id}/cancel'] = {
+  patch: {
+    tags: TAG_ORDERS, summary: 'Cancel an in-flight order (any state before out_for_delivery, or before delivered)', ...bearer(), parameters: [idParam()],
+    requestBody: jsonBody({ reason: { type: 'string' } }),
+    responses: { 200: envelope(ref('Order'), 'Order cancelled'), 400: errorResponse("Cannot move order from '<status>' to 'cancelled'"), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
+};
+paths['/admin/orders/{id}/mark-returned'] = {
+  patch: {
+    tags: TAG_ORDERS, summary: "Admin equivalent of the Delivery Boy's RTO-complete action — only valid from delivery_failed", ...bearer(), parameters: [idParam()],
+    requestBody: jsonBody({ reason: { type: 'string' } }, ['reason']),
+    responses: { 200: envelope(ref('Order'), 'Order marked as returned'), 400: errorResponse("Cannot move order from '<status>' to 'returned' — only allowed from delivery_failed"), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
+};
 paths['/admin/orders/{id}/refund'] = {
   post: {
     tags: TAG_ORDERS, summary: 'Issue a manual/partial refund to the customer\'s wallet', ...bearer(), parameters: [idParam()],

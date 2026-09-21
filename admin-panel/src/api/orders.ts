@@ -18,6 +18,14 @@ export function assignDeliveryToOrder(orderId: string, deliveryId: string) {
   return unwrap<Order>(apiClient.patch(`/admin/orders/${orderId}/assign-delivery`, { deliveryId }));
 }
 
+export function cancelOrderAdmin(orderId: string, reason: string) {
+  return unwrap<Order>(apiClient.patch(`/admin/orders/${orderId}/cancel`, { reason }));
+}
+
+export function markOrderReturned(orderId: string, reason: string) {
+  return unwrap<Order>(apiClient.patch(`/admin/orders/${orderId}/mark-returned`, { reason }));
+}
+
 export function issueRefund(orderId: string, amount: number, reason: string) {
   return unwrap(apiClient.post(`/admin/orders/${orderId}/refund`, { amount, reason }));
 }

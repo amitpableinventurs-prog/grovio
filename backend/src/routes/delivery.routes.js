@@ -21,6 +21,7 @@ router.post('/jobs/:id/out-for-delivery', ctrl.markOutForDelivery);
 router.post('/jobs/:id/arrived-drop', ctrl.markArrivedAtDrop);
 router.post('/jobs/:id/complete', ctrl.completeJob);
 router.post('/jobs/:id/failed', ctrl.markFailed);
+router.post('/jobs/:id/return', ctrl.markReturned);
 
 router.get('/history', ctrl.listHistory);
 router.get('/earnings', ctrl.getEarnings);

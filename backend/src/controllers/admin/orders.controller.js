@@ -1,4 +1,4 @@
-const { Order, PickerProfile, DeliveryProfile } = require('../../models');
+const { Order, PickerProfile, DeliveryProfile, Refund } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
@@ -6,6 +6,7 @@ const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const { transitionOrder } = require('../../services/order.service');
 const { notifyUser } = require('../../services/notification.service');
 const { findAvailablePicker } = require('../../services/assignment.service');
+const { creditWallet } = require('../../services/payment.service');
 const { resolveStoreScope } = require('../../utils/storeScope');
 const { PERMISSIONS } = require('../../utils/permissions');
 
@@ -129,4 +130,53 @@ const assignDelivery = catchAsync(async (req, res) => {
   new ApiResponse(200, order, 'Delivery partner assigned').send(res);
 });
 
-module.exports = { listOrders, getOrderDetail, acceptOrder, rejectOrder, assignPicker, assignDelivery };
+// PATCH /admin/orders/:id/cancel { reason } — admin/store-manager cancels an in-flight order
+// (there was previously no way to cancel one past 'placed'; rejectOrder above only covers that
+// initial state). Refunds to the customer's wallet if the order was already paid, same as the
+// customer's own self-cancel path.
+const cancelOrder = catchAsync(async (req, res) => {
+  const order = await Order.findById(req.params.id);
+  if (!order) throw new ApiError(404, 'Order not found');
+  resolveStoreScope(req.user, order.store, PERMISSIONS.MANAGE_ORDERS);
+
+  order.cancelReason = req.body.reason || 'Cancelled by admin';
+  await order.save();
+  await transitionOrder({ order, toStatus: 'cancelled', changedBy: req.user.id, note: order.cancelReason });
+
+  if (order.paymentStatus === 'paid') {
+    await creditWallet({ userId: order.customer, amount: order.grandTotal, reason: 'Order cancellation refund', refOrderId: order._id });
+    await Refund.create({ order: order._id, amount: order.grandTotal, reason: order.cancelReason, initiatedBy: req.user.id });
+    order.paymentStatus = 'refunded';
+    await order.save();
+  }
+
+  new ApiResponse(200, order, 'Order cancelled').send(res);
+});
+
+// PATCH /admin/orders/:id/mark-returned { reason } — admin equivalent of the Delivery Boy's
+// POST /delivery/jobs/:id/return, for when RTO is coordinated by phone instead of through the
+// delivery app. Only valid from 'delivery_failed', same as the delivery-side path. Refunds the
+// customer if already paid, since they never received the item.
+const markReturned = catchAsync(async (req, res) => {
+  const order = await Order.findById(req.params.id);
+  if (!order) throw new ApiError(404, 'Order not found');
+  resolveStoreScope(req.user, order.store, PERMISSIONS.MANAGE_ORDERS);
+
+  const reason = req.body.reason;
+  if (!reason) throw new ApiError(400, 'A return reason is required');
+
+  order.cancelReason = reason;
+  await order.save();
+  await transitionOrder({ order, toStatus: 'returned', changedBy: req.user.id, note: reason });
+
+  if (order.paymentStatus === 'paid') {
+    await creditWallet({ userId: order.customer, amount: order.grandTotal, reason: 'Order returned - refund', refOrderId: order._id });
+    await Refund.create({ order: order._id, amount: order.grandTotal, reason, initiatedBy: req.user.id });
+    order.paymentStatus = 'refunded';
+    await order.save();
+  }
+
+  new ApiResponse(200, order, 'Order marked as returned').send(res);
+});
+
+module.exports = { listOrders, getOrderDetail, acceptOrder, rejectOrder, assignPicker, assignDelivery, cancelOrder, markReturned };

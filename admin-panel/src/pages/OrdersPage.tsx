@@ -15,7 +15,7 @@ import {
   App as AntApp,
 } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchOrders, fetchOrder, assignPickerToOrder, assignDeliveryToOrder, issueRefund, fetchScannerLogs } from '../api/orders';
+import { fetchOrders, fetchOrder, assignPickerToOrder, assignDeliveryToOrder, issueRefund, fetchScannerLogs, cancelOrderAdmin, markOrderReturned } from '../api/orders';
 import { fetchUsersByRole } from '../api/users';
 import type { Order, User, Store } from '../types';
 import { usePageState } from '../hooks/usePageState';
@@ -27,12 +27,20 @@ const ORDER_STATUSES = [
   'out_for_delivery', 'delivery_failed', 'delivered', 'cancelled', 'returned',
 ];
 
+// Mirrors the backend's TRANSITIONS map (order.service.js) — cancellation isn't allowed once an
+// order is out for delivery, delivered, or already in a terminal state.
+const NON_CANCELLABLE_STATUSES = ['out_for_delivery', 'delivered', 'cancelled', 'rejected', 'returned'];
+
 export default function OrdersPage() {
   const { page, pageSize, onChange } = usePageState();
   const [status, setStatus] = useState<string | undefined>();
   const [detailId, setDetailId] = useState<string | null>(null);
   const [refundOpen, setRefundOpen] = useState(false);
   const [refundForm] = Form.useForm();
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelForm] = Form.useForm();
+  const [returnOpen, setReturnOpen] = useState(false);
+  const [returnForm] = Form.useForm();
   const { message } = AntApp.useApp();
   const queryClient = useQueryClient();
 
@@ -106,6 +114,28 @@ export default function OrdersPage() {
       refundForm.resetFields();
       invalidateDetail();
     },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (reason: string) => cancelOrderAdmin(detailId as string, reason),
+    onSuccess: () => {
+      message.success('Order cancelled');
+      setCancelOpen(false);
+      cancelForm.resetFields();
+      invalidateDetail();
+    },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Could not cancel order'),
+  });
+
+  const returnMutation = useMutation({
+    mutationFn: (reason: string) => markOrderReturned(detailId as string, reason),
+    onSuccess: () => {
+      message.success('Order marked as returned');
+      setReturnOpen(false);
+      returnForm.resetFields();
+      invalidateDetail();
+    },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Could not mark order as returned'),
   });
 
   return (
@@ -193,6 +223,16 @@ export default function OrdersPage() {
               <Button danger onClick={() => setRefundOpen(true)}>
                 Issue Refund
               </Button>
+              <Button
+                danger
+                disabled={NON_CANCELLABLE_STATUSES.includes(order.orderStatus)}
+                onClick={() => setCancelOpen(true)}
+              >
+                Cancel Order
+              </Button>
+              <Button disabled={order.orderStatus !== 'delivery_failed'} onClick={() => setReturnOpen(true)}>
+                Mark as Returned
+              </Button>
             </Space>
 
             <Typography.Title level={5}>Status Timeline</Typography.Title>
@@ -243,6 +283,46 @@ export default function OrdersPage() {
           <Form.Item name="reason" label="Reason" rules={[{ required: true }]}>
             <Input.TextArea rows={3} />
           </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Cancel Order"
+        open={cancelOpen}
+        onCancel={() => setCancelOpen(false)}
+        onOk={() => cancelForm.submit()}
+        confirmLoading={cancelMutation.isPending}
+        okText="Cancel Order"
+        okButtonProps={{ danger: true }}
+      >
+        <Form form={cancelForm} layout="vertical" onFinish={(values) => cancelMutation.mutate(values.reason)}>
+          <Form.Item name="reason" label="Reason" rules={[{ required: true }]}>
+            <Input.TextArea rows={3} placeholder="Why is this order being cancelled?" />
+          </Form.Item>
+          {order?.paymentStatus === 'paid' && (
+            <Typography.Text type="secondary">
+              This order is already paid — cancelling will refund {formatCurrency(order.grandTotal)} to the customer's wallet.
+            </Typography.Text>
+          )}
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Mark as Returned"
+        open={returnOpen}
+        onCancel={() => setReturnOpen(false)}
+        onOk={() => returnForm.submit()}
+        confirmLoading={returnMutation.isPending}
+      >
+        <Form form={returnForm} layout="vertical" onFinish={(values) => returnMutation.mutate(values.reason)}>
+          <Form.Item name="reason" label="Reason" rules={[{ required: true }]}>
+            <Input.TextArea rows={3} placeholder="e.g. Customer refused delivery, item brought back to store" />
+          </Form.Item>
+          {order?.paymentStatus === 'paid' && (
+            <Typography.Text type="secondary">
+              This order is already paid — marking it returned will refund {formatCurrency(order.grandTotal)} to the customer's wallet.
+            </Typography.Text>
+          )}
         </Form>
       </Modal>
     </div>

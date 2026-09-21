@@ -101,6 +101,8 @@ router.get('/orders', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_
 router.get('/orders/:id', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.getOrderDetail);
 router.patch('/orders/:id/accept', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.acceptOrder);
 router.patch('/orders/:id/reject', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.rejectOrder);
+router.patch('/orders/:id/cancel', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.cancelOrder);
+router.patch('/orders/:id/mark-returned', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.markReturned);
 router.patch('/orders/:id/assign-picker', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.assignPicker);
 router.patch('/orders/:id/assign-delivery', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.assignDelivery);
 router.post('/orders/:id/refund', p(PERMISSIONS.MANAGE_PAYMENTS), paymentsCtrl.issueRefund);
