@@ -1,13 +1,49 @@
 const S = require('../schemas');
 const {
   envelope, paginated, ref, errorResponse,
-  RESPONSES_401, RESPONSES_403, RESPONSES_404,
+  RESPONSES_401, RESPONSES_403, RESPONSES_404, RESPONSES_422,
   jsonBody, formBody, idParam, q, PAGE_QS, bearer,
 } = require('../helpers');
 
 const paths = {};
 
 // ============================== AUTH ==============================
+
+paths['/auth/register-vendor'] = {
+  post: {
+    tags: ['Auth'],
+    summary: 'Vendor (store-manager) self-registration',
+    description:
+      'Public signup for a store-manager, as an alternative to an admin creating one via POST /admin/admins. ' +
+      'Creates the exact same kind of account a manual creation would (role: admin, manage_own_store_inventory permission, assignedStore) plus a new Store. ' +
+      'The store is created with status: "inactive" — it never appears in customer browsing until an admin reviews it and flips it active via PATCH /admin/stores/{id}. That review is the real approval gate; the account itself is fully functional (can manage its own store\'s catalog/inventory/orders) immediately after registering.',
+    requestBody: jsonBody({
+      name: { type: 'string', example: 'Raj Kirana' },
+      email: { type: 'string', example: 'vendor1@grovio.com' },
+      password: { type: 'string', example: 'Vendor@123' },
+      phone: { type: 'string', example: '9990001111' },
+      storeName: { type: 'string', example: 'Raj Kirana - MG Road' },
+      address: { type: 'string', example: 'MG Road' },
+      lat: { type: 'number', example: 28.6 },
+      lng: { type: 'number', example: 77.2 },
+      deviceId: { type: 'string' },
+      platform: { type: 'string', enum: ['android', 'ios', 'web'] },
+    }, ['name', 'email', 'password', 'storeName']),
+    responses: {
+      201: envelope({
+        type: 'object',
+        properties: {
+          accessToken: { type: 'string' },
+          refreshToken: { type: 'string' },
+          user: ref('User'),
+          store: ref('Store'),
+        },
+      }, 'Vendor registered successfully. Your store is pending admin approval.'),
+      409: errorResponse('Email or phone number already registered'),
+      422: RESPONSES_422,
+    },
+  },
+};
 
 paths['/auth/login'] = {
   post: {

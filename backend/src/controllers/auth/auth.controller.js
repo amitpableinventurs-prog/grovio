@@ -1,11 +1,12 @@
 const bcrypt = require('bcryptjs');
-const { User, PickerProfile, DeliveryProfile, Wallet } = require('../../models');
+const { User, PickerProfile, DeliveryProfile, Wallet, Store } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const otpService = require('../../services/otp.service');
 const tokenService = require('../../services/token.service');
 const { resolvePhone } = require('../../utils/phone');
+const { PERMISSIONS } = require('../../utils/permissions');
 
 async function respondWithTokens(res, user, { deviceId, platform } = {}, statusCode = 200, message = 'Success') {
   const { accessToken, refreshToken } = await tokenService.issueTokenPair(user, { deviceId, platform });
@@ -14,9 +15,53 @@ async function respondWithTokens(res, user, { deviceId, platform } = {}, statusC
   return new ApiResponse(statusCode, { accessToken, refreshToken, user: safeUser }, message).send(res);
 }
 
+// ---------- Vendor (store-manager) self-registration ----------
+// Public signup, as an alternative to an admin manually creating one via POST /admin/admins.
+// Produces the exact same kind of account (role: 'admin', MANAGE_OWN_STORE_INVENTORY permission,
+// assignedStore) — just self-initiated. The store starts status: 'inactive', so it never shows up
+// to customers (see customer/catalog.controller.js) until an admin reviews and activates it via
+// PATCH /admin/stores/:id — THAT is the actual approval gate, not the account's permissions.
+const registerVendor = catchAsync(async (req, res) => {
+  const { name, email, password, phone, storeName, address, lat, lng, deviceId, platform } = req.body;
+
+  const existingEmail = await User.findOne({ email });
+  if (existingEmail) throw new ApiError(409, 'Email already registered');
+
+  if (phone) {
+    const existingPhone = await User.findOne({ phone });
+    if (existingPhone) throw new ApiError(409, 'Phone number already registered');
+  }
+
+  const store = await Store.create({
+    name: storeName,
+    address: address || null,
+    lat: lat ?? null,
+    lng: lng ?? null,
+    status: 'inactive',
+  });
+
+  const hashed = await bcrypt.hash(password, 10);
+  const user = await User.create({
+    name,
+    email,
+    phone: phone || undefined,
+    password: hashed,
+    role: 'admin',
+    permissions: [PERMISSIONS.MANAGE_OWN_STORE_INVENTORY],
+    assignedStore: store._id,
+    isVerified: true,
+  });
+
+  const { accessToken, refreshToken } = await tokenService.issueTokenPair(user, { deviceId, platform });
+  const safeUser = user.toObject();
+  delete safeUser.password;
+
+  new ApiResponse(201, { accessToken, refreshToken, user: safeUser, store }, 'Vendor registered successfully. Your store is pending admin approval.').send(res);
+});
+
 // ---------- Admin: email + password ----------
-// (Admin accounts, including store-scoped inventory-manager sub-admins, are created by
-// another admin via POST /admin/admins — there is no public/self-service registration.)
+// (Full/other admin accounts are still created by another admin via POST /admin/admins —
+// registerVendor above is the one public/self-service exception, for store-managers.)
 
 const loginWithPassword = catchAsync(async (req, res) => {
   const { email, password, deviceId, platform } = req.body;
@@ -171,4 +216,4 @@ const updateMe = catchAsync(async (req, res) => {
   new ApiResponse(200, safeUser, 'Profile updated').send(res);
 });
 
-module.exports = { loginWithPassword, sendOtp, resendOtp, verifyOtp, refresh, logout, logoutAll, me, updateMe };
+module.exports = { registerVendor, loginWithPassword, sendOtp, resendOtp, verifyOtp, refresh, logout, logoutAll, me, updateMe };
