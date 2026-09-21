@@ -333,6 +333,23 @@ paths['/admin/settings'] = {
   },
 };
 
+paths['/admin/content-pages'] = {
+  get: { tags: TAG_SETTINGS, summary: 'List all content pages (About Us, Privacy Policy, Terms & Conditions)', ...bearer(), responses: { 200: envelope({ type: 'array', items: ref('ContentPage') }), 401: RESPONSES_401 } },
+};
+paths['/admin/content-pages/{slug}'] = {
+  get: {
+    tags: TAG_SETTINGS, summary: 'Get one content page', ...bearer(),
+    parameters: [{ name: 'slug', in: 'path', required: true, schema: { type: 'string', enum: ['about-us', 'privacy-policy', 'terms-and-conditions'] } }],
+    responses: { 200: envelope(ref('ContentPage')), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
+  put: {
+    tags: TAG_SETTINGS, summary: 'Update a content page (creates it if it somehow doesn\'t exist yet)', ...bearer(),
+    parameters: [{ name: 'slug', in: 'path', required: true, schema: { type: 'string', enum: ['about-us', 'privacy-policy', 'terms-and-conditions'] } }],
+    requestBody: jsonBody({ title: { type: 'string' }, content: { type: 'string', description: 'HTML' } }, ['title', 'content']),
+    responses: { 200: envelope(ref('ContentPage'), 'Page updated'), 400: errorResponse('title and content are required'), 401: RESPONSES_401 },
+  },
+};
+
 // ---------- Reports ----------
 paths['/admin/reports/sales'] = {
   get: { tags: TAG_REPORTS, summary: 'Sales totals (delivered orders)', ...bearer(), parameters: [q('from', 'ISO date'), q('to', 'ISO date')], responses: { 200: envelope({ type: 'object', properties: { totalOrders: { type: 'integer' }, totalRevenue: { type: 'number' }, totalItemSales: { type: 'number' } } }), 401: RESPONSES_401 } },

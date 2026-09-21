@@ -22,6 +22,7 @@ module.exports = {
   Notification: require('./notification.model'),
   SupportTicket: require('./supportTicket.model'),
   Setting: require('./setting.model'),
+  ContentPage: require('./contentPage.model'),
   Settlement: require('./settlement.model'),
   AdminActivityLog: require('./adminActivityLog.model'),
   RefreshToken: require('./refreshToken.model'),

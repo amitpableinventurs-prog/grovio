@@ -346,6 +346,18 @@ const Banner = {
   },
 };
 
+const ContentPage = {
+  type: 'object',
+  properties: {
+    _id: id,
+    slug: { type: 'string', enum: ['about-us', 'privacy-policy', 'terms-and-conditions'] },
+    title: { type: 'string' },
+    content: { type: 'string', description: 'Admin-authored HTML, rendered as-is by the customer app' },
+    createdAt: dateTime,
+    updatedAt: dateTime,
+  },
+};
+
 const SupportTicket = {
   type: 'object',
   properties: {
@@ -482,6 +494,7 @@ module.exports = {
   PickerProfile,
   DeliveryProfile,
   ScannerLog,
+  ContentPage,
   UserWithProfile,
   Category,
   ProductVariant,

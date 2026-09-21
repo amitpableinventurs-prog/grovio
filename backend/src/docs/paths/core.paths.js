@@ -189,6 +189,15 @@ paths['/auth/logout-all'] = {
 paths['/common/banners'] = {
   get: { tags: ['Common'], summary: 'List active banners (public)', responses: { 200: envelope({ type: 'array', items: ref('Banner') }) } },
 };
+paths['/common/content/{slug}'] = {
+  get: {
+    tags: ['Common'],
+    summary: 'Get a static page — About Us, Privacy Policy, or Terms & Conditions (public)',
+    description: 'Admin-authored HTML, edited from Admin > Settings > Content Pages. Render the returned `content` field as HTML.',
+    parameters: [{ name: 'slug', in: 'path', required: true, schema: { type: 'string', enum: ['about-us', 'privacy-policy', 'terms-and-conditions'] } }],
+    responses: { 200: envelope(ref('ContentPage')), 404: RESPONSES_404 },
+  },
+};
 paths['/common/upload'] = {
   post: {
     tags: ['Common'], summary: 'Upload a single file (any authenticated role)', ...bearer(),

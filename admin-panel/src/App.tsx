@@ -20,6 +20,7 @@ import SettlementsPage from './pages/SettlementsPage';
 import ReportsPage from './pages/ReportsPage';
 import SupportTicketsPage from './pages/SupportTicketsPage';
 import SettingsPage from './pages/SettingsPage';
+import ContentPagesPage from './pages/ContentPagesPage';
 import AdminsPage from './pages/AdminsPage';
 import ActivityLogsPage from './pages/ActivityLogsPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -155,6 +156,14 @@ export default function App() {
             element={
               <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_SETTINGS]}>
                 <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/content-pages"
+            element={
+              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_SETTINGS]}>
+                <ContentPagesPage />
               </ProtectedRoute>
             }
           />

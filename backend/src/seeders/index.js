@@ -1,7 +1,8 @@
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const { connectDB } = require('../config/db');
-const { User, Category, Setting } = require('../models');
+const { User, Category, Setting, ContentPage } = require('../models');
+const { DEFAULT_CONTENT_PAGES } = require('./contentPages.seed');
 
 async function run() {
   await connectDB();
@@ -46,6 +47,14 @@ async function run() {
     await Setting.findOneAndUpdate({ key }, { key, value: String(value) }, { upsert: true });
   }
   console.log('Seeded default settings.');
+
+  // Only inserts each page if it doesn't already exist — an admin's edits from the Settings >
+  // Content Pages screen must never be silently overwritten by re-running the seed script.
+  for (const page of DEFAULT_CONTENT_PAGES) {
+    const existing = await ContentPage.findOne({ slug: page.slug });
+    if (!existing) await ContentPage.create(page);
+  }
+  console.log('Seeded default content pages (about-us, privacy-policy, terms-and-conditions).');
 
   process.exit(0);
 }

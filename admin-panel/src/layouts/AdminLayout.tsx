@@ -11,6 +11,7 @@ import {
   TagsOutlined,
   PictureOutlined,
   SettingOutlined,
+  FileTextOutlined,
   BarChartOutlined,
   CustomerServiceOutlined,
   DatabaseOutlined,
@@ -55,6 +56,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'reports', path: '/reports', label: 'Reports', icon: <BarChartOutlined />, permissions: [PERMISSIONS.VIEW_REPORTS] },
   { key: 'support', path: '/support-tickets', label: 'Support Tickets', icon: <CustomerServiceOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS] },
   { key: 'settings', path: '/settings', label: 'Settings', icon: <SettingOutlined />, permissions: [PERMISSIONS.MANAGE_SETTINGS] },
+  { key: 'content-pages', path: '/content-pages', label: 'Content Pages', icon: <FileTextOutlined />, permissions: [PERMISSIONS.MANAGE_SETTINGS] },
   { key: 'admins', path: '/admins', label: 'Admins & Roles', icon: <SafetyCertificateOutlined />, permissions: [PERMISSIONS.MANAGE_ADMINS] },
   { key: 'activity-logs', path: '/activity-logs', label: 'Activity Logs', icon: <FileSearchOutlined />, permissions: [PERMISSIONS.MANAGE_ADMINS] },
 ];

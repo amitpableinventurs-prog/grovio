@@ -125,14 +125,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/about"
-            element={
-              <ProtectedRoute>
-                <AboutUsPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/about" element={<AboutUsPage />} />
           <Route
             path="/returns-refunds"
             element={
@@ -141,22 +134,8 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/terms"
-            element={
-              <ProtectedRoute>
-                <TermsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/privacy-policy"
-            element={
-              <ProtectedRoute>
-                <PrivacyPolicyPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
 
           <Route path="*" element={<NotFoundPage />} />
         </Route>

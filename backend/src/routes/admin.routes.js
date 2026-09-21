@@ -21,6 +21,7 @@ const adminsCtrl = require('../controllers/admin/admins.controller');
 const pickersCtrl = require('../controllers/admin/pickers.controller');
 const deliveryPartnersCtrl = require('../controllers/admin/deliveryPartners.controller');
 const scannerLogsCtrl = require('../controllers/admin/scannerLogs.controller');
+const contentPagesCtrl = require('../controllers/admin/contentPages.controller');
 
 router.use(authenticate, authorize('admin'));
 
@@ -131,6 +132,12 @@ router.delete('/banners/:id', p(PERMISSIONS.MANAGE_PROMOTIONS), bannersCtrl.dele
 // Settings
 router.get('/settings', p(PERMISSIONS.MANAGE_SETTINGS), settingsCtrl.getSettings);
 router.put('/settings', p(PERMISSIONS.MANAGE_SETTINGS), settingsCtrl.updateSettings);
+
+// Content Pages (About Us, Privacy Policy, Terms & Conditions — served publicly via
+// GET /common/content/:slug)
+router.get('/content-pages', p(PERMISSIONS.MANAGE_SETTINGS), contentPagesCtrl.listContentPages);
+router.get('/content-pages/:slug', p(PERMISSIONS.MANAGE_SETTINGS), contentPagesCtrl.getContentPage);
+router.put('/content-pages/:slug', p(PERMISSIONS.MANAGE_SETTINGS), contentPagesCtrl.updateContentPage);
 
 // Reports
 router.get('/reports/sales', p(PERMISSIONS.VIEW_REPORTS), reportsCtrl.salesReport);
