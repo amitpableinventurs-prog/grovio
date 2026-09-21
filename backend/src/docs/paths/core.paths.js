@@ -1,7 +1,7 @@
 const S = require('../schemas');
 const {
   envelope, paginated, ref, errorResponse,
-  RESPONSES_401, RESPONSES_403, RESPONSES_404, RESPONSES_422,
+  RESPONSES_401, RESPONSES_403, RESPONSES_404,
   jsonBody, formBody, idParam, q, PAGE_QS, bearer,
 } = require('../helpers');
 
@@ -9,34 +9,10 @@ const paths = {};
 
 // ============================== AUTH ==============================
 
-paths['/auth/register-vendor'] = {
-  post: {
-    tags: ['Auth'],
-    summary: 'Register a new vendor (creates the Vendor business + its first Store)',
-    requestBody: jsonBody({
-      name: { type: 'string', example: 'Raj Kirana' },
-      email: { type: 'string', example: 'vendor1@grovio.com' },
-      phone: { type: 'string', example: '9990001111' },
-      password: { type: 'string', example: 'Vendor@123' },
-      storeName: { type: 'string', example: 'Raj Kirana - MG Road' },
-      address: { type: 'string', example: 'MG Road' },
-      lat: { type: 'number', example: 28.6 },
-      lng: { type: 'number', example: 77.2 },
-      deviceId: { type: 'string' },
-      platform: { type: 'string', enum: ['android', 'ios', 'web'] },
-    }, ['name', 'email', 'phone', 'password', 'storeName']),
-    responses: {
-      201: envelope(ref('AuthTokens'), 'Vendor registered successfully. Awaiting admin approval.'),
-      409: errorResponse('Email already registered'),
-      422: RESPONSES_422,
-    },
-  },
-};
-
 paths['/auth/login'] = {
   post: {
     tags: ['Auth'],
-    summary: 'Admin/Vendor login (email + password)',
+    summary: 'Admin login (email + password) — also used by store-manager sub-admin accounts',
     requestBody: jsonBody({
       email: { type: 'string', example: 'admin@grovio.com' },
       password: { type: 'string', example: 'Admin@12345' },
@@ -46,7 +22,7 @@ paths['/auth/login'] = {
     responses: {
       200: envelope(ref('AuthTokens'), 'Login successful'),
       401: errorResponse('Invalid email or password'),
-      403: errorResponse('Vendor not approved yet / account disabled'),
+      403: errorResponse('Account has been disabled'),
     },
   },
 };
@@ -87,14 +63,19 @@ paths['/auth/verify-otp'] = {
     tags: ['Auth'],
     summary: 'Verify OTP — logs in, or signs up on first verification',
     description:
-      'Send `otp` (the field name the apps use; `code` is accepted as an alias). `role` is optional and defaults to `customer` — the Customer app never sends it; the Picker/Delivery apps pass their own role explicitly. ' +
+      'Send `otp` (the field name the apps use; `code` is accepted as an alias). `role` is optional and defaults to `customer` — the Customer app never sends it; the Delivery app passes `role: "delivery"` explicitly. ' +
+      'Self-registration only works for `customer` and `delivery` — a `picker` account with no existing user returns 404 (Pickers are onboarded by Admin only, see POST /admin/pickers, which collects ID-proof documents this endpoint has no way to accept). ' +
+      'When registering as `delivery` for the first time, `vehicleType`, `vehicleNumber` and `licenseNumber` are required — a DeliveryProfile is created with `status: "pending"`, same as an admin-created one; the partner cannot accept jobs until an admin approves them (PATCH /admin/delivery-partners/{id}/status). ' +
       'The response\'s `isNewUser` is the single source of truth for whether to route to a "create your profile" screen or straight to Home. ' +
       'On a wrong/expired/exhausted OTP this returns 400 with `errors: [{ reason, attemptsLeft }]` where `reason` is one of `invalid | expired | max_attempts | not_found`, so the UI can show a specific inline message.',
     requestBody: jsonBody({
       ...otpPhoneFields,
       otp: { type: 'string', example: '1234' },
-      role: { type: 'string', enum: ['customer', 'picker', 'delivery'], description: 'Optional, defaults to customer. Only used on first-time signup.' },
+      role: { type: 'string', enum: ['customer', 'delivery'], description: 'Optional, defaults to customer. Only used on first-time signup. (picker is a valid enum value but always 404s — see description.)' },
       name: { type: 'string', example: 'Test Customer' },
+      vehicleType: { type: 'string', example: 'bike', description: 'Required when role=delivery on first-time signup' },
+      vehicleNumber: { type: 'string', example: 'DL01AB1234', description: 'Required when role=delivery on first-time signup' },
+      licenseNumber: { type: 'string', example: 'DL-0420110012345', description: 'Required when role=delivery on first-time signup' },
       deviceId: { type: 'string' },
       platform: { type: 'string', enum: ['android', 'ios', 'web'] },
     }, ['otp']),
@@ -108,7 +89,8 @@ paths['/auth/verify-otp'] = {
           user: ref('User'),
         },
       }, 'Login successful'),
-      400: errorResponse('Incorrect OTP. Please try again.'),
+      400: errorResponse('Incorrect OTP, or missing vehicle details for a delivery signup'),
+      404: errorResponse('No account found for this number. Please contact your admin. (picker self-registration)'),
     },
   },
 };

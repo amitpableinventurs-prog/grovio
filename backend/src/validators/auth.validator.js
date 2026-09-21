@@ -21,6 +21,11 @@ const verifyOtpRules = [
   body('code').optional().isString(),
   body('deviceId').optional().isString(),
   body('role').optional().isIn(['customer', 'picker', 'delivery']),
+  // Required only when role === 'delivery' on first-time signup — enforced in the controller
+  // (where the specific "which field is missing" message is clearer than a generic 422).
+  body('vehicleType').optional().isString(),
+  body('vehicleNumber').optional().isString(),
+  body('licenseNumber').optional().isString(),
 ];
 
 module.exports = { loginRules, sendOtpRules, verifyOtpRules };

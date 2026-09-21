@@ -8,8 +8,10 @@ const { creditWallet } = require('../../services/payment.service');
 
 const COD_COLLECTION_METHODS = ['cash', 'upi'];
 
+// GET /delivery/profile -> profile fields plus the account's name/phone/status, so the
+// Delivery app's profile screen doesn't need a separate call to /auth/me.
 const getProfile = catchAsync(async (req, res) => {
-  const profile = await DeliveryProfile.findOne({ user: req.user.id });
+  const profile = await DeliveryProfile.findOne({ user: req.user.id }).populate('user', 'name phone email isActive');
   if (!profile) throw new ApiError(404, 'Delivery profile not found');
   new ApiResponse(200, profile).send(res);
 });

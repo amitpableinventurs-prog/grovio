@@ -77,10 +77,21 @@ const verifyOtp = catchAsync(async (req, res) => {
     if (!['customer', 'picker', 'delivery'].includes(effectiveRole)) {
       throw new ApiError(400, 'role must be one of customer, picker, delivery');
     }
-    // Picker/delivery accounts are created by Admin only (see admin/pickers.controller.js) —
-    // there is no public self-registration for staff roles, only for customers.
-    if (effectiveRole !== 'customer') {
+    // Picker accounts still require Admin onboarding (see admin/pickers.controller.js) — the
+    // KYC step (ID proof upload, employee ID, shift, etc.) has no self-service equivalent.
+    // Delivery partners CAN self-register here, but land in DeliveryProfile.status='pending'
+    // just like an admin-created one — they still can't accept jobs until an admin approves
+    // them via PATCH /admin/delivery-partners/:id/status.
+    if (effectiveRole === 'picker') {
       throw new ApiError(404, 'No account found for this number. Please contact your admin.');
+    }
+
+    let vehicleType, vehicleNumber, licenseNumber;
+    if (effectiveRole === 'delivery') {
+      ({ vehicleType, vehicleNumber, licenseNumber } = req.body);
+      if (!vehicleType || !vehicleNumber || !licenseNumber) {
+        throw new ApiError(400, 'vehicleType, vehicleNumber and licenseNumber are required to register as a delivery partner');
+      }
     }
 
     isNewUser = true;
@@ -91,6 +102,10 @@ const verifyOtp = catchAsync(async (req, res) => {
       isVerified: true,
     });
     await Wallet.create({ user: user._id, balance: 0 });
+
+    if (effectiveRole === 'delivery') {
+      await DeliveryProfile.create({ user: user._id, vehicleType, vehicleNumber, licenseNumber, status: 'pending' });
+    }
   } else if (!user.isActive) {
     throw new ApiError(403, 'Your account has been disabled');
   }
