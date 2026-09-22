@@ -61,11 +61,25 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'activity-logs', path: '/activity-logs', label: 'Activity Logs', icon: <FileSearchOutlined />, permissions: [PERMISSIONS.MANAGE_ADMINS] },
 ];
 
+// A store-manager (vendor) account holds only MANAGE_OWN_STORE_INVENTORY — everyone else with
+// less than '*' is some other restricted staff-admin combination.
+function isStoreManager(permissions: string[] | undefined): boolean {
+  return !!permissions && permissions.length === 1 && permissions[0] === PERMISSIONS.MANAGE_OWN_STORE_INVENTORY;
+}
+
+function roleLabel(permissions: string[] | undefined): string {
+  if (!permissions) return 'Staff Admin';
+  if (permissions.includes('*')) return 'Super Admin';
+  if (isStoreManager(permissions)) return 'Store Manager';
+  return 'Staff Admin';
+}
+
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const { user, refreshToken, clear } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const brandLabel = isStoreManager(user?.permissions) ? 'Grovio Vendor' : 'Grovio Admin';
 
   const visibleItems = useMemo(
     () => NAV_ITEMS.filter((item) => !item.permissions || hasPermission(user?.permissions, ...item.permissions)),
@@ -99,7 +113,7 @@ export default function AdminLayout() {
             color: '#fff',
           }}
         >
-          <span className="grovio-logo">{collapsed ? 'G' : 'Grovio Admin'}</span>
+          <span className="grovio-logo">{collapsed ? 'G' : brandLabel}</span>
         </div>
         <Menu
           theme="dark"
@@ -128,7 +142,7 @@ export default function AdminLayout() {
               <div style={{ lineHeight: 1.2 }}>
                 <Typography.Text strong style={{ display: 'block' }}>{user?.name}</Typography.Text>
                 <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  {user?.permissions?.includes('*') ? 'Super Admin' : 'Staff Admin'}
+                  {roleLabel(user?.permissions)}
                 </Typography.Text>
               </div>
             </Space>
