@@ -192,12 +192,25 @@ export default function CheckoutPage() {
         <h2 className="font-semibold text-gray-900 mb-4">Bill Details</h2>
         {summary && (
           <div className="space-y-2 text-sm text-gray-600">
+            {summary.stores.length > 1 && (
+              <div className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                Items are from {summary.stores.length} stores — placed as one order, with a delivery charge per
+                store.
+              </div>
+            )}
+            {summary.stores.length > 1 &&
+              summary.stores.map((s) => (
+                <div key={s.storeId} className="flex justify-between border-b border-gray-100 pb-2">
+                  <span className="font-medium text-gray-900">{s.storeName}</span>
+                  <span>{formatPrice(s.grandTotal)}</span>
+                </div>
+              ))}
             <div className="flex justify-between">
               <span>Item Total</span>
               <span>{formatPrice(summary.itemTotal)}</span>
             </div>
             <div className="flex justify-between">
-              <span>Delivery Charge</span>
+              <span>Delivery Charge{summary.stores.length > 1 ? ` (${summary.stores.length} stores)` : ''}</span>
               <span>{formatPrice(summary.deliveryFee)}</span>
             </div>
             {summary.discount > 0 && (

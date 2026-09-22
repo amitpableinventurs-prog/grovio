@@ -246,6 +246,7 @@ const OrderItem = {
   properties: {
     _id: id,
     product: id,
+    pickupStore: { type: 'string', description: 'Which store this item is actually picked from — differs from Order.store (the hub) for a non-hub store on a multi-store order' },
     variantId: { type: 'string', nullable: true },
     variantLabel: { type: 'string', nullable: true },
     nameSnapshot: { type: 'string', example: 'Fresh Apples' },
@@ -265,9 +266,12 @@ const PickTask = {
   properties: {
     _id: id,
     picker: id,
+    store: { type: 'string', description: 'Which store this picker is working at' },
     status: { type: 'string', enum: ['assigned', 'picking', 'completed'] },
     startedAt: { ...dateTime, nullable: true },
     completedAt: { ...dateTime, nullable: true },
+    handoffStatus: { type: 'string', enum: ['not_required', 'pending', 'delivered_to_hub'], description: "'not_required' for the hub store's own picker; otherwise starts 'pending' until scan-verified at the hub" },
+    handoffAt: { ...dateTime, nullable: true },
   },
 };
 

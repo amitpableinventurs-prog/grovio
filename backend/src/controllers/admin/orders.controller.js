@@ -7,12 +7,15 @@ const { transitionOrder } = require('../../services/order.service');
 const { notifyUser } = require('../../services/notification.service');
 const { splitOrderAcrossPickers } = require('../../services/assignment.service');
 const { creditWallet } = require('../../services/payment.service');
-const { resolveStoreScope } = require('../../utils/storeScope');
+const { resolveStoreScope, hasFullAccess } = require('../../utils/storeScope');
 const { PERMISSIONS } = require('../../utils/permissions');
 
 // GET /admin/orders?storeId=&status=
 // A full MANAGE_ORDERS admin sees everything (optionally filtered by storeId). A restricted
-// store-manager (MANAGE_OWN_STORE_INVENTORY + assignedStore) only ever sees their own store's orders.
+// store-manager (MANAGE_OWN_STORE_INVENTORY + assignedStore) only ever sees orders their own
+// store is involved in — as the hub (order.store) OR as a contributing store on a multi-store
+// order (items[].pickupStore), since their store's pickers still need to work those items even
+// when some other store ends up as the hub.
 const listOrders = catchAsync(async (req, res) => {
   const { page, limit, offset } = getPagination(req.query);
   const { status } = req.query;
@@ -21,7 +24,7 @@ const listOrders = catchAsync(async (req, res) => {
 
   const where = {};
   if (status) where.orderStatus = status;
-  if (scopedStoreId) where.store = scopedStoreId;
+  if (scopedStoreId) where.$or = [{ store: scopedStoreId }, { 'items.pickupStore': scopedStoreId }];
 
   const [rows, count] = await Promise.all([
     Order.find(where)
@@ -36,6 +39,16 @@ const listOrders = catchAsync(async (req, res) => {
   new ApiResponse(200, { items: rows, meta: buildPageMeta({ page, limit, count }) }).send(res);
 });
 
+// Same "hub OR contributing store" visibility as listOrders above — resolveStoreScope alone would
+// wrongly 403 a contributing (non-hub) store-manager, since it only ever checks order.store.
+function assertOrderVisible(user, order) {
+  if (hasFullAccess(user, PERMISSIONS.MANAGE_ORDERS)) return;
+  const scopedStoreId = resolveStoreScope(user, null, PERMISSIONS.MANAGE_ORDERS);
+  const involved = order.store.toString() === scopedStoreId
+    || order.items.some((i) => i.pickupStore.toString() === scopedStoreId);
+  if (!involved) throw new ApiError(403, 'You can only manage your assigned store.');
+}
+
 const getOrderDetail = catchAsync(async (req, res) => {
   const order = await Order.findById(req.params.id)
     .populate('customer', 'name phone')
@@ -43,7 +56,7 @@ const getOrderDetail = catchAsync(async (req, res) => {
     .populate('pickTasks.picker', 'name phone')
     .populate('delivery', 'name phone');
   if (!order) throw new ApiError(404, 'Order not found');
-  resolveStoreScope(req.user, order.store._id, PERMISSIONS.MANAGE_ORDERS);
+  assertOrderVisible(req.user, order);
   new ApiResponse(200, order).send(res);
 });
 
@@ -60,7 +73,7 @@ const acceptOrder = catchAsync(async (req, res) => {
   // assignment.service.js#splitOrderAcrossPickers. (In practice customer orders are
   // auto-accepted at placement — see customer/orders.controller.js — so this path mainly covers
   // an order that was left at 'placed' for some reason and needs a manual push.)
-  const pickerIds = await splitOrderAcrossPickers(order, order.store);
+  const pickerIds = await splitOrderAcrossPickers(order);
   if (pickerIds.length) {
     await order.save();
     await transitionOrder({ order, toStatus: 'picking', changedBy: req.user.id, note: `Split across ${pickerIds.length} picker(s)` });
@@ -103,10 +116,15 @@ const assignPicker = catchAsync(async (req, res) => {
 
   const picker = await PickerProfile.findOne({ user: pickerId, status: 'approved' });
   if (!picker) throw new ApiError(400, 'Picker not found or not approved');
+  // A picker can only physically pick items sitting at their own store.
+  if (picker.store.toString() !== item.pickupStore.toString()) {
+    throw new ApiError(400, "This picker isn't at the store this item is picked from");
+  }
 
   item.assignedPicker = pickerId;
   if (!order.pickTasks.some((t) => t.picker.toString() === pickerId)) {
-    order.pickTasks.push({ picker: pickerId, status: 'assigned' });
+    const isHub = item.pickupStore.toString() === order.store.toString();
+    order.pickTasks.push({ picker: pickerId, store: item.pickupStore, status: 'assigned', handoffStatus: isHub ? 'not_required' : 'pending' });
   }
   await order.save();
 

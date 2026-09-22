@@ -192,21 +192,68 @@ async function transitionOrder({ order, toStatus, changedBy, note }) {
   return order;
 }
 
-// Called after a picker marks their own pickTask 'completed' (see picker.controller.js#completeMyPicking).
-// Rolls the order-level status up based on how many of the pickTasks are done: the first
-// completion (with others still pending) moves the order to 'partially_picked'; the last one
-// moves it straight to 'packed' — "fully picked" and "ready for dispatch" are treated as the same
-// automatic transition here, since the items are already consolidated at the store (see the
-// architecture decision in the picker.controller.js module comment).
+// Called after a picker marks their own pickTask 'completed' (see picker.controller.js#completeMyPicking)
+// or after a hub handoff is verified (see verifyHandoffOtp below). Rolls the order-level status up:
+// the first completion (with others still pending) moves the order to 'partially_picked'; it only
+// reaches 'packed' once every pickTask is done picking AND, for a cart that spanned multiple
+// stores, every non-hub store's picker has handed their portion off at the hub (handoffStatus) —
+// "fully picked" and "ready for dispatch" are the same automatic transition for a single-store
+// order, but for a multi-store one, dispatch also needs consolidation to have actually happened.
 async function advancePickingStatus({ order, changedBy }) {
   const allCompleted = order.pickTasks.every((t) => t.status === 'completed');
+  const allHandedOff = order.pickTasks.every((t) => t.handoffStatus !== 'pending');
   const anyCompleted = order.pickTasks.some((t) => t.status === 'completed');
 
-  if (allCompleted && order.orderStatus !== 'packed') {
-    await transitionOrder({ order, toStatus: 'packed', changedBy, note: 'All pickers completed — order packed' });
+  if (allCompleted && allHandedOff && order.orderStatus !== 'packed') {
+    await transitionOrder({ order, toStatus: 'packed', changedBy, note: 'All pickers completed and consolidated at the hub — order packed' });
   } else if (anyCompleted && order.orderStatus === 'picking') {
     await transitionOrder({ order, toStatus: 'partially_picked', changedBy, note: 'Some pickers completed' });
   }
+}
+
+// Ensures `task` (a non-hub pickTask, i.e. handoffStatus !== 'not_required') has a live handoff
+// OTP for its picker to read out to whoever receives it at the hub — same idea as
+// ensureHandoverOtp above, just scoped to one pickTask instead of the whole order. Returns the
+// code only when it actually generated a new one. Caller is responsible for persisting (order.save()).
+function ensureHandoffOtp(task) {
+  const expired = !task.handoffOtp || !task.handoffOtpExpiresAt || task.handoffOtpExpiresAt < new Date();
+  if (!expired) return null;
+  task.handoffOtp = generateOtpCode();
+  task.handoffOtpExpiresAt = new Date(Date.now() + HANDOVER_OTP_EXPIRY_MINUTES * 60 * 1000);
+  task.handoffOtpAttempts = 0;
+  return task.handoffOtp;
+}
+
+// Validates the code a hub-store picker was given by another store's picker in person. Finds
+// whichever pending pickTask it belongs to (the receiving picker doesn't need to know in advance
+// which store it's from) — on success marks that task handed off and re-runs advancePickingStatus,
+// since this may be the last thing the order was waiting on to reach 'packed'.
+async function verifyHandoffOtp({ order, code, changedBy }) {
+  const candidates = order.pickTasks.filter((t) => t.handoffStatus === 'pending' && t.handoffOtp);
+  if (!candidates.length) return { valid: false, reason: 'not_generated' };
+
+  const task = candidates.find((t) => t.handoffOtp === String(code));
+  if (!task) {
+    // Attribute the failed attempt to every candidate task so a max-attempts lockout can't be
+    // dodged by spreading guesses across them — same spirit as the single-OTP case, just fanned out.
+    candidates.forEach((t) => { t.handoffOtpAttempts += 1; });
+    await order.save();
+    const attemptsLeft = Math.max(...candidates.map((t) => MAX_HANDOVER_OTP_ATTEMPTS - t.handoffOtpAttempts));
+    if (candidates.some((t) => t.handoffOtpExpiresAt < new Date())) return { valid: false, reason: 'expired' };
+    return { valid: false, reason: attemptsLeft <= 0 ? 'max_attempts' : 'invalid', attemptsLeft: Math.max(attemptsLeft, 0) };
+  }
+
+  if (task.handoffOtpExpiresAt < new Date()) return { valid: false, reason: 'expired' };
+  if (task.handoffOtpAttempts >= MAX_HANDOVER_OTP_ATTEMPTS) return { valid: false, reason: 'max_attempts' };
+
+  task.handoffStatus = 'delivered_to_hub';
+  task.handoffAt = new Date();
+  task.handoffOtp = null;
+  task.handoffOtpExpiresAt = null;
+  await order.save();
+
+  await advancePickingStatus({ order, changedBy });
+  return { valid: true, task };
 }
 
 module.exports = {
@@ -217,4 +264,6 @@ module.exports = {
   ensureHandoverQrToken,
   verifyHandoverQr,
   advancePickingStatus,
+  ensureHandoffOtp,
+  verifyHandoffOtp,
 };

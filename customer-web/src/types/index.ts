@@ -68,7 +68,6 @@ export interface CartItem {
 export interface Cart {
   _id: string;
   user: string;
-  store: Store | string | null;
   items: CartItem[];
   couponCode: string | null;
   subtotal: number;

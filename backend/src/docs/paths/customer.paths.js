@@ -90,7 +90,14 @@ paths['/customer/checkout/summary'] = {
       200: envelope({
         type: 'object',
         properties: {
-          storeId: { type: 'string' }, itemTotal: { type: 'number' }, deliveryFee: { type: 'number' }, discount: { type: 'number' }, tax: { type: 'number' }, grandTotal: { type: 'number' }, couponCode: { type: 'string', nullable: true },
+          stores: {
+            type: 'array',
+            description: 'Per-store breakdown — a cart spanning multiple stores places one order per store, each priced here separately',
+            items: { type: 'object', properties: {
+              storeId: { type: 'string' }, storeName: { type: 'string' }, itemTotal: { type: 'number' }, deliveryFee: { type: 'number' }, discount: { type: 'number' }, grandTotal: { type: 'number' },
+            } },
+          },
+          itemTotal: { type: 'number' }, deliveryFee: { type: 'number' }, discount: { type: 'number' }, tax: { type: 'number' }, grandTotal: { type: 'number' }, couponCode: { type: 'string', nullable: true },
           walletBalance: { type: 'number', description: 'Current Grovio Wallet balance — use to show/enable a "Pay with Wallet" option' },
           walletSufficient: { type: 'boolean', description: 'walletBalance >= grandTotal' },
         },
@@ -102,7 +109,7 @@ paths['/customer/checkout/summary'] = {
 paths['/customer/orders'] = {
   post: {
     tags: TAG_ORDERS, summary: 'Place an order from the current cart', ...bearer(),
-    description: 'paymentMethod: "WALLET" debits the Grovio Wallet immediately and the order is created already paid — check checkoutSummary\'s walletBalance/walletSufficient first to avoid offering it when the balance is too low.',
+    description: 'A cart spanning multiple stores becomes a single order consolidated at a hub store (see checkoutSummary for the per-store cost breakdown) — picking is still split per store, with non-hub stores\' pickers handing their portion off at the hub before the order is packed. paymentMethod: "WALLET" debits the Grovio Wallet immediately and the order is created already paid — check checkoutSummary\'s walletBalance/walletSufficient first to avoid offering it when the balance is too low.',
     requestBody: jsonBody({ addressId: { type: 'string' }, paymentMethod: { type: 'string', enum: ['COD', 'RAZORPAY', 'WALLET'], default: 'COD' } }, ['addressId']),
     responses: { 201: envelope(ref('Order'), 'Order placed successfully'), 400: errorResponse('Cart empty / item out of stock / store closed / Insufficient wallet balance'), 401: RESPONSES_401 },
   },

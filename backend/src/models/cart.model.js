@@ -7,11 +7,11 @@ const cartItemSchema = new Schema({
   priceSnapshot: { type: Number, required: true },
 });
 
-// One cart document per user. Single-store cart: adding an item from a different
-// store replaces `store` and clears `items`.
+// One cart document per user. Items can come from multiple stores — checkout
+// (see customer/orders.controller.js#loadAndPriceCart) splits them into one
+// Order per store, each with its own delivery fee and picker/delivery run.
 const cartSchema = new Schema({
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-  store: { type: Schema.Types.ObjectId, ref: 'Store', default: null },
   items: { type: [cartItemSchema], default: [] },
   couponCode: { type: String, default: null },
 }, { timestamps: true });

@@ -49,40 +49,57 @@ export default function CartPage() {
     );
   }
 
-  const deliveryFee = 25;
+  // Checkout splits a cart into one order per store (each with its own delivery charge) — see
+  // backend/src/controllers/customer/orders.controller.js#loadAndPriceCart — so group the items
+  // here the same way to preview that split before the customer pays.
+  const deliveryFeePerStore = 25;
+  const groups = new Map<string, { storeName: string; items: typeof cart.items }>();
+  for (const item of cart.items) {
+    const store = typeof item.product.store === 'object' ? item.product.store : null;
+    const storeId = store?._id ?? (typeof item.product.store === 'string' ? item.product.store : 'unknown');
+    if (!groups.has(storeId)) groups.set(storeId, { storeName: store?.name ?? 'Store', items: [] });
+    groups.get(storeId)!.items.push(item);
+  }
+  const storeCount = groups.size;
+  const deliveryFee = deliveryFeePerStore * storeCount;
   const total = cart.subtotal + deliveryFee;
 
   return (
     <div className="grid gap-8 md:grid-cols-3">
-      <div className="md:col-span-2 flex flex-col gap-3">
+      <div className="md:col-span-2 flex flex-col gap-5">
         <h1 className="text-xl font-bold text-gray-900">My Cart</h1>
-        {cart.items.map((item) => {
-          const image = resolveAssetUrl(item.product.images?.[0]);
-          return (
-            <div key={item._id} className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-3">
-              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-gray-50">
-                {image ? (
-                  <img src={image} alt={item.product.name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-gray-300">
-                    <ShoppingCart size={22} />
+        {[...groups.entries()].map(([storeId, group]) => (
+          <div key={storeId} className="flex flex-col gap-3">
+            {storeCount > 1 && <h2 className="text-sm font-semibold text-gray-700">{group.storeName}</h2>}
+            {group.items.map((item) => {
+              const image = resolveAssetUrl(item.product.images?.[0]);
+              return (
+                <div key={item._id} className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-3">
+                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-gray-50">
+                    {image ? (
+                      <img src={image} alt={item.product.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-gray-300">
+                        <ShoppingCart size={22} />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900 truncate">{item.product.name}</p>
-                <p className="text-xs text-gray-500">{item.product.unit}</p>
-                <div className="mt-1">
-                  <PriceTag price={item.priceSnapshot} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{item.product.name}</p>
+                    <p className="text-xs text-gray-500">{item.product.unit}</p>
+                    <div className="mt-1">
+                      <PriceTag price={item.priceSnapshot} />
+                    </div>
+                  </div>
+                  <QuantityStepper
+                    qty={item.qty}
+                    onChange={(qty) => (qty <= 0 ? removeItem(item._id) : updateItem({ itemId: item._id, qty }))}
+                  />
                 </div>
-              </div>
-              <QuantityStepper
-                qty={item.qty}
-                onChange={(qty) => (qty <= 0 ? removeItem(item._id) : updateItem({ itemId: item._id, qty }))}
-              />
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white p-5 h-fit">
@@ -122,13 +139,19 @@ export default function CartPage() {
           {couponError && <p className="mt-1 text-xs text-red-600">{couponError}</p>}
         </div>
 
+        {storeCount > 1 && (
+          <p className="mb-3 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+            Items from {storeCount} stores will be placed as one order, with a delivery charge per store.
+          </p>
+        )}
+
         <div className="space-y-2 text-sm text-gray-600">
           <div className="flex justify-between">
             <span>Item Total</span>
             <span>{formatPrice(cart.subtotal)}</span>
           </div>
           <div className="flex justify-between">
-            <span>Delivery Charge</span>
+            <span>Delivery Charge{storeCount > 1 ? ` (${storeCount} stores)` : ''}</span>
             <span>{formatPrice(deliveryFee)}</span>
           </div>
         </div>

@@ -15,7 +15,7 @@ function computeSubtotal(cart) {
 
 const getCart = catchAsync(async (req, res) => {
   const cart = await getOrCreateCart(req.user.id);
-  await cart.populate([{ path: 'items.product' }, { path: 'store', select: 'name' }]);
+  await cart.populate({ path: 'items.product', populate: { path: 'store', select: 'name' } });
   new ApiResponse(200, { ...cart.toObject(), subtotal: computeSubtotal(cart) }).send(res);
 });
 
@@ -34,13 +34,6 @@ const addToCart = catchAsync(async (req, res) => {
   }
 
   const cart = await getOrCreateCart(req.user.id);
-
-  // Single-store cart: switching stores clears the previous cart + any applied coupon.
-  if (cart.store && cart.store.toString() !== product.store.toString()) {
-    cart.items = [];
-    cart.couponCode = null;
-  }
-  cart.store = product.store;
 
   const existing = cart.items.find(
     (i) => i.product.toString() === productId && (i.variantId ? i.variantId.toString() : null) === (variantId || null)
@@ -79,10 +72,7 @@ const removeCartItem = catchAsync(async (req, res) => {
   if (!item) throw new ApiError(404, 'Cart item not found');
 
   cart.items.pull({ _id: req.params.id });
-  if (!cart.items.length) {
-    cart.store = null;
-    cart.couponCode = null;
-  }
+  if (!cart.items.length) cart.couponCode = null;
   await cart.save();
 
   new ApiResponse(200, cart, 'Item removed from cart').send(res);
@@ -91,7 +81,6 @@ const removeCartItem = catchAsync(async (req, res) => {
 const clearCart = catchAsync(async (req, res) => {
   const cart = await getOrCreateCart(req.user.id);
   cart.items = [];
-  cart.store = null;
   cart.couponCode = null;
   await cart.save();
   new ApiResponse(200, cart, 'Cart cleared').send(res);

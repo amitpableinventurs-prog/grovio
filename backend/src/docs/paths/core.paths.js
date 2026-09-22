@@ -100,18 +100,22 @@ paths['/auth/verify-otp'] = {
     summary: 'Verify OTP — logs in, or signs up on first verification',
     description:
       'Send `otp` (the field name the apps use; `code` is accepted as an alias). `role` is optional and defaults to `customer` — the Customer app never sends it; the Delivery app passes `role: "delivery"` explicitly. ' +
-      'Self-registration only works for `customer` and `delivery` — a `picker` account with no existing user returns 404 (Pickers are onboarded by Admin only, see POST /admin/pickers, which collects ID-proof documents this endpoint has no way to accept). ' +
-      'When registering as `delivery` for the first time, `vehicleType`, `vehicleNumber` and `licenseNumber` are required — a DeliveryProfile is created with `status: "pending"`, same as an admin-created one; the partner cannot accept jobs until an admin approves them (PATCH /admin/delivery-partners/{id}/status). ' +
+      'Self-registration works for `customer`, `delivery` and `picker` alike. When registering as `delivery` for the first time, `vehicleType`, `vehicleNumber` and `licenseNumber` are required — a DeliveryProfile is created with `status: "pending"`. When registering as `picker` for the first time, `idProofType` and `idProofNumber` are required (`address`, `emergencyContactName`, `emergencyContactPhone` optional) — a PickerProfile is created with `status: "pending"`. Either way, the account cannot actually work (accept jobs / get pick-lists assigned) until an admin approves it — see PATCH /admin/delivery-partners/{id}/status and admin/pickers.controller.js#updatePicker; full KYC (ID-proof document upload, employee ID, shift, etc.) is still completed by an admin afterward. ' +
       'The response\'s `isNewUser` is the single source of truth for whether to route to a "create your profile" screen or straight to Home. ' +
       'On a wrong/expired/exhausted OTP this returns 400 with `errors: [{ reason, attemptsLeft }]` where `reason` is one of `invalid | expired | max_attempts | not_found`, so the UI can show a specific inline message.',
     requestBody: jsonBody({
       ...otpPhoneFields,
       otp: { type: 'string', example: '1234' },
-      role: { type: 'string', enum: ['customer', 'delivery'], description: 'Optional, defaults to customer. Only used on first-time signup. (picker is a valid enum value but always 404s — see description.)' },
+      role: { type: 'string', enum: ['customer', 'delivery', 'picker'], description: 'Optional, defaults to customer. Only used on first-time signup.' },
       name: { type: 'string', example: 'Test Customer' },
       vehicleType: { type: 'string', example: 'bike', description: 'Required when role=delivery on first-time signup' },
       vehicleNumber: { type: 'string', example: 'DL01AB1234', description: 'Required when role=delivery on first-time signup' },
       licenseNumber: { type: 'string', example: 'DL-0420110012345', description: 'Required when role=delivery on first-time signup' },
+      idProofType: { type: 'string', example: 'Aadhaar', description: 'Required when role=picker on first-time signup' },
+      idProofNumber: { type: 'string', example: '1234-5678-9012', description: 'Required when role=picker on first-time signup' },
+      address: { type: 'string', description: 'Optional, role=picker signup' },
+      emergencyContactName: { type: 'string', description: 'Optional, role=picker signup' },
+      emergencyContactPhone: { type: 'string', description: 'Optional, role=picker signup' },
       deviceId: { type: 'string' },
       platform: { type: 'string', enum: ['android', 'ios', 'web'] },
     }, ['otp']),
@@ -125,8 +129,7 @@ paths['/auth/verify-otp'] = {
           user: ref('User'),
         },
       }, 'Login successful'),
-      400: errorResponse('Incorrect OTP, or missing vehicle details for a delivery signup'),
-      404: errorResponse('No account found for this number. Please contact your admin. (picker self-registration)'),
+      400: errorResponse('Incorrect OTP, or missing vehicle/ID-proof details for a delivery/picker signup'),
     },
   },
 };

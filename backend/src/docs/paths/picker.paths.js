@@ -47,6 +47,23 @@ paths['/picker/jobs/{id}/otp'] = {
 paths['/picker/jobs/{id}/qr'] = {
   get: { tags: TAG, summary: 'Get the handover QR token to render as a QR code for the delivery partner to scan (alternative to the OTP above; auto-generated on delivery assignment, refreshed here if expired)', ...bearer(), parameters: [idParam()], responses: { 200: envelope({ type: 'object', properties: { qrToken: { type: 'string' }, expiresAt: { type: 'string', format: 'date-time' } } }), 400: errorResponse('No delivery partner assigned yet'), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
+paths['/picker/jobs/{id}/handoff/otp'] = {
+  get: {
+    tags: TAG,
+    summary: "For a non-hub store's picker, once their portion is picked: the code to read out to whoever receives it at the hub (see handoff/verify below). Not applicable to the hub store's own picker.",
+    ...bearer(), parameters: [idParam()],
+    responses: { 200: envelope({ type: 'object', properties: { otp: { type: 'string', example: '4821' }, expiresAt: { type: 'string', format: 'date-time' } } }), 400: errorResponse('Finish picking your items first / already handed off / not applicable to this picker'), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
+};
+paths['/picker/jobs/{id}/handoff/verify'] = {
+  post: {
+    tags: TAG,
+    summary: 'Called by a picker AT THE HUB store to confirm they physically received another store\'s picked items — matches the code against whichever pickTask it belongs to.',
+    ...bearer(), parameters: [idParam()],
+    requestBody: jsonBody({ code: { type: 'string' } }, ['code']),
+    responses: { 200: envelope(ref('Order'), 'Handoff confirmed'), 400: errorResponse('Incorrect/expired code, or too many attempts'), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
+};
 paths['/picker/history'] = {
   get: { tags: TAG, summary: 'Completed/cancelled/failed jobs history', ...bearer(), parameters: PAGE_QS, responses: { 200: envelope(paginated(ref('Order'))), 401: RESPONSES_401 } },
 };

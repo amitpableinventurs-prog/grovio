@@ -8,24 +8,47 @@ function distance(lat1, lng1, lat2, lng2) {
 }
 
 // Splits an order's items round-robin across up to `maxPickers` available (approved, online)
-// pickers at the store, and creates the matching pickTasks — each picker then only works the
-// items assigned to them (see picker.controller.js#scanItem/completeMyPicking). Mutates `order`
-// in place (items[].assignedPicker, pickTasks) but does not save it, so the caller can do so as
-// part of its own transitionOrder/save sequence. Returns the assigned picker user IDs (empty if
-// none were available — the order still gets created, just with nobody to pick it yet).
-async function splitOrderAcrossPickers(order, storeId, maxPickers = 3) {
-  const pickers = await PickerProfile.find({ store: storeId, status: 'approved', isAvailable: true })
-    .sort({ updatedAt: 1 })
-    .limit(maxPickers);
+// pickers PER STORE represented in the order (item.pickupStore) — an order consolidated at a hub
+// (order.store) can hold items from several stores, each with its own picker pool. Creates the
+// matching pickTasks (one per assigned picker, tagged with which store they're working at) —
+// each picker then only works the items assigned to them (see
+// picker.controller.js#scanItem/completeMyPicking). A store whose items end up with no available
+// pickers is simply left unassigned, same as today's single-store "nobody available" case — those
+// items just wait. Mutates `order` in place (items[].assignedPicker, pickTasks) but does not save
+// it, so the caller can do so as part of its own transitionOrder/save sequence. Returns the
+// assigned picker user IDs (empty if none were available anywhere).
+async function splitOrderAcrossPickers(order, maxPickers = 3) {
+  const hubStoreId = order.store.toString();
 
-  if (!pickers.length) return [];
-
+  const itemIndexesByStore = new Map();
   order.items.forEach((item, index) => {
-    item.assignedPicker = pickers[index % pickers.length].user;
+    const storeId = item.pickupStore.toString();
+    if (!itemIndexesByStore.has(storeId)) itemIndexesByStore.set(storeId, []);
+    itemIndexesByStore.get(storeId).push(index);
   });
-  order.pickTasks = pickers.map((p) => ({ picker: p.user, status: 'assigned' }));
 
-  return pickers.map((p) => p.user);
+  const pickTasks = [];
+  const assignedPickerIds = [];
+
+  for (const [storeId, itemIndexes] of itemIndexesByStore) {
+    const pickers = await PickerProfile.find({ store: storeId, status: 'approved', isAvailable: true })
+      .sort({ updatedAt: 1 })
+      .limit(maxPickers);
+    if (!pickers.length) continue;
+
+    itemIndexes.forEach((itemIndex, i) => {
+      order.items[itemIndex].assignedPicker = pickers[i % pickers.length].user;
+    });
+
+    const isHub = storeId === hubStoreId;
+    pickers.forEach((p) => {
+      pickTasks.push({ picker: p.user, store: storeId, status: 'assigned', handoffStatus: isHub ? 'not_required' : 'pending' });
+      assignedPickerIds.push(p.user);
+    });
+  }
+
+  order.pickTasks = pickTasks;
+  return assignedPickerIds;
 }
 
 // Picks the nearest available, approved delivery partner to the vendor's coordinates.

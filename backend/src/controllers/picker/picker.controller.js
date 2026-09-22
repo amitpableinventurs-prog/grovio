@@ -1,13 +1,18 @@
-// Multi-picker architecture: an order is split across up to 3 pickers at acceptance time (see
-// assignment.service.js#splitOrderAcrossPickers), each responsible for the items whose
+// Multi-picker architecture: an order is split across up to 3 pickers PER STORE it draws items
+// from (see assignment.service.js#splitOrderAcrossPickers), each responsible for the items whose
 // orderItem.assignedPicker matches them (order.pickTasks tracks each picker's own progress).
-// The Store itself is the consolidation/handover point — there's no separate Hub Center entity.
+// order.store is the hub — for a single-store order that's just "the store", the same as always;
+// for a cart spanning multiple stores, the other stores' pickers each carry their picked portion
+// to the hub in person and hand it off there (pickTask.handoffStatus) before the order can be
+// packed for the single delivery-partner pickup — see order.service.js#verifyHandoffOtp.
 const { Order, PickerProfile, Product } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
-const { transitionOrder, ensureHandoverOtp, ensureHandoverQrToken, advancePickingStatus } = require('../../services/order.service');
+const {
+  transitionOrder, ensureHandoverOtp, ensureHandoverQrToken, advancePickingStatus, ensureHandoffOtp, verifyHandoffOtp,
+} = require('../../services/order.service');
 const { findNearestDeliveryPartner } = require('../../services/assignment.service');
 const { notifyUser } = require('../../services/notification.service');
 
@@ -227,13 +232,20 @@ const recordSubstitution = catchAsync(async (req, res) => {
   new ApiResponse(200, item, 'Substitution recorded').send(res);
 });
 
+// Only a picker physically AT the hub can hand the order to the delivery partner — for a
+// single-store order that's every picker on it (same as before); for a multi-store order, other
+// stores' pickers aren't at the pickup location, so they don't get to read out/show this.
+function isHubPicker(order, userId) {
+  return order.pickTasks.some((t) => t.picker.toString() === userId && t.store.toString() === order.store.toString());
+}
+
 // GET /picker/jobs/:id/otp -> the handover OTP to read out to the delivery partner in person.
-// Any picker on this order's pickTasks can view/refresh it — the handover happens once, for the
-// whole consolidated order, after all pickers are done, not per-picker.
+// Any picker AT THE HUB can view/refresh it — the handover happens once, for the whole
+// consolidated order, after all pickers are done, not per-picker.
 const getHandoverOtp = catchAsync(async (req, res) => {
   const order = await Order.findOne({ _id: req.params.id, 'pickTasks.picker': req.user.id })
-    .select('+handoverOtp +handoverOtpExpiresAt orderStatus delivery orderNumber pickTasks');
-  if (!order) throw new ApiError(404, 'Job not found or not assigned to you');
+    .select('+handoverOtp +handoverOtpExpiresAt orderStatus delivery orderNumber pickTasks store');
+  if (!order || !isHubPicker(order, req.user.id)) throw new ApiError(404, 'Job not found or not assigned to you');
   if (!order.delivery) throw new ApiError(400, 'No delivery partner assigned to this order yet');
   if (!['assigned', 'packed'].includes(order.orderStatus)) {
     throw new ApiError(400, `Handover OTP is not applicable while order is '${order.orderStatus}'`);
@@ -248,8 +260,8 @@ const getHandoverOtp = catchAsync(async (req, res) => {
 // GET /picker/jobs/:id/qr -> same idea as the OTP above, for the QR alternative.
 const getHandoverQr = catchAsync(async (req, res) => {
   const order = await Order.findOne({ _id: req.params.id, 'pickTasks.picker': req.user.id })
-    .select('+handoverQrToken +handoverQrTokenExpiresAt orderStatus delivery orderNumber pickTasks');
-  if (!order) throw new ApiError(404, 'Job not found or not assigned to you');
+    .select('+handoverQrToken +handoverQrTokenExpiresAt orderStatus delivery orderNumber pickTasks store');
+  if (!order || !isHubPicker(order, req.user.id)) throw new ApiError(404, 'Job not found or not assigned to you');
   if (!order.delivery) throw new ApiError(400, 'No delivery partner assigned to this order yet');
   if (!['assigned', 'packed'].includes(order.orderStatus)) {
     throw new ApiError(400, `Handover QR is not applicable while order is '${order.orderStatus}'`);
@@ -261,9 +273,59 @@ const getHandoverQr = catchAsync(async (req, res) => {
   new ApiResponse(200, { qrToken: order.handoverQrToken, expiresAt: order.handoverQrTokenExpiresAt }).send(res);
 });
 
+// GET /picker/jobs/:id/handoff/otp -> for a NON-hub picker, once their own portion is picked: the
+// code to read out to whoever receives it at the hub. Mirrors getHandoverOtp above, but scoped to
+// this picker's own pickTask instead of the whole order.
+const getHandoffOtp = catchAsync(async (req, res) => {
+  const order = await Order.findOne({ _id: req.params.id, 'pickTasks.picker': req.user.id })
+    .select('+pickTasks.handoffOtp +pickTasks.handoffOtpExpiresAt pickTasks orderNumber');
+  if (!order) throw new ApiError(404, 'Job not found or not assigned to you');
+
+  const task = myPickTask(order, req.user.id);
+  if (!task || task.handoffStatus === 'not_required') {
+    throw new ApiError(400, 'Your portion of this order does not need to be handed off anywhere');
+  }
+  if (task.status !== 'completed') throw new ApiError(400, 'Finish picking your items before generating a handoff code');
+  if (task.handoffStatus === 'delivered_to_hub') throw new ApiError(400, 'Already handed off to the hub');
+
+  const freshlyGenerated = ensureHandoffOtp(task);
+  if (freshlyGenerated) await order.save();
+
+  new ApiResponse(200, { otp: task.handoffOtp, expiresAt: task.handoffOtpExpiresAt }).send(res);
+});
+
+// POST /picker/jobs/:id/handoff/verify  { code }  -> called by a picker AT THE HUB to confirm
+// they've physically received another store's picked items. Whichever pending pickTask the code
+// matches gets marked delivered — the caller doesn't need to know in advance which store it came
+// from, only that a fellow picker just handed them a sealed bag and read out a number.
+const verifyHandoff = catchAsync(async (req, res) => {
+  const order = await Order.findOne({ _id: req.params.id, 'pickTasks.picker': req.user.id })
+    .select('+pickTasks.handoffOtp +pickTasks.handoffOtpExpiresAt +pickTasks.handoffOtpAttempts pickTasks store orderNumber');
+  if (!order || !isHubPicker(order, req.user.id)) throw new ApiError(404, 'Job not found or not assigned to you');
+
+  const { code } = req.body;
+  if (!code) throw new ApiError(400, 'code is required');
+
+  const result = await verifyHandoffOtp({ order, code, changedBy: req.user.id });
+  if (!result.valid) {
+    const messages = {
+      not_generated: 'No handoff is pending for this order.',
+      expired: 'This handoff code has expired.',
+      max_attempts: 'Too many incorrect attempts.',
+      invalid: 'Incorrect code. Please try again.',
+    };
+    throw new ApiError(400, messages[result.reason] || 'Invalid or expired code', [
+      { reason: result.reason, attemptsLeft: result.attemptsLeft },
+    ]);
+  }
+
+  new ApiResponse(200, order, 'Handoff confirmed').send(res);
+});
+
 // POST /picker/jobs/:id/complete -> marks THIS picker's own portion done. Once every picker on
-// the order has done the same, the order rolls up to 'packed' automatically (see
-// order.service.js#advancePickingStatus) and a delivery partner is auto-assigned.
+// the order has done the same — and, for a store that isn't the hub, once their portion has also
+// been handed off there (see getHandoffOtp/verifyHandoff above) — the order rolls up to 'packed'
+// automatically (see order.service.js#advancePickingStatus) and a delivery partner is auto-assigned.
 const completeMyPicking = catchAsync(async (req, res) => {
   const order = await findAssignedJob(req);
   const task = myPickTask(order, req.user.id);
@@ -272,7 +334,23 @@ const completeMyPicking = catchAsync(async (req, res) => {
 
   task.status = 'completed';
   task.completedAt = new Date();
+
+  let handoffOtp = null;
+  if (task.handoffStatus === 'pending') {
+    handoffOtp = ensureHandoffOtp(task);
+  }
+
   await order.save();
+
+  if (handoffOtp) {
+    await notifyUser(req.user.id, {
+      title: `Order ${order.orderNumber}`,
+      body: `Carry your picked items to ${order.store.name} and give this code when you hand them off: ${handoffOtp}`,
+      type: 'handoff_otp',
+      data: { orderId: order._id, handoffOtp },
+    });
+  }
+
   await advancePickingStatus({ order, changedBy: req.user.id });
 
   if (order.orderStatus === 'packed') {
@@ -308,5 +386,7 @@ module.exports = {
   recordSubstitution,
   getHandoverOtp,
   getHandoverQr,
+  getHandoffOtp,
+  verifyHandoff,
   completeMyPicking,
 };

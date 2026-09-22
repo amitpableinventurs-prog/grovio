@@ -18,6 +18,8 @@ router.post('/jobs/:id/substitutions', ctrl.recordSubstitution);
 router.post('/jobs/:id/complete', ctrl.completeMyPicking);
 router.get('/jobs/:id/otp', ctrl.getHandoverOtp);
 router.get('/jobs/:id/qr', ctrl.getHandoverQr);
+router.get('/jobs/:id/handoff/otp', ctrl.getHandoffOtp);
+router.post('/jobs/:id/handoff/verify', ctrl.verifyHandoff);
 
 router.get('/history', ctrl.listHistory);
 router.get('/performance', ctrl.getPerformance);

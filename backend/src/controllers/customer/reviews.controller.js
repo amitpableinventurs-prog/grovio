@@ -13,10 +13,15 @@ const submitReview = catchAsync(async (req, res) => {
   const existing = await Review.findOne({ order: order._id });
   if (existing) throw new ApiError(409, 'You have already reviewed this order');
 
+  // order.store is the hub a multi-store order consolidates at — if the review is for a specific
+  // product, attribute it to that product's own store rather than blanket-crediting the hub.
+  const reviewedItem = productId ? order.items.find((i) => i.product.toString() === productId) : null;
+  const storeId = reviewedItem?.pickupStore || order.store;
+
   const review = await Review.create({
     order: order._id,
     customer: req.user.id,
-    store: order.store,
+    store: storeId,
     product: productId || null,
     rating,
     comment,

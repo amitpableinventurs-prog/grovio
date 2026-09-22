@@ -2,6 +2,11 @@ const { Schema, model } = require('mongoose');
 
 const orderItemSchema = new Schema({
   product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
+  // Which store this item is actually picked from. Snapshotted at order creation, same as
+  // nameSnapshot/price below — an order can hold items from multiple stores (see order.store,
+  // the hub they all consolidate into) so this is what routes picking to the right store's
+  // pickers; see assignment.service.js#splitOrderAcrossPickers.
+  pickupStore: { type: Schema.Types.ObjectId, ref: 'Store', required: true },
   variantId: { type: Schema.Types.ObjectId, default: null },
   variantLabel: { type: String, default: null },
   nameSnapshot: { type: String, required: true },
@@ -21,14 +26,28 @@ const orderItemSchema = new Schema({
   substituteNote: { type: String, default: null },
 });
 
-// One entry per picker working this order — an order is split across up to 3 pickers who work
-// their portion (the items whose orderItem.assignedPicker matches them) in parallel. Replaces the
-// old single `picker` field.
+// One entry per picker working this order — an order is split across up to 3 pickers PER STORE
+// represented in it, who work their portion (the items whose orderItem.assignedPicker matches
+// them) in parallel. Replaces the old single `picker` field.
 const pickTaskSchema = new Schema({
   picker: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  // Which store this picker is working at. When it differs from order.store (the hub store this
+  // order consolidates at), their portion isn't done until it physically reaches the hub — see
+  // handoffStatus below.
+  store: { type: Schema.Types.ObjectId, ref: 'Store', required: true },
   status: { type: String, enum: ['assigned', 'picking', 'completed'], default: 'assigned' },
   startedAt: { type: Date, default: null },
   completedAt: { type: Date, default: null },
+  // 'not_required' for the hub store's own picker (nothing to carry anywhere). Otherwise starts
+  // 'pending' and becomes 'delivered_to_hub' once the hub-store picker scan-verifies the OTP this
+  // picker shows them in person — see order.service.js#verifyHandoffOtp. The order can't reach
+  // 'packed' (ready for the single delivery-partner pickup) until every task here is either
+  // 'not_required' or 'delivered_to_hub'.
+  handoffStatus: { type: String, enum: ['not_required', 'pending', 'delivered_to_hub'], default: 'not_required' },
+  handoffOtp: { type: String, default: null, select: false },
+  handoffOtpExpiresAt: { type: Date, default: null, select: false },
+  handoffOtpAttempts: { type: Number, default: 0, select: false },
+  handoffAt: { type: Date, default: null },
 });
 
 const statusLogSchema = new Schema({
@@ -106,6 +125,11 @@ function stripSensitiveFields(doc, ret) {
   delete ret.handoverOtpAttempts;
   delete ret.handoverQrToken;
   delete ret.handoverQrTokenExpiresAt;
+  ret.pickTasks?.forEach((task) => {
+    delete task.handoffOtp;
+    delete task.handoffOtpExpiresAt;
+    delete task.handoffOtpAttempts;
+  });
   return ret;
 }
 orderSchema.set('toJSON', { transform: stripSensitiveFields });

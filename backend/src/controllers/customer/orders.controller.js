@@ -40,17 +40,17 @@ async function resolveCoupon(code, itemTotal, userId) {
   return { discount, coupon };
 }
 
-// Loads the customer's cart, validates the store/items, and computes the authoritative
-// server-side total breakdown. Shared by the checkout preview and the real order placement
-// so the numbers a customer sees before paying are exactly what gets charged.
+// Loads the customer's cart, validates each store/item, and computes the authoritative
+// server-side total breakdown — split per store, since a cart can hold items from multiple
+// stores. They still end up as a single Order (see placeOrder below), consolidated at a hub
+// store; the per-store split here is what drives per-store picker assignment and hub handoff.
+// Shared by the checkout preview and the real order placement so the numbers a customer sees
+// before paying are exactly what gets charged.
 async function loadAndPriceCart(userId, couponCodeOverride) {
   const cart = await Cart.findOne({ user: userId }).populate('items.product');
   if (!cart || !cart.items.length) throw new ApiError(400, 'Your cart is empty');
 
-  const store = await Store.findById(cart.store);
-  if (!store || store.status !== 'active') throw new ApiError(400, 'This store is currently unavailable');
-  if (!store.isOpen) throw new ApiError(400, 'This store is currently closed');
-
+  const itemsByStore = new Map();
   for (const item of cart.items) {
     if (!item.product) throw new ApiError(400, 'An item in your cart is no longer available');
 
@@ -62,22 +62,60 @@ async function loadAndPriceCart(userId, couponCodeOverride) {
     } else if (!item.product.isAvailable || item.product.stockQty < item.qty) {
       throw new ApiError(400, `${item.product.name} is out of stock`);
     }
+
+    const storeId = item.product.store.toString();
+    if (!itemsByStore.has(storeId)) itemsByStore.set(storeId, []);
+    itemsByStore.get(storeId).push(item);
   }
 
+  const stores = await Store.find({ _id: { $in: [...itemsByStore.keys()] } });
+  const storeById = new Map(stores.map((s) => [s._id.toString(), s]));
+
+  const deliveryFeePerStore = Number(await getSetting('deliveryFee', process.env.DEFAULT_DELIVERY_FEE || 25));
   const itemTotal = cart.items.reduce((sum, i) => sum + Number(i.priceSnapshot) * i.qty, 0);
-  const deliveryFee = Number(await getSetting('deliveryFee', process.env.DEFAULT_DELIVERY_FEE || 25));
   const couponCode = couponCodeOverride !== undefined ? couponCodeOverride : cart.couponCode;
   const { discount, coupon } = await resolveCoupon(couponCode, itemTotal, userId);
+
+  const storeGroups = [];
+  let discountRemaining = discount;
+  let groupsLeft = itemsByStore.size;
+  for (const [storeId, items] of itemsByStore) {
+    const store = storeById.get(storeId);
+    if (!store || store.status !== 'active') throw new ApiError(400, 'One of the stores in your cart is currently unavailable');
+    if (!store.isOpen) throw new ApiError(400, `${store.name} is currently closed`);
+
+    const groupItemTotal = items.reduce((sum, i) => sum + Number(i.priceSnapshot) * i.qty, 0);
+    groupsLeft -= 1;
+    // Last group absorbs whatever's left of the discount so the parts always sum exactly to
+    // the whole — proportional split on every other group would otherwise drift by rounding.
+    const groupDiscount = groupsLeft === 0
+      ? Number(discountRemaining.toFixed(2))
+      : Number((discount * (groupItemTotal / itemTotal)).toFixed(2));
+    discountRemaining = Number((discountRemaining - groupDiscount).toFixed(2));
+
+    const groupGrandTotal = Number((groupItemTotal + deliveryFeePerStore + 0 - groupDiscount).toFixed(2));
+    storeGroups.push({
+      store,
+      items,
+      itemTotal: groupItemTotal,
+      deliveryFee: deliveryFeePerStore,
+      discount: groupDiscount,
+      tax: 0,
+      grandTotal: groupGrandTotal,
+    });
+  }
+
+  const deliveryFee = deliveryFeePerStore * itemsByStore.size;
   const tax = 0;
   const grandTotal = Number((itemTotal + deliveryFee + tax - discount).toFixed(2));
 
-  return { cart, store, itemTotal, deliveryFee, discount, coupon, tax, grandTotal };
+  return { cart, storeGroups, itemTotal, deliveryFee, discount, coupon, tax, grandTotal };
 }
 
 // POST /customer/checkout/summary  { couponCode? }  -> recalculate totals without placing the order
 const checkoutSummary = catchAsync(async (req, res) => {
   const { couponCode } = req.body;
-  const { itemTotal, deliveryFee, discount, tax, grandTotal, coupon, store } = await loadAndPriceCart(req.user.id, couponCode);
+  const { itemTotal, deliveryFee, discount, tax, grandTotal, coupon, storeGroups } = await loadAndPriceCart(req.user.id, couponCode);
 
   // Included so the client can show/enable "Pay with Wallet" (and how much is available) at
   // checkout without a separate GET /customer/wallet call — placeOrder still re-checks the
@@ -86,7 +124,14 @@ const checkoutSummary = catchAsync(async (req, res) => {
   const walletBalance = wallet ? wallet.balance : 0;
 
   new ApiResponse(200, {
-    storeId: store._id,
+    stores: storeGroups.map((g) => ({
+      storeId: g.store._id,
+      storeName: g.store.name,
+      itemTotal: g.itemTotal,
+      deliveryFee: g.deliveryFee,
+      discount: g.discount,
+      grandTotal: g.grandTotal,
+    })),
     itemTotal,
     deliveryFee,
     discount,
@@ -99,6 +144,11 @@ const checkoutSummary = catchAsync(async (req, res) => {
 });
 
 // POST /customer/orders  { addressId, paymentMethod }
+// A cart spanning multiple stores becomes a SINGLE order that consolidates at a hub — whichever
+// of the cart's stores has the most items. Each item snapshots its own pickupStore (see
+// order.model.js), and picking is split per store (see assignment.service.js#splitOrderAcrossPickers)
+// — a picker at a non-hub store carries their portion to the hub and hands it off there (pickTask
+// handoffStatus) before the order can reach 'packed' and go out with a single delivery pickup.
 // Note: a standalone (non-replica-set) MongoDB instance doesn't support multi-document
 // transactions, so writes below run sequentially rather than atomically.
 const placeOrder = catchAsync(async (req, res) => {
@@ -107,16 +157,34 @@ const placeOrder = catchAsync(async (req, res) => {
   const address = await Address.findOne({ _id: addressId, user: req.user.id });
   if (!address) throw new ApiError(404, 'Address not found');
 
-  const { cart, store, itemTotal, deliveryFee, discount, coupon, tax, grandTotal } = await loadAndPriceCart(req.user.id);
+  const { cart, storeGroups, itemTotal, deliveryFee, discount, coupon, tax, grandTotal } = await loadAndPriceCart(req.user.id);
 
   if (paymentMethod === 'WALLET') {
     await debitWallet({ userId: req.user.id, amount: grandTotal, reason: 'Order payment' });
   }
 
+  const hubGroup = storeGroups.reduce((max, g) => (g.items.length > max.items.length ? g : max), storeGroups[0]);
+  const storeNameById = new Map(storeGroups.map((g) => [g.store._id.toString(), g.store.name]));
+
+  const items = storeGroups.flatMap((group) =>
+    group.items.map((item) => {
+      const variant = item.variantId ? item.product.variants.id(item.variantId) : null;
+      return {
+        product: item.product._id,
+        pickupStore: group.store._id,
+        variantId: item.variantId || null,
+        variantLabel: variant ? variant.label : null,
+        nameSnapshot: variant ? `${item.product.name} (${variant.label})` : item.product.name,
+        price: item.priceSnapshot,
+        qty: item.qty,
+      };
+    })
+  );
+
   const order = await Order.create({
     orderNumber: generateOrderNumber(),
     customer: req.user.id,
-    store: store._id,
+    store: hubGroup.store._id,
     address: addressId,
     itemTotal,
     deliveryFee,
@@ -126,17 +194,7 @@ const placeOrder = catchAsync(async (req, res) => {
     couponCode: coupon ? coupon.code : null,
     paymentMethod,
     paymentStatus: paymentMethod === 'WALLET' ? 'paid' : 'pending',
-    items: cart.items.map((item) => {
-      const variant = item.variantId ? item.product.variants.id(item.variantId) : null;
-      return {
-        product: item.product._id,
-        variantId: item.variantId || null,
-        variantLabel: variant ? variant.label : null,
-        nameSnapshot: variant ? `${item.product.name} (${variant.label})` : item.product.name,
-        price: item.priceSnapshot,
-        qty: item.qty,
-      };
-    }),
+    items,
     statusLogs: [{ status: 'placed', changedBy: req.user.id }],
   });
 
@@ -156,22 +214,21 @@ const placeOrder = catchAsync(async (req, res) => {
   }
 
   cart.items = [];
-  cart.store = null;
   cart.couponCode = null;
   await cart.save();
 
   // Stores are company-owned now — there's no vendor to approve the order, so it's accepted
-  // immediately and split across up to 3 available pickers at this store, who then work their
+  // immediately and split across up to 3 pickers per store represented in it, who then work their
   // assigned items in parallel — see assignment.service.js#splitOrderAcrossPickers.
   await transitionOrder({ order, toStatus: 'accepted', changedBy: req.user.id, note: 'Auto-accepted (no vendor approval required)' });
 
-  const pickerIds = await splitOrderAcrossPickers(order, store._id);
+  const pickerIds = await splitOrderAcrossPickers(order);
   if (pickerIds.length) {
     await order.save();
     await transitionOrder({ order, toStatus: 'picking', changedBy: req.user.id, note: `Split across ${pickerIds.length} picker(s)` });
-    await Promise.all(pickerIds.map((pickerId) => notifyUser(pickerId, {
+    await Promise.all(order.pickTasks.map((task) => notifyUser(task.picker, {
       title: 'New order assigned',
-      body: `Order ${order.orderNumber} is ready to be picked at ${store.name}.`,
+      body: `Order ${order.orderNumber} is ready to be picked at ${storeNameById.get(task.store.toString())}.`,
       type: 'new_order',
       data: { orderId: order._id },
     })));
