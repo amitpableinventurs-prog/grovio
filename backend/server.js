@@ -30,10 +30,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Standalone public vendor-signup page (calls POST /api/v1/auth/register-vendor directly) —
-// deliberately kept as a separate plain-HTML directory rather than a route inside admin-panel's
-// React app, since it needs to be reachable without logging in.
+// Standalone public onboarding/login pages (call the auth API directly) — deliberately kept as
+// separate plain-HTML directories rather than routes inside customer-web/admin-panel's React
+// apps, since they need to be reachable without logging in and aren't part of either app's
+// actual product surface.
 app.use('/vendor-signup', express.static(path.join(__dirname, '../vendor-signup')));
+app.use('/picker-signup', express.static(path.join(__dirname, '../picker-signup')));
+app.use('/delivery-signup', express.static(path.join(__dirname, '../delivery-signup')));
+app.use('/partner-login', express.static(path.join(__dirname, '../partner-login')));
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/', (req, res) => {

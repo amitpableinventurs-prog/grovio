@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Become a Grovio Picker</title>
+<style>
+  :root {
+    --brand-50: #eefdf3; --brand-100: #d6f7e0; --brand-200: #b0edc6; --brand-300: #7bdda4;
+    --brand-400: #45c67d; --brand-500: #22ab61; --brand-600: #158a4d; --brand-700: #126e40;
+    --brand-800: #125736; --brand-900: #10482e;
+    --text: #1f2937; --muted: #6b7280; --border: #e5e7eb; --bg: #f6f8f7; --danger: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+    display: flex; align-items: center; justify-content: center; padding: 32px 16px;
+  }
+  .shell {
+    width: 100%; max-width: 920px; background: #fff; border-radius: 20px;
+    box-shadow: 0 1px 2px rgba(16,72,46,0.04), 0 20px 40px -12px rgba(16,72,46,0.18);
+    overflow: hidden; display: grid; grid-template-columns: 1fr;
+  }
+  @media (min-width: 820px) { .shell { grid-template-columns: 0.85fr 1.15fr; } }
+  .panel {
+    background: linear-gradient(160deg, var(--brand-700) 0%, var(--brand-900) 100%);
+    color: #fff; padding: 40px 36px; display: flex; flex-direction: column; position: relative; overflow: hidden;
+  }
+  .panel::before {
+    content: ""; position: absolute; width: 320px; height: 320px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%); top: -120px; right: -120px;
+  }
+  .brand-mark { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 800; position: relative; }
+  .panel h1 { font-size: 26px; line-height: 1.3; margin: 28px 0 12px; position: relative; font-weight: 800; }
+  .panel > p { color: var(--brand-100); font-size: 14px; line-height: 1.6; margin: 0 0 28px; position: relative; }
+  .benefits { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 16px; position: relative; }
+  .benefits li { display: flex; align-items: flex-start; gap: 12px; font-size: 13.5px; line-height: 1.5; color: var(--brand-50); }
+  .benefits .icon {
+    flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,0.12);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .panel-footer { margin-top: auto; padding-top: 28px; font-size: 12.5px; color: var(--brand-200); position: relative; }
+  .form-panel { padding: 40px 36px; }
+  .form-panel h2 { font-size: 20px; margin: 0 0 4px; font-weight: 700; }
+  .form-panel > p.lede { color: var(--muted); font-size: 13.5px; margin: 0 0 24px; line-height: 1.5; }
+  fieldset { border: none; padding: 0; margin: 0 0 22px; }
+  legend { font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--brand-700); margin-bottom: 12px; padding: 0; }
+  .row { display: grid; gap: 14px; }
+  @media (min-width: 520px) { .row.two-col { grid-template-columns: 1fr 1fr; } }
+  label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .field { margin-top: 14px; }
+  .field:first-child { margin-top: 0; }
+  .row .field { margin-top: 0; }
+  input, select {
+    width: 100%; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 14px; font-family: inherit; background: #fafbfa; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--brand-500); background: #fff; box-shadow: 0 0 0 3px rgba(21,138,77,0.14); }
+  .hint { font-size: 11.5px; color: var(--muted); margin-top: 5px; }
+  button[type="submit"], button.primary {
+    width: 100%; padding: 13px; background: var(--brand-600); color: #fff; border: none; border-radius: 10px;
+    font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 6px; transition: background 0.15s, transform 0.1s;
+  }
+  button[type="submit"]:hover, button.primary:hover { background: var(--brand-700); }
+  button[type="submit"]:active, button.primary:active { transform: scale(0.99); }
+  button[type="submit"]:disabled, button.primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .link-btn { background: none; border: none; color: var(--brand-700); font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 0; margin-top: 14px; }
+  .alert { border-radius: 10px; padding: 12px 14px; font-size: 13px; margin-bottom: 20px; line-height: 1.5; display: none; }
+  .alert.error { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
+  .alert.info { background: var(--brand-50); color: var(--brand-800); border: 1px solid var(--brand-200); }
+  .success-view { display: none; text-align: center; padding: 20px 0; }
+  .success-icon { width: 64px; height: 64px; border-radius: 50%; background: var(--brand-50); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
+  .success-view h2 { font-size: 19px; margin-bottom: 10px; }
+  .success-view p { color: var(--muted); font-size: 13.5px; line-height: 1.6; max-width: 340px; margin: 0 auto 10px; }
+  .success-view p.next-step { color: var(--brand-700); font-weight: 600; margin-top: 18px; }
+  .otp-boxes { display: flex; gap: 10px; }
+  .otp-boxes input { text-align: center; font-size: 20px; font-weight: 700; letter-spacing: 2px; }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <div class="panel">
+      <div class="brand-mark">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        Grovio
+      </div>
+      <h1>Pick and pack for Grovio</h1>
+      <p>Join a Grovio dark store as a picker — scan, pack and hand off orders, and get paid for every shift.</p>
+      <ul class="benefits">
+        <li><span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span>Flexible shifts at a store near you.</span></li>
+        <li><span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span><span>Simple scan-and-pack workflow, no experience required.</span></li>
+        <li><span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span>Quick sign-up — our team reviews and approves your ID within a day.</span></li>
+      </ul>
+      <p class="panel-footer">Already registered? Log in from the Grovio Partner Login page once approved.</p>
+    </div>
+
+    <div class="form-panel">
+      <div id="form-view">
+        <h2>Register as a Picker</h2>
+        <p class="lede" id="step-lede">Enter your details, then verify your mobile number. Your account stays inactive until our team reviews it.</p>
+
+        <div id="alert" class="alert"></div>
+
+        <form id="details-form">
+          <fieldset>
+            <legend>Your Details</legend>
+            <div class="row two-col">
+              <div class="field">
+                <label for="name">Full Name</label>
+                <input id="name" name="name" type="text" required autocomplete="name" />
+              </div>
+              <div class="field">
+                <label for="phone">Mobile Number</label>
+                <input id="phone" name="phone" type="tel" required autocomplete="tel" placeholder="+919876543210" />
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>ID Verification</legend>
+            <div class="row two-col">
+              <div class="field">
+                <label for="idProofType">ID Proof Type</label>
+                <select id="idProofType" name="idProofType" required>
+                  <option value="">Select...</option>
+                  <option>Aadhaar</option>
+                  <option>PAN Card</option>
+                  <option>Voter ID</option>
+                  <option>Driving Licence</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="idProofNumber">ID Proof Number</label>
+                <input id="idProofNumber" name="idProofNumber" type="text" required />
+              </div>
+            </div>
+            <div class="field" style="margin-top:14px">
+              <label for="address">Address (optional)</label>
+              <input id="address" name="address" type="text" />
+            </div>
+            <div class="row two-col" style="margin-top:14px">
+              <div class="field">
+                <label for="emergencyContactName">Emergency Contact Name (optional)</label>
+                <input id="emergencyContactName" name="emergencyContactName" type="text" />
+              </div>
+              <div class="field">
+                <label for="emergencyContactPhone">Emergency Contact Phone (optional)</label>
+                <input id="emergencyContactPhone" name="emergencyContactPhone" type="tel" />
+              </div>
+            </div>
+            <div class="hint">You'll be asked to show the physical document once an admin reviews your application.</div>
+          </fieldset>
+
+          <button type="submit" id="send-otp-btn">Send OTP</button>
+        </form>
+
+        <form id="otp-form" style="display:none">
+          <fieldset>
+            <legend>Verify Mobile Number</legend>
+            <div class="field">
+              <label for="otp">Enter the 4-digit code sent to <span id="otp-phone-label"></span></label>
+              <input id="otp" name="otp" type="text" inputmode="numeric" maxlength="4" required autocomplete="one-time-code" class="otp-boxes" style="letter-spacing:6px;font-size:20px;text-align:center" />
+            </div>
+          </fieldset>
+          <button type="submit" id="verify-otp-btn">Verify &amp; Register</button>
+          <button type="button" class="link-btn" id="back-btn">&larr; Change details</button>
+        </form>
+      </div>
+
+      <div id="success-view" class="success-view">
+        <div class="success-icon">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#158a4d" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
+        <h2>You're registered!</h2>
+        <p>Your picker account has been created and is pending admin review. You'll be assigned to a store and approved before you can start picking.</p>
+        <p class="next-step">Once approved, log in with your mobile number at the Grovio Partner Login page.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const detailsForm = document.getElementById('details-form');
+    const otpForm = document.getElementById('otp-form');
+    const alertBox = document.getElementById('alert');
+    const sendOtpBtn = document.getElementById('send-otp-btn');
+    const verifyOtpBtn = document.getElementById('verify-otp-btn');
+    const backBtn = document.getElementById('back-btn');
+    const stepLede = document.getElementById('step-lede');
+
+    function showAlert(message, type) {
+      alertBox.textContent = message;
+      alertBox.className = `alert ${type}`;
+      alertBox.style.display = 'block';
+    }
+    function hideAlert() { alertBox.style.display = 'none'; }
+
+    backBtn.addEventListener('click', () => {
+      otpForm.style.display = 'none';
+      detailsForm.style.display = 'block';
+      stepLede.textContent = 'Enter your details, then verify your mobile number. Your account stays inactive until our team reviews it.';
+      hideAlert();
+    });
+
+    detailsForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert();
+      sendOtpBtn.disabled = true;
+      sendOtpBtn.textContent = 'Sending OTP…';
+
+      const phone = detailsForm.phone.value.trim();
+      try {
+        const res = await fetch('/api/v1/auth/send-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone }),
+        });
+        const body = await res.json();
+        if (!res.ok || !body.success) throw new Error(body.message || 'Could not send OTP. Please try again.');
+
+        document.getElementById('otp-phone-label').textContent = phone;
+        detailsForm.style.display = 'none';
+        otpForm.style.display = 'block';
+        stepLede.textContent = 'Almost done — just verify your number.';
+        if (body.data && body.data.debugOtp) {
+          document.getElementById('otp').value = body.data.debugOtp;
+          showAlert(`Dev mode: OTP auto-filled (${body.data.debugOtp}).`, 'info');
+        }
+      } catch (err) {
+        showAlert(err.message || 'Something went wrong. Please try again.', 'error');
+      } finally {
+        sendOtpBtn.disabled = false;
+        sendOtpBtn.textContent = 'Send OTP';
+      }
+    });
+
+    otpForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert();
+      verifyOtpBtn.disabled = true;
+      verifyOtpBtn.textContent = 'Verifying…';
+
+      const payload = {
+        phone: detailsForm.phone.value.trim(),
+        otp: otpForm.otp.value.trim(),
+        role: 'picker',
+        name: detailsForm.name.value.trim(),
+        idProofType: detailsForm.idProofType.value,
+        idProofNumber: detailsForm.idProofNumber.value.trim(),
+      };
+      if (detailsForm.address.value.trim()) payload.address = detailsForm.address.value.trim();
+      if (detailsForm.emergencyContactName.value.trim()) payload.emergencyContactName = detailsForm.emergencyContactName.value.trim();
+      if (detailsForm.emergencyContactPhone.value.trim()) payload.emergencyContactPhone = detailsForm.emergencyContactPhone.value.trim();
+
+      try {
+        const res = await fetch('/api/v1/auth/verify-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const body = await res.json();
+        if (!res.ok || !body.success) throw new Error(body.message || 'Verification failed. Please try again.');
+
+        document.getElementById('form-view').style.display = 'none';
+        document.getElementById('success-view').style.display = 'block';
+      } catch (err) {
+        showAlert(err.message || 'Something went wrong. Please try again.', 'error');
+      } finally {
+        verifyOtpBtn.disabled = false;
+        verifyOtpBtn.textContent = 'Verify & Register';
+      }
+    });
+  </script>
+</body>
+</html>

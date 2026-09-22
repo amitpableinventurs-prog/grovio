@@ -122,20 +122,25 @@ const verifyOtp = catchAsync(async (req, res) => {
     if (!['customer', 'picker', 'delivery'].includes(effectiveRole)) {
       throw new ApiError(400, 'role must be one of customer, picker, delivery');
     }
-    // Picker accounts still require Admin onboarding (see admin/pickers.controller.js) — the
-    // KYC step (ID proof upload, employee ID, shift, etc.) has no self-service equivalent.
-    // Delivery partners CAN self-register here, but land in DeliveryProfile.status='pending'
-    // just like an admin-created one — they still can't accept jobs until an admin approves
-    // them via PATCH /admin/delivery-partners/:id/status.
-    if (effectiveRole === 'picker') {
-      throw new ApiError(404, 'No account found for this number. Please contact your admin.');
-    }
-
+    // Both picker and delivery partners can self-register here, same as a customer — but they
+    // land in {Picker,Delivery}Profile.status='pending', just like an admin-created one. Neither
+    // can actually work (accept jobs / get assigned pick-lists) until an admin approves them —
+    // see PATCH /admin/delivery-partners/:id/status and admin/pickers.controller.js. Full KYC
+    // (ID proof document upload, employee ID, shift, etc.) is still filled in/verified by an
+    // admin afterward — this just captures enough to review and reach out.
     let vehicleType, vehicleNumber, licenseNumber;
     if (effectiveRole === 'delivery') {
       ({ vehicleType, vehicleNumber, licenseNumber } = req.body);
       if (!vehicleType || !vehicleNumber || !licenseNumber) {
         throw new ApiError(400, 'vehicleType, vehicleNumber and licenseNumber are required to register as a delivery partner');
+      }
+    }
+
+    let idProofType, idProofNumber, address, emergencyContactName, emergencyContactPhone;
+    if (effectiveRole === 'picker') {
+      ({ idProofType, idProofNumber, address, emergencyContactName, emergencyContactPhone } = req.body);
+      if (!idProofType || !idProofNumber) {
+        throw new ApiError(400, 'idProofType and idProofNumber are required to register as a picker');
       }
     }
 
@@ -150,6 +155,11 @@ const verifyOtp = catchAsync(async (req, res) => {
 
     if (effectiveRole === 'delivery') {
       await DeliveryProfile.create({ user: user._id, vehicleType, vehicleNumber, licenseNumber, status: 'pending' });
+    }
+    if (effectiveRole === 'picker') {
+      await PickerProfile.create({
+        user: user._id, idProofType, idProofNumber, address, emergencyContactName, emergencyContactPhone, status: 'pending',
+      });
     }
   } else if (!user.isActive) {
     throw new ApiError(403, 'Your account has been disabled');

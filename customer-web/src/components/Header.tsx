@@ -1,15 +1,10 @@
 import { type FormEvent, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Menu, Search, ShoppingBag, ShoppingCart, Store, X, Zap } from 'lucide-react';
+import { Menu, Search, ShoppingBag, ShoppingCart, X, Zap } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useCart } from '../hooks/useCart';
 import { listCategories } from '../api/catalog';
-import { ASSET_BASE_URL } from '../api/client';
-
-// Standalone static page (backend/../vendor-signup), not a route in this app — it must be
-// reachable without logging in, so it's served directly by the backend at this path.
-const VENDOR_SIGNUP_URL = `${ASSET_BASE_URL}/vendor-signup`;
 
 export default function Header() {
   const navigate = useNavigate();
@@ -80,16 +75,6 @@ export default function Header() {
             >
               <Search size={17} />
             </button>
-
-            <a
-              href={VENDOR_SIGNUP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-brand-200 px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50"
-            >
-              <Store size={16} />
-              Sell on Grovio
-            </a>
 
             <Link to="/cart" className="relative flex items-center gap-1.5 text-gray-700 hover:text-brand-700">
               <ShoppingBag size={22} />
@@ -187,15 +172,6 @@ export default function Header() {
                 </Link>
               </>
             )}
-            <a
-              href={VENDOR_SIGNUP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1 flex items-center gap-2 rounded-lg border border-brand-200 px-2 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50"
-            >
-              <Store size={16} />
-              Sell on Grovio
-            </a>
           </nav>
         </div>
       )}
