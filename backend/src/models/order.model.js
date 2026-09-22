@@ -3,9 +3,9 @@ const { Schema, model } = require('mongoose');
 const orderItemSchema = new Schema({
   product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
   // Which store this item is actually picked from. Snapshotted at order creation, same as
-  // nameSnapshot/price below — an order can hold items from multiple stores (see order.store,
-  // the hub they all consolidate into) so this is what routes picking to the right store's
-  // pickers; see assignment.service.js#splitOrderAcrossPickers.
+  // nameSnapshot/price below — an order can hold items from multiple stores, each becoming its
+  // own pickup point for the delivery partner (see pickTaskSchema below) rather than being
+  // physically consolidated anywhere first.
   pickupStore: { type: Schema.Types.ObjectId, ref: 'Store', required: true },
   variantId: { type: Schema.Types.ObjectId, default: null },
   variantLabel: { type: String, default: null },
@@ -16,38 +16,39 @@ const orderItemSchema = new Schema({
   // When the order is split across pickTasks (see below), this is which picker is responsible
   // for this specific item. Set when the order is accepted (see assignment.service.js#splitItemsAcrossPickers).
   assignedPicker: { type: Schema.Types.ObjectId, ref: 'User', default: null },
-  // Set when the assigned picker successfully scans this item's product QR — see
-  // picker/picker.controller.js#scanItem. Distinct from pickedQty being non-null: pickedQty could
-  // in principle be set without a scan (e.g. old data, or a manual override), pickedAt specifically
-  // marks a verified scan.
-  pickedAt: { type: Date, default: null },
   isAvailable: { type: Boolean, default: true },
   substituteProduct: { type: Schema.Types.ObjectId, ref: 'Product', default: null },
   substituteNote: { type: String, default: null },
 });
 
 // One entry per picker working this order — an order is split across up to 3 pickers PER STORE
-// represented in it, who work their portion (the items whose orderItem.assignedPicker matches
-// them) in parallel. Replaces the old single `picker` field.
+// represented in it, who each pick + pack their own portion at their own store (no scanning, no
+// physical hand-off between pickers) and press "Ready for Pickup" when done (status: 'completed'
+// below). The delivery partner then visits each picker's store as its own pickup point and
+// confirms collection there via scan/OTP (pickupOtp/pickupQrToken below) — see
+// delivery.controller.js#verifyPickupOtpCtrl/scanPickupQr. Replaces the old single `picker` field.
 const pickTaskSchema = new Schema({
   picker: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  // Which store this picker is working at. When it differs from order.store (the hub store this
-  // order consolidates at), their portion isn't done until it physically reaches the hub — see
-  // handoffStatus below.
+  // Which store — i.e. which physical pickup point — this picker/task represents.
   store: { type: Schema.Types.ObjectId, ref: 'Store', required: true },
+  // 'completed' here means picked + packed + the picker pressed "Ready for Pickup" — there is no
+  // separate scan-verified picking step.
   status: { type: String, enum: ['assigned', 'picking', 'completed'], default: 'assigned' },
   startedAt: { type: Date, default: null },
   completedAt: { type: Date, default: null },
-  // 'not_required' for the hub store's own picker (nothing to carry anywhere). Otherwise starts
-  // 'pending' and becomes 'delivered_to_hub' once the hub-store picker scan-verifies the OTP this
-  // picker shows them in person — see order.service.js#verifyHandoffOtp. The order can't reach
-  // 'packed' (ready for the single delivery-partner pickup) until every task here is either
-  // 'not_required' or 'delivered_to_hub'.
-  handoffStatus: { type: String, enum: ['not_required', 'pending', 'delivered_to_hub'], default: 'not_required' },
-  handoffOtp: { type: String, default: null, select: false },
-  handoffOtpExpiresAt: { type: Date, default: null, select: false },
-  handoffOtpAttempts: { type: Number, default: 0, select: false },
-  handoffAt: { type: Date, default: null },
+  // Generated once the order has a delivery partner assigned (every task is already 'completed'
+  // by then — see order.service.js#advancePickingStatus). The picker reads this out (or shows the
+  // QR) to the delivery partner in person when they arrive at this specific store; either method
+  // marks pickedUpAt and counts this pickup point done — see order.service.js#verifyPickupOtp.
+  pickupOtp: { type: String, default: null, select: false },
+  pickupOtpExpiresAt: { type: Date, default: null, select: false },
+  pickupOtpAttempts: { type: Number, default: 0, select: false },
+  pickupQrToken: { type: String, default: null, select: false },
+  pickupQrTokenExpiresAt: { type: Date, default: null, select: false },
+  // Set once the delivery partner has confirmed collection from this specific store. The order
+  // only moves 'assigned' -> 'picked_up' once every pickTask here has this set — see
+  // order.service.js#advanceAfterPickup.
+  pickedUpAt: { type: Date, default: null },
 });
 
 const statusLogSchema = new Schema({
@@ -66,22 +67,11 @@ const orderSchema = new Schema({
   pickTasks: { type: [pickTaskSchema], default: [] },
   delivery: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   deliveryAcceptedAt: { type: Date, default: null },
+  // Delivery Boy <-> Customer PIN at drop-off. Distinct from each pickTask's own pickupOtp/
+  // pickupQrToken above, which are the Picker <-> Delivery Boy handovers at each pickup point.
   deliveryPin: { type: String, default: null, select: false },
-  // Picker <-> Delivery Boy handover OTP (distinct from deliveryPin above, which is the
-  // Delivery Boy <-> Customer PIN at drop-off). Auto-generated alongside deliveryPin as soon as
-  // a delivery partner is assigned (see order.service.js#transitionOrder); the Picker reads it
-  // out to the Delivery Boy in person, who submits it via POST /delivery/jobs/:id/otp/verify.
-  // This is the only path allowed to move an order into 'picked_up' — see
-  // delivery.controller.js#verifyHandoverOtp.
-  handoverOtp: { type: String, default: null, select: false },
-  handoverOtpExpiresAt: { type: Date, default: null, select: false },
-  handoverOtpAttempts: { type: Number, default: 0, select: false },
-  // Alternative to handoverOtp above — either one completes the same Picker->Delivery handover.
-  // The Picker's app displays this as a QR code (see GET /picker/jobs/:id/qr); the Delivery Boy
-  // scans it and submits the decoded token via POST /delivery/jobs/:id/scan. Every scan attempt,
-  // successful or not, is recorded in ScannerLog regardless of which method completes the handover.
-  handoverQrToken: { type: String, default: null, select: false },
-  handoverQrTokenExpiresAt: { type: Date, default: null, select: false },
+  // Set once every pickTask's pickedUpAt is set — i.e. the delivery partner has completed the
+  // full multi-stop collection run — see order.service.js#advanceAfterPickup.
   pickerHandoverAt: { type: Date, default: null },
   arrivedAtPickupAt: { type: Date, default: null },
   arrivedAtDropAt: { type: Date, default: null },
@@ -120,15 +110,12 @@ const orderSchema = new Schema({
 // them explicitly (customer delivery-pin endpoint, picker handover-OTP endpoint).
 function stripSensitiveFields(doc, ret) {
   delete ret.deliveryPin;
-  delete ret.handoverOtp;
-  delete ret.handoverOtpExpiresAt;
-  delete ret.handoverOtpAttempts;
-  delete ret.handoverQrToken;
-  delete ret.handoverQrTokenExpiresAt;
   ret.pickTasks?.forEach((task) => {
-    delete task.handoffOtp;
-    delete task.handoffOtpExpiresAt;
-    delete task.handoffOtpAttempts;
+    delete task.pickupOtp;
+    delete task.pickupOtpExpiresAt;
+    delete task.pickupOtpAttempts;
+    delete task.pickupQrToken;
+    delete task.pickupQrTokenExpiresAt;
   });
   return ret;
 }

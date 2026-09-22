@@ -3,7 +3,7 @@ const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
-const { transitionOrder, verifyHandoverOtp, verifyHandoverQr } = require('../../services/order.service');
+const { transitionOrder, verifyPickupOtp, verifyPickupQr } = require('../../services/order.service');
 const { creditWallet } = require('../../services/payment.service');
 
 const COD_COLLECTION_METHODS = ['cash', 'upi'];
@@ -86,11 +86,11 @@ const listHistory = catchAsync(async (req, res) => {
   new ApiResponse(200, { items: rows, meta: buildPageMeta({ page, limit, count }) }).send(res);
 });
 
-async function findAssignedOrder(req, { withPin = false, withOtp = false, withQr = false } = {}) {
+async function findAssignedOrder(req, { withPin = false, withPickupOtp = false, withPickupQr = false } = {}) {
   let query = Order.findOne({ _id: req.params.id, delivery: req.user.id }).populate('address').populate('store');
   if (withPin) query = query.select('+deliveryPin');
-  if (withOtp) query = query.select('+handoverOtp +handoverOtpExpiresAt +handoverOtpAttempts');
-  if (withQr) query = query.select('+handoverQrToken +handoverQrTokenExpiresAt');
+  if (withPickupOtp) query = query.select('+pickTasks.pickupOtp +pickTasks.pickupOtpExpiresAt +pickTasks.pickupOtpAttempts');
+  if (withPickupQr) query = query.select('+pickTasks.pickupQrToken +pickTasks.pickupQrTokenExpiresAt');
   const order = await query;
   if (!order) throw new ApiError(404, 'Order not found or not assigned to you');
   return order;
@@ -138,54 +138,82 @@ const listAssignedPickers = catchAsync(async (req, res) => {
   new ApiResponse(200, profiles).send(res);
 });
 
-// POST /delivery/jobs/:id/otp/verify { otp } -> validates the handover OTP the Picker read out
-// in person. This is the only way an order can move to 'picked_up' (see order.service.js).
-const verifyHandoverOtpCtrl = catchAsync(async (req, res) => {
-  const order = await findAssignedOrder(req, { withOtp: true });
-  if (!order.deliveryAcceptedAt) throw new ApiError(400, 'Accept this job before verifying the handover OTP');
+// GET /delivery/jobs/:id/pickups -> the pickup points for this order — one per store/picker it
+// draws items from (see assignment.service.js#splitOrderAcrossPickers). The delivery partner
+// visits each one in turn and confirms collection independently (scan or OTP) — see
+// verifyPickupOtpCtrl/scanPickupQr below. Order-level status only advances to 'picked_up' once
+// every point here shows pickedUp: true.
+const listPickupPoints = catchAsync(async (req, res) => {
+  const order = await findAssignedOrder(req);
+  await order.populate('pickTasks.store', 'name address lat lng');
+  await order.populate('pickTasks.picker', 'name phone');
+
+  const points = order.pickTasks.map((task) => ({
+    taskId: task._id,
+    store: task.store,
+    picker: task.picker,
+    status: task.status,
+    pickedUp: !!task.pickedUpAt,
+    pickedUpAt: task.pickedUpAt,
+  }));
+
+  new ApiResponse(200, points).send(res);
+});
+
+// POST /delivery/jobs/:id/pickups/:taskId/otp/verify { otp } -> validates the pickup OTP the
+// Picker AT THAT STORE read out in person. Confirms collection from just this one pickup point —
+// the order only moves to 'picked_up' once every point is confirmed (see order.service.js#advanceAfterPickup).
+const verifyPickupOtpCtrl = catchAsync(async (req, res) => {
+  const order = await findAssignedOrder(req, { withPickupOtp: true });
+  if (!order.deliveryAcceptedAt) throw new ApiError(400, 'Accept this job before verifying a pickup OTP');
 
   const { otp } = req.body;
   if (!otp) throw new ApiError(400, 'otp is required');
 
-  const result = await verifyHandoverOtp({ order, code: otp, changedBy: req.user.id });
+  const result = await verifyPickupOtp({ order, taskId: req.params.taskId, code: otp, changedBy: req.user.id });
   if (!result.valid) {
     const messages = {
-      not_generated: 'No handover OTP has been generated for this order yet',
-      expired: 'This handover OTP has expired. Ask the picker to refresh it.',
+      not_found: 'No such pickup point on this order',
+      already_picked_up: 'This pickup point has already been collected',
+      not_generated: 'No pickup OTP has been generated for this pickup point yet',
+      expired: 'This pickup OTP has expired. Ask the picker to refresh it.',
       max_attempts: 'Too many incorrect attempts. Ask the picker to refresh the OTP.',
       invalid: `Incorrect OTP.${result.attemptsLeft != null ? ` ${result.attemptsLeft} attempt(s) left.` : ''}`,
     };
-    throw new ApiError(400, messages[result.reason] || 'Invalid handover OTP');
+    throw new ApiError(400, messages[result.reason] || 'Invalid pickup OTP');
   }
 
-  new ApiResponse(200, order, 'Handover confirmed. Order picked up.').send(res);
+  new ApiResponse(200, order, 'Pickup confirmed.').send(res);
 });
 
-// POST /delivery/jobs/:id/scan { qrToken, deviceId?, location?: { lat, lng } } -> scans the
-// Picker's handover QR code. Alternative to POST .../otp/verify — either one completes the same
-// handover (order -> picked_up). Every attempt, successful or not, is recorded in ScannerLog.
-const scanHandoverQr = catchAsync(async (req, res) => {
-  const order = await findAssignedOrder(req, { withQr: true });
-  if (!order.deliveryAcceptedAt) throw new ApiError(400, 'Accept this job before scanning the handover QR');
+// POST /delivery/jobs/:id/pickups/:taskId/scan { qrToken, deviceId?, location?: { lat, lng } } ->
+// scans that pickup point's QR code. Alternative to .../otp/verify above — either one completes
+// the same pickup. Every attempt, successful or not, is recorded in ScannerLog.
+const scanPickupQr = catchAsync(async (req, res) => {
+  const order = await findAssignedOrder(req, { withPickupQr: true });
+  if (!order.deliveryAcceptedAt) throw new ApiError(400, 'Accept this job before scanning a pickup QR');
 
   const { qrToken, deviceId, location } = req.body;
   if (!qrToken) throw new ApiError(400, 'qrToken is required');
 
-  const result = await verifyHandoverQr({ order, qrToken, scannedBy: req.user.id, userType: 'delivery', deviceId, location });
+  const result = await verifyPickupQr({ order, taskId: req.params.taskId, qrToken, scannedBy: req.user.id, deviceId, location });
   if (!result.valid) {
     const messages = {
-      not_generated: 'No handover QR has been generated for this order yet',
+      not_found: 'No such pickup point on this order',
+      already_picked_up: 'This pickup point has already been collected',
+      not_generated: 'No pickup QR has been generated for this pickup point yet',
       expired: 'This QR code has expired. Ask the picker to refresh it.',
-      invalid: 'This QR code does not belong to this order',
+      invalid: 'This QR code does not belong to this pickup point',
     };
     throw new ApiError(400, messages[result.reason] || 'Invalid QR code');
   }
 
-  new ApiResponse(200, order, 'Handover confirmed. Order picked up.').send(res);
+  new ApiResponse(200, order, 'Pickup confirmed.').send(res);
 });
 
-// POST /delivery/jobs/:id/out-for-delivery -> picked_up -> out_for_delivery (departing the hub
-// with the package). Requires the OTP-verified 'picked_up' status — see verifyHandoverOtpCtrl.
+// POST /delivery/jobs/:id/out-for-delivery -> picked_up -> out_for_delivery (departing the last
+// pickup point with all packages collected). Requires every pickup point already confirmed — see
+// verifyPickupOtpCtrl/scanPickupQr and order.service.js#advanceAfterPickup.
 const markOutForDelivery = catchAsync(async (req, res) => {
   const order = await findAssignedOrder(req);
   await transitionOrder({ order, toStatus: 'out_for_delivery', changedBy: req.user.id, note: 'Departed for delivery' });
@@ -295,8 +323,9 @@ module.exports = {
   rejectAssignment,
   markArrivedAtPickup,
   listAssignedPickers,
-  verifyHandoverOtpCtrl,
-  scanHandoverQr,
+  listPickupPoints,
+  verifyPickupOtpCtrl,
+  scanPickupQr,
   markOutForDelivery,
   markArrivedAtDrop,
   completeJob,

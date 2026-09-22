@@ -8,18 +8,17 @@ function distance(lat1, lng1, lat2, lng2) {
 }
 
 // Splits an order's items round-robin across up to `maxPickers` available (approved, online)
-// pickers PER STORE represented in the order (item.pickupStore) — an order consolidated at a hub
-// (order.store) can hold items from several stores, each with its own picker pool. Creates the
-// matching pickTasks (one per assigned picker, tagged with which store they're working at) —
-// each picker then only works the items assigned to them (see
-// picker.controller.js#scanItem/completeMyPicking). A store whose items end up with no available
-// pickers is simply left unassigned, same as today's single-store "nobody available" case — those
-// items just wait. Mutates `order` in place (items[].assignedPicker, pickTasks) but does not save
-// it, so the caller can do so as part of its own transitionOrder/save sequence. Returns the
-// assigned picker user IDs (empty if none were available anywhere).
+// pickers PER STORE represented in the order (item.pickupStore) — a cart spanning multiple
+// stores has one picker pool per store, each becoming its own pickup point for the delivery
+// partner later (see delivery.controller.js#verifyPickupOtpCtrl) rather than being physically
+// consolidated anywhere. Creates the matching pickTasks (one per assigned picker, tagged with
+// which store they're working at) — each picker then only works the items assigned to them (see
+// picker.controller.js#completeMyPicking). A store whose items end up with no available pickers
+// is simply left unassigned, same as today's single-store "nobody available" case — those items
+// just wait. Mutates `order` in place (items[].assignedPicker, pickTasks) but does not save it,
+// so the caller can do so as part of its own transitionOrder/save sequence. Returns the assigned
+// picker user IDs (empty if none were available anywhere).
 async function splitOrderAcrossPickers(order, maxPickers = 3) {
-  const hubStoreId = order.store.toString();
-
   const itemIndexesByStore = new Map();
   order.items.forEach((item, index) => {
     const storeId = item.pickupStore.toString();
@@ -40,9 +39,8 @@ async function splitOrderAcrossPickers(order, maxPickers = 3) {
       order.items[itemIndex].assignedPicker = pickers[i % pickers.length].user;
     });
 
-    const isHub = storeId === hubStoreId;
     pickers.forEach((p) => {
-      pickTasks.push({ picker: p.user, store: storeId, status: 'assigned', handoffStatus: isHub ? 'not_required' : 'pending' });
+      pickTasks.push({ picker: p.user, store: storeId, status: 'assigned' });
       assignedPickerIds.push(p.user);
     });
   }

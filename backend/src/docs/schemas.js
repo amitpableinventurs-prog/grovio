@@ -246,7 +246,7 @@ const OrderItem = {
   properties: {
     _id: id,
     product: id,
-    pickupStore: { type: 'string', description: 'Which store this item is actually picked from — differs from Order.store (the hub) for a non-hub store on a multi-store order' },
+    pickupStore: { type: 'string', description: "Which store this item is actually picked from — a multi-store order has one pickup point per distinct value here (see the order's pickTasks)" },
     variantId: { type: 'string', nullable: true },
     variantLabel: { type: 'string', nullable: true },
     nameSnapshot: { type: 'string', example: 'Fresh Apples' },
@@ -254,7 +254,6 @@ const OrderItem = {
     qty: { type: 'integer', example: 2 },
     pickedQty: { type: 'integer', nullable: true },
     assignedPicker: { type: 'string', nullable: true, description: 'Which of the order\'s pickTasks this item belongs to' },
-    pickedAt: { ...dateTime, nullable: true, description: 'Set when the assigned picker successfully scans this item' },
     isAvailable: { type: 'boolean' },
     substituteProduct: { type: 'string', nullable: true },
     substituteNote: { type: 'string', nullable: true },
@@ -266,12 +265,11 @@ const PickTask = {
   properties: {
     _id: id,
     picker: id,
-    store: { type: 'string', description: 'Which store this picker is working at' },
-    status: { type: 'string', enum: ['assigned', 'picking', 'completed'] },
+    store: { type: 'string', description: 'Which store — i.e. which pickup point — this picker/task represents' },
+    status: { type: 'string', enum: ['assigned', 'picking', 'completed'], description: "'completed' means picked + packed + the picker pressed \"Ready for Pickup\" — there is no scan-verified picking step" },
     startedAt: { ...dateTime, nullable: true },
     completedAt: { ...dateTime, nullable: true },
-    handoffStatus: { type: 'string', enum: ['not_required', 'pending', 'delivered_to_hub'], description: "'not_required' for the hub store's own picker; otherwise starts 'pending' until scan-verified at the hub" },
-    handoffAt: { ...dateTime, nullable: true },
+    pickedUpAt: { ...dateTime, nullable: true, description: "Set once the delivery partner has confirmed collection from this pickup point (scan or OTP) — see GET /delivery/jobs/{id}/pickups" },
   },
 };
 

@@ -5,9 +5,10 @@ const { notifyUser } = require('./notification.service');
 const ApiError = require('../utils/apiError');
 
 // Allowed forward transitions. Cancellation is handled separately (allowed from most pre-delivery states).
-// 'assigned' -> 'picked_up' is gated behind a verified handover OTP (see verifyHandoverOtp below) —
-// there is no other path to 'picked_up', per the business rule that the delivery app must never
-// self-report a pickup without backend validation.
+// 'assigned' -> 'picked_up' is gated behind every pickTask's pickup being verified (see
+// verifyPickupOtp/verifyPickupQr and advanceAfterPickup below) — there is no other path to
+// 'picked_up', per the business rule that the delivery app must never self-report a pickup
+// without backend validation.
 const TRANSITIONS = {
   placed: ['accepted', 'rejected', 'cancelled'],
   accepted: ['picking', 'cancelled'],
@@ -55,75 +56,86 @@ function generateOtpCode() {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
-// A secure opaque token, not customer data, to embed in the handover QR code (see
-// order.model.js#handoverQrToken).
+// A secure opaque token, not customer data, to embed in a pickup QR code (see
+// order.model.js#pickTaskSchema.pickupQrToken).
 function generateQrToken() {
   return crypto.randomBytes(24).toString('hex');
 }
 
-// Ensures `order` has a live (non-expired) handover OTP, generating a fresh one if there isn't
-// one yet or the existing one has expired. Returns the code only when it actually generated a
-// new one, so callers can tell "freshly generated" apart from "already had a valid one" without
-// re-reading the field. Caller is responsible for persisting (order.save()).
-function ensureHandoverOtp(order) {
-  const expired = !order.handoverOtp || !order.handoverOtpExpiresAt || order.handoverOtpExpiresAt < new Date();
+// Ensures `task` (one pickTask, i.e. one pickup point/store) has a live pickup OTP for its
+// picker to read out to the delivery partner in person when they arrive at that store. Returns
+// the code only when it actually generated a new one, so callers can tell "freshly generated"
+// apart from "already had a valid one" without re-reading the field. Caller is responsible for
+// persisting (order.save()).
+function ensurePickupOtp(task) {
+  const expired = !task.pickupOtp || !task.pickupOtpExpiresAt || task.pickupOtpExpiresAt < new Date();
   if (!expired) return null;
-  order.handoverOtp = generateOtpCode();
-  order.handoverOtpExpiresAt = new Date(Date.now() + HANDOVER_OTP_EXPIRY_MINUTES * 60 * 1000);
-  order.handoverOtpAttempts = 0;
-  return order.handoverOtp;
+  task.pickupOtp = generateOtpCode();
+  task.pickupOtpExpiresAt = new Date(Date.now() + HANDOVER_OTP_EXPIRY_MINUTES * 60 * 1000);
+  task.pickupOtpAttempts = 0;
+  return task.pickupOtp;
 }
 
-// Same idea as ensureHandoverOtp, for the QR alternative — see order.model.js#handoverQrToken.
-function ensureHandoverQrToken(order) {
-  const expired = !order.handoverQrToken || !order.handoverQrTokenExpiresAt || order.handoverQrTokenExpiresAt < new Date();
+// Same idea as ensurePickupOtp, for the QR alternative.
+function ensurePickupQrToken(task) {
+  const expired = !task.pickupQrToken || !task.pickupQrTokenExpiresAt || task.pickupQrTokenExpiresAt < new Date();
   if (!expired) return null;
-  order.handoverQrToken = generateQrToken();
-  order.handoverQrTokenExpiresAt = new Date(Date.now() + HANDOVER_QR_EXPIRY_MINUTES * 60 * 1000);
-  return order.handoverQrToken;
+  task.pickupQrToken = generateQrToken();
+  task.pickupQrTokenExpiresAt = new Date(Date.now() + HANDOVER_QR_EXPIRY_MINUTES * 60 * 1000);
+  return task.pickupQrToken;
 }
 
-// Validates the code the Delivery Boy enters against the Picker's handover OTP. On success this
-// is the ONLY path that transitions an order to 'picked_up' (see TRANSITIONS above) — the mobile
-// app itself never sets that status directly, the backend does after verifying here.
-async function verifyHandoverOtp({ order, code, changedBy }) {
-  if (!order.handoverOtp) return { valid: false, reason: 'not_generated' };
-  if (order.handoverOtpExpiresAt < new Date()) return { valid: false, reason: 'expired' };
-  if (order.handoverOtpAttempts >= MAX_HANDOVER_OTP_ATTEMPTS) return { valid: false, reason: 'max_attempts' };
+// Validates the code the Delivery Boy enters against ONE specific pickTask's pickup OTP — i.e.
+// confirms collection from that one store. Every pickup point is verified independently; the
+// order only reaches 'picked_up' once all of them are (see advanceAfterPickup below).
+async function verifyPickupOtp({ order, taskId, code, changedBy }) {
+  const task = order.pickTasks.id(taskId);
+  if (!task) return { valid: false, reason: 'not_found' };
+  if (task.pickedUpAt) return { valid: false, reason: 'already_picked_up' };
+  if (!task.pickupOtp) return { valid: false, reason: 'not_generated' };
+  if (task.pickupOtpExpiresAt < new Date()) return { valid: false, reason: 'expired' };
+  if (task.pickupOtpAttempts >= MAX_HANDOVER_OTP_ATTEMPTS) return { valid: false, reason: 'max_attempts' };
 
-  if (order.handoverOtp !== String(code)) {
-    order.handoverOtpAttempts += 1;
+  if (task.pickupOtp !== String(code)) {
+    task.pickupOtpAttempts += 1;
     await order.save();
-    const attemptsLeft = MAX_HANDOVER_OTP_ATTEMPTS - order.handoverOtpAttempts;
+    const attemptsLeft = MAX_HANDOVER_OTP_ATTEMPTS - task.pickupOtpAttempts;
     return { valid: false, reason: attemptsLeft <= 0 ? 'max_attempts' : 'invalid', attemptsLeft: Math.max(attemptsLeft, 0) };
   }
 
-  // Clear both handover methods on success — QR and OTP verify the same physical handover, so
-  // once either one completes it, the other should stop being valid too.
-  order.handoverOtp = null;
-  order.handoverOtpExpiresAt = null;
-  order.handoverQrToken = null;
-  order.handoverQrTokenExpiresAt = null;
-  await transitionOrder({ order, toStatus: 'picked_up', changedBy, note: 'Handover OTP verified' });
-  return { valid: true };
+  // Clear both pickup methods on success — QR and OTP verify the same physical pickup, so once
+  // either one completes it, the other should stop being valid too.
+  task.pickedUpAt = new Date();
+  task.pickupOtp = null;
+  task.pickupOtpExpiresAt = null;
+  task.pickupQrToken = null;
+  task.pickupQrTokenExpiresAt = null;
+  await order.save();
+
+  await advanceAfterPickup({ order, changedBy });
+  return { valid: true, task };
 }
 
-// Validates the QR token the Delivery Boy scanned against the Picker's handover QR — the other
-// path (alongside verifyHandoverOtp above) that can transition an order to 'picked_up'. Every
+// Validates the QR token the Delivery Boy scanned against ONE specific pickTask's pickup QR —
+// the other path (alongside verifyPickupOtp above) that can confirm a single pickup point. Every
 // attempt, successful or not, is written to ScannerLog first, so a failed/rejected scan is never
-// silently dropped (see the "current implementation" delivery-panel spec, section 9/18).
-async function verifyHandoverQr({ order, qrToken, scannedBy, userType, deviceId, location }) {
+// silently dropped.
+async function verifyPickupQr({ order, taskId, qrToken, scannedBy, deviceId, location }) {
+  const task = order.pickTasks.id(taskId);
+
   let reason = null;
-  if (!order.handoverQrToken) reason = 'not_generated';
-  else if (order.handoverQrTokenExpiresAt < new Date()) reason = 'expired';
-  else if (order.handoverQrToken !== qrToken) reason = 'invalid';
+  if (!task) reason = 'not_found';
+  else if (task.pickedUpAt) reason = 'already_picked_up';
+  else if (!task.pickupQrToken) reason = 'not_generated';
+  else if (task.pickupQrTokenExpiresAt < new Date()) reason = 'expired';
+  else if (task.pickupQrToken !== qrToken) reason = 'invalid';
 
   await ScannerLog.create({
     order: order._id,
     qrType: 'handover',
     qrToken: qrToken || null,
     scannedBy,
-    userType,
+    userType: 'delivery',
     deviceId: deviceId || null,
     location: location || undefined,
     status: reason ? 'failed' : 'success',
@@ -132,12 +144,25 @@ async function verifyHandoverQr({ order, qrToken, scannedBy, userType, deviceId,
 
   if (reason) return { valid: false, reason };
 
-  order.handoverQrToken = null;
-  order.handoverQrTokenExpiresAt = null;
-  order.handoverOtp = null;
-  order.handoverOtpExpiresAt = null;
-  await transitionOrder({ order, toStatus: 'picked_up', changedBy: scannedBy, note: 'Handover QR scanned' });
-  return { valid: true };
+  task.pickedUpAt = new Date();
+  task.pickupQrToken = null;
+  task.pickupQrTokenExpiresAt = null;
+  task.pickupOtp = null;
+  task.pickupOtpExpiresAt = null;
+  await order.save();
+
+  await advanceAfterPickup({ order, changedBy: scannedBy });
+  return { valid: true, task };
+}
+
+// Once every pickTask (every pickup point) has been collected by the delivery partner, the order
+// moves 'assigned' -> 'picked_up' — the whole multi-stop collection run is complete and the
+// partner can now head to the customer. Called after each individual pickup is verified.
+async function advanceAfterPickup({ order, changedBy }) {
+  const allPickedUp = order.pickTasks.every((t) => t.pickedUpAt);
+  if (allPickedUp && order.orderStatus === 'assigned') {
+    await transitionOrder({ order, toStatus: 'picked_up', changedBy, note: 'All pickup points collected' });
+  }
 }
 
 async function transitionOrder({ order, toStatus, changedBy, note }) {
@@ -150,17 +175,25 @@ async function transitionOrder({ order, toStatus, changedBy, note }) {
   if (toStatus === 'delivered') order.deliveredAt = new Date();
   if (toStatus === 'picked_up') order.pickerHandoverAt = order.pickerHandoverAt || new Date();
 
-  // Generate the customer hand-off PIN and both handover methods (OTP + QR) as soon as a
-  // delivery partner is assigned. The PIN is collected from the customer at the doorstep to
-  // confirm delivery; the OTP/QR are used by the Picker and Delivery Boy at pickup time —
-  // whichever one is used first completes the handover (see verifyHandoverOtp/verifyHandoverQr).
+  // Generate the customer hand-off PIN, and a pickup OTP+QR per pickup point, as soon as a
+  // delivery partner is assigned. Every pickTask is already 'completed' by the time an order
+  // reaches 'assigned' (see advancePickingStatus below), so all pickup points get their codes at
+  // once here. The PIN is collected from the customer at the doorstep to confirm delivery; each
+  // pickup OTP/QR is used by that store's picker and the Delivery Boy when they arrive there —
+  // whichever method is used first completes that one pickup (see verifyPickupOtp/verifyPickupQr).
   let pin = null;
   if (toStatus === 'assigned' && !order.deliveryPin) {
     pin = generatePin();
     order.deliveryPin = pin;
   }
-  const handoverOtp = toStatus === 'assigned' ? ensureHandoverOtp(order) : null;
-  if (toStatus === 'assigned') ensureHandoverQrToken(order);
+  const freshPickupCodes = [];
+  if (toStatus === 'assigned') {
+    order.pickTasks.forEach((task) => {
+      const code = ensurePickupOtp(task);
+      ensurePickupQrToken(task);
+      if (code) freshPickupCodes.push({ task, code });
+    });
+  }
 
   order.statusLogs.push({ status: toStatus, changedBy, note });
   await order.save();
@@ -177,93 +210,40 @@ async function transitionOrder({ order, toStatus, changedBy, note }) {
     });
   }
 
-  // Any picker who worked this order can hand it over (see getHandoverOtp/getHandoverQr's
-  // authorization, which checks pickTasks the same way) — notify all of them, not just one.
-  if (handoverOtp && order.pickTasks?.length) {
-    const pickerIds = [...new Set(order.pickTasks.map((t) => t.picker.toString()))];
-    await Promise.all(pickerIds.map((pickerId) => notifyUser(pickerId, {
-      title: `Order ${order.orderNumber}`,
-      body: `Give this handover OTP to the delivery partner when they arrive: ${handoverOtp}`,
-      type: 'handover_otp',
-      data: { orderId: order._id, handoverOtp },
-    })));
-  }
+  // Each pickup point's own picker gets their own code, not a single shared one.
+  await Promise.all(freshPickupCodes.map(({ task, code }) => notifyUser(task.picker, {
+    title: `Order ${order.orderNumber}`,
+    body: `Give this pickup code to the delivery partner when they arrive: ${code}`,
+    type: 'pickup_otp',
+    data: { orderId: order._id, taskId: task._id, pickupOtp: code },
+  })));
 
   return order;
 }
 
-// Called after a picker marks their own pickTask 'completed' (see picker.controller.js#completeMyPicking)
-// or after a hub handoff is verified (see verifyHandoffOtp below). Rolls the order-level status up:
-// the first completion (with others still pending) moves the order to 'partially_picked'; it only
-// reaches 'packed' once every pickTask is done picking AND, for a cart that spanned multiple
-// stores, every non-hub store's picker has handed their portion off at the hub (handoffStatus) —
-// "fully picked" and "ready for dispatch" are the same automatic transition for a single-store
-// order, but for a multi-store one, dispatch also needs consolidation to have actually happened.
+// Called after a picker marks their own pickTask 'completed' (i.e. presses "Ready for Pickup" —
+// see picker.controller.js#completeMyPicking). Rolls the order-level status up based on how many
+// of the pickTasks are done: the first completion (with others still pending) moves the order to
+// 'partially_picked'; the last one moves it straight to 'packed' ("fully ready for pickup") —
+// picking is independent per store/picker, so there's nothing else to wait on.
 async function advancePickingStatus({ order, changedBy }) {
   const allCompleted = order.pickTasks.every((t) => t.status === 'completed');
-  const allHandedOff = order.pickTasks.every((t) => t.handoffStatus !== 'pending');
   const anyCompleted = order.pickTasks.some((t) => t.status === 'completed');
 
-  if (allCompleted && allHandedOff && order.orderStatus !== 'packed') {
-    await transitionOrder({ order, toStatus: 'packed', changedBy, note: 'All pickers completed and consolidated at the hub — order packed' });
+  if (allCompleted && order.orderStatus !== 'packed') {
+    await transitionOrder({ order, toStatus: 'packed', changedBy, note: 'All pickers completed — order packed' });
   } else if (anyCompleted && order.orderStatus === 'picking') {
     await transitionOrder({ order, toStatus: 'partially_picked', changedBy, note: 'Some pickers completed' });
   }
 }
 
-// Ensures `task` (a non-hub pickTask, i.e. handoffStatus !== 'not_required') has a live handoff
-// OTP for its picker to read out to whoever receives it at the hub — same idea as
-// ensureHandoverOtp above, just scoped to one pickTask instead of the whole order. Returns the
-// code only when it actually generated a new one. Caller is responsible for persisting (order.save()).
-function ensureHandoffOtp(task) {
-  const expired = !task.handoffOtp || !task.handoffOtpExpiresAt || task.handoffOtpExpiresAt < new Date();
-  if (!expired) return null;
-  task.handoffOtp = generateOtpCode();
-  task.handoffOtpExpiresAt = new Date(Date.now() + HANDOVER_OTP_EXPIRY_MINUTES * 60 * 1000);
-  task.handoffOtpAttempts = 0;
-  return task.handoffOtp;
-}
-
-// Validates the code a hub-store picker was given by another store's picker in person. Finds
-// whichever pending pickTask it belongs to (the receiving picker doesn't need to know in advance
-// which store it's from) — on success marks that task handed off and re-runs advancePickingStatus,
-// since this may be the last thing the order was waiting on to reach 'packed'.
-async function verifyHandoffOtp({ order, code, changedBy }) {
-  const candidates = order.pickTasks.filter((t) => t.handoffStatus === 'pending' && t.handoffOtp);
-  if (!candidates.length) return { valid: false, reason: 'not_generated' };
-
-  const task = candidates.find((t) => t.handoffOtp === String(code));
-  if (!task) {
-    // Attribute the failed attempt to every candidate task so a max-attempts lockout can't be
-    // dodged by spreading guesses across them — same spirit as the single-OTP case, just fanned out.
-    candidates.forEach((t) => { t.handoffOtpAttempts += 1; });
-    await order.save();
-    const attemptsLeft = Math.max(...candidates.map((t) => MAX_HANDOVER_OTP_ATTEMPTS - t.handoffOtpAttempts));
-    if (candidates.some((t) => t.handoffOtpExpiresAt < new Date())) return { valid: false, reason: 'expired' };
-    return { valid: false, reason: attemptsLeft <= 0 ? 'max_attempts' : 'invalid', attemptsLeft: Math.max(attemptsLeft, 0) };
-  }
-
-  if (task.handoffOtpExpiresAt < new Date()) return { valid: false, reason: 'expired' };
-  if (task.handoffOtpAttempts >= MAX_HANDOVER_OTP_ATTEMPTS) return { valid: false, reason: 'max_attempts' };
-
-  task.handoffStatus = 'delivered_to_hub';
-  task.handoffAt = new Date();
-  task.handoffOtp = null;
-  task.handoffOtpExpiresAt = null;
-  await order.save();
-
-  await advancePickingStatus({ order, changedBy });
-  return { valid: true, task };
-}
-
 module.exports = {
   transitionOrder,
   TRANSITIONS,
-  ensureHandoverOtp,
-  verifyHandoverOtp,
-  ensureHandoverQrToken,
-  verifyHandoverQr,
+  ensurePickupOtp,
+  ensurePickupQrToken,
+  verifyPickupOtp,
+  verifyPickupQr,
+  advanceAfterPickup,
   advancePickingStatus,
-  ensureHandoffOtp,
-  verifyHandoffOtp,
 };

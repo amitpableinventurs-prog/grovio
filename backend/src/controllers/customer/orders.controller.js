@@ -42,10 +42,10 @@ async function resolveCoupon(code, itemTotal, userId) {
 
 // Loads the customer's cart, validates each store/item, and computes the authoritative
 // server-side total breakdown — split per store, since a cart can hold items from multiple
-// stores. They still end up as a single Order (see placeOrder below), consolidated at a hub
-// store; the per-store split here is what drives per-store picker assignment and hub handoff.
-// Shared by the checkout preview and the real order placement so the numbers a customer sees
-// before paying are exactly what gets charged.
+// stores. They still end up as a single Order (see placeOrder below); the per-store split here
+// is what drives per-store picker assignment and, later, per-store delivery pickup points. Shared
+// by the checkout preview and the real order placement so the numbers a customer sees before
+// paying are exactly what gets charged.
 async function loadAndPriceCart(userId, couponCodeOverride) {
   const cart = await Cart.findOne({ user: userId }).populate('items.product');
   if (!cart || !cart.items.length) throw new ApiError(400, 'Your cart is empty');
@@ -144,11 +144,13 @@ const checkoutSummary = catchAsync(async (req, res) => {
 });
 
 // POST /customer/orders  { addressId, paymentMethod }
-// A cart spanning multiple stores becomes a SINGLE order that consolidates at a hub — whichever
-// of the cart's stores has the most items. Each item snapshots its own pickupStore (see
-// order.model.js), and picking is split per store (see assignment.service.js#splitOrderAcrossPickers)
-// — a picker at a non-hub store carries their portion to the hub and hands it off there (pickTask
-// handoffStatus) before the order can reach 'packed' and go out with a single delivery pickup.
+// A cart spanning multiple stores becomes a SINGLE order. Each item snapshots its own
+// pickupStore (see order.model.js), and picking is split per store (see
+// assignment.service.js#splitOrderAcrossPickers) — each picker picks, packs and marks their own
+// portion ready for pickup AT THEIR OWN STORE (no physical hand-off between pickers). The
+// delivery partner later visits every store as its own pickup point — see
+// delivery.controller.js#listPickupPoints. order.store is just the order's primary/display
+// store (whichever of the cart's stores has the most items), not a physical consolidation point.
 // Note: a standalone (non-replica-set) MongoDB instance doesn't support multi-document
 // transactions, so writes below run sequentially rather than atomically.
 const placeOrder = catchAsync(async (req, res) => {
@@ -163,7 +165,7 @@ const placeOrder = catchAsync(async (req, res) => {
     await debitWallet({ userId: req.user.id, amount: grandTotal, reason: 'Order payment' });
   }
 
-  const hubGroup = storeGroups.reduce((max, g) => (g.items.length > max.items.length ? g : max), storeGroups[0]);
+  const primaryGroup = storeGroups.reduce((max, g) => (g.items.length > max.items.length ? g : max), storeGroups[0]);
   const storeNameById = new Map(storeGroups.map((g) => [g.store._id.toString(), g.store.name]));
 
   const items = storeGroups.flatMap((group) =>
@@ -184,7 +186,7 @@ const placeOrder = catchAsync(async (req, res) => {
   const order = await Order.create({
     orderNumber: generateOrderNumber(),
     customer: req.user.id,
-    store: hubGroup.store._id,
+    store: primaryGroup.store._id,
     address: addressId,
     itemTotal,
     deliveryFee,

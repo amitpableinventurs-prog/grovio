@@ -33,24 +33,41 @@ paths['/delivery/jobs/{id}/arrived-pickup'] = {
   post: { tags: TAG, summary: 'Mark arrival at the store', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('Order'), 'Arrival at store recorded'), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
 paths['/delivery/jobs/{id}/pickers'] = {
-  get: { tags: TAG, summary: 'Get the picker(s) assigned to this order (for handover identification)', ...bearer(), parameters: [idParam()], responses: { 200: envelope({ type: 'array', items: ref('PickerProfile') }), 401: RESPONSES_401, 404: RESPONSES_404 } },
+  get: { tags: TAG, summary: 'Get the picker(s) assigned to this order (for pickup identification)', ...bearer(), parameters: [idParam()], responses: { 200: envelope({ type: 'array', items: ref('PickerProfile') }), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
-paths['/delivery/jobs/{id}/otp/verify'] = {
-  post: { tags: TAG, summary: 'Verify the picker\'s handover OTP (order -> picked_up)', ...bearer(), parameters: [idParam()], requestBody: jsonBody({ otp: { type: 'string', example: '4821' } }, ['otp']), responses: { 200: envelope(ref('Order'), 'Handover confirmed. Order picked up.'), 400: errorResponse('Incorrect or expired OTP'), 401: RESPONSES_401, 404: RESPONSES_404 } },
+paths['/delivery/jobs/{id}/pickups'] = {
+  get: {
+    tags: TAG,
+    summary: 'List this order\'s pickup points — one per store it draws items from. Visit each in turn and confirm collection independently (scan or OTP, see below); the order only reaches picked_up once every point here is pickedUp: true.',
+    ...bearer(), parameters: [idParam()],
+    responses: {
+      200: envelope({ type: 'array', items: { type: 'object', properties: {
+        taskId: { type: 'string' }, store: ref('Store'), picker: { type: 'object' }, status: { type: 'string' }, pickedUp: { type: 'boolean' }, pickedUpAt: { type: 'string', format: 'date-time', nullable: true },
+      } } }),
+      401: RESPONSES_401, 404: RESPONSES_404,
+    },
+  },
 };
-paths['/delivery/jobs/{id}/scan'] = {
+paths['/delivery/jobs/{id}/pickups/{taskId}/otp/verify'] = {
   post: {
-    tags: TAG, summary: 'Scan the picker\'s handover QR code (order -> picked_up) — alternative to otp/verify above; either one completes the handover', ...bearer(), parameters: [idParam()],
+    tags: TAG, summary: 'Verify one pickup point\'s OTP, given by that store\'s picker in person', ...bearer(), parameters: [idParam(), idParam('taskId', 'pickTask subdocument ID, from GET .../pickups')],
+    requestBody: jsonBody({ otp: { type: 'string', example: '4821' } }, ['otp']),
+    responses: { 200: envelope(ref('Order'), 'Pickup confirmed.'), 400: errorResponse('Incorrect or expired OTP, or this pickup point was already collected'), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
+};
+paths['/delivery/jobs/{id}/pickups/{taskId}/scan'] = {
+  post: {
+    tags: TAG, summary: 'Scan one pickup point\'s QR code — alternative to otp/verify above; either one confirms that pickup', ...bearer(), parameters: [idParam(), idParam('taskId', 'pickTask subdocument ID, from GET .../pickups')],
     requestBody: jsonBody({
       qrToken: { type: 'string', description: 'Decoded content of the scanned QR code' },
       deviceId: { type: 'string' },
       location: { type: 'object', properties: { lat: { type: 'number' }, lng: { type: 'number' } } },
     }, ['qrToken']),
-    responses: { 200: envelope(ref('Order'), 'Handover confirmed. Order picked up.'), 400: errorResponse('Invalid, expired, or unrelated QR code'), 401: RESPONSES_401, 404: RESPONSES_404 },
+    responses: { 200: envelope(ref('Order'), 'Pickup confirmed.'), 400: errorResponse('Invalid, expired, or unrelated QR code, or this pickup point was already collected'), 401: RESPONSES_401, 404: RESPONSES_404 },
   },
 };
 paths['/delivery/jobs/{id}/out-for-delivery'] = {
-  post: { tags: TAG, summary: 'Depart with the package after a verified handover (order -> out_for_delivery)', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('Order'), 'Marked as out for delivery'), 401: RESPONSES_401, 404: RESPONSES_404 } },
+  post: { tags: TAG, summary: 'Depart for the customer once every pickup point is confirmed (order -> out_for_delivery)', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('Order'), 'Marked as out for delivery'), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
 paths['/delivery/jobs/{id}/arrived-drop'] = {
   post: { tags: TAG, summary: 'Mark arrival at the customer\'s address', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('Order'), 'Arrival at customer recorded'), 401: RESPONSES_401, 404: RESPONSES_404 } },

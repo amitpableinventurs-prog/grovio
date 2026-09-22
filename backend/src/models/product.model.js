@@ -23,9 +23,8 @@ const productSchema = new Schema({
   variants: { type: [variantSchema], default: [] },
   isAvailable: { type: Boolean, default: true },
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
-  // System-generated scannable code (not a real-world UPC/EAN) — printed by admin as a label and
-  // scanned by the Picker app to verify they've picked the correct item. See
-  // utils/productQr.js#generateProductQrToken and picker/picker.controller.js#scanItem.
+  // System-generated scannable code (not a real-world UPC/EAN) — printed by admin as a physical
+  // label for the product. See utils/productQr.js#generateProductQrToken.
   qrToken: { type: String, unique: true, sparse: true },
 }, { timestamps: true });
 

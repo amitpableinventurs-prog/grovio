@@ -123,8 +123,7 @@ const assignPicker = catchAsync(async (req, res) => {
 
   item.assignedPicker = pickerId;
   if (!order.pickTasks.some((t) => t.picker.toString() === pickerId)) {
-    const isHub = item.pickupStore.toString() === order.store.toString();
-    order.pickTasks.push({ picker: pickerId, store: item.pickupStore, status: 'assigned', handoffStatus: isHub ? 'not_required' : 'pending' });
+    order.pickTasks.push({ picker: pickerId, store: item.pickupStore, status: 'assigned' });
   }
   await order.save();
 
