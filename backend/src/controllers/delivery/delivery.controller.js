@@ -127,15 +127,15 @@ const markArrivedAtPickup = catchAsync(async (req, res) => {
   new ApiResponse(200, order, 'Arrival at store recorded').send(res);
 });
 
-// GET /delivery/jobs/:id/pickers -> the picker(s) assigned to this order (currently always one,
-// per the current single-picker-per-order model — returned as an array so a future multi-picker
-// order-to-picker mapping is a purely additive change on top of this same endpoint).
+// GET /delivery/jobs/:id/pickers -> the picker(s) assigned to this order — up to 3, one per
+// pickTask (see assignment.service.js#splitOrderAcrossPickers).
 const listAssignedPickers = catchAsync(async (req, res) => {
   const order = await findAssignedOrder(req);
-  if (!order.picker) return new ApiResponse(200, []).send(res);
+  if (!order.pickTasks?.length) return new ApiResponse(200, []).send(res);
 
-  const profile = await PickerProfile.findOne({ user: order.picker }).populate('user', 'name phone');
-  new ApiResponse(200, profile ? [profile] : []).send(res);
+  const pickerIds = order.pickTasks.map((t) => t.picker);
+  const profiles = await PickerProfile.find({ user: { $in: pickerIds } }).populate('user', 'name phone');
+  new ApiResponse(200, profiles).send(res);
 });
 
 // POST /delivery/jobs/:id/otp/verify { otp } -> validates the handover OTP the Picker read out

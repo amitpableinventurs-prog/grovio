@@ -23,7 +23,7 @@ import StatusTag from '../components/StatusTag';
 import { formatCurrency, formatDateTime, titleCase } from '../utils/format';
 
 const ORDER_STATUSES = [
-  'placed', 'accepted', 'rejected', 'picking', 'packed', 'assigned', 'picked_up',
+  'placed', 'accepted', 'rejected', 'picking', 'partially_picked', 'packed', 'assigned', 'picked_up',
   'out_for_delivery', 'delivery_failed', 'delivered', 'cancelled', 'returned',
 ];
 
@@ -64,17 +64,25 @@ export default function OrdersPage() {
   const { data: pickers } = useQuery({ queryKey: ['approved-pickers'], queryFn: () => fetchUsersByRole('picker', { limit: 100, status: 'approved' }) });
   const { data: deliveryPartners } = useQuery({ queryKey: ['approved-delivery'], queryFn: () => fetchUsersByRole('delivery', { limit: 100, status: 'approved' }) });
 
-  // The Select only knows the label for a user in its fetched (approved) options list. If the
-  // order's already-assigned picker/delivery partner isn't in that list for any reason, fall back
-  // to the name the order itself was populated with — otherwise the Select shows the raw user ID.
+  // The Select only knows the label for a user in its fetched (approved) options list. If any of
+  // the order's already-assigned pickers aren't in that list for some reason, fall back to the
+  // names the order itself was populated with — otherwise the Select would show a raw user ID.
   const pickerOptions = useMemo(() => {
     const base = pickers?.items.map((p) => ({ value: p._id, label: p.name })) ?? [];
-    const assigned = order && typeof order.picker === 'object' ? (order.picker as User) : null;
-    if (assigned && !base.some((o) => o.value === assigned._id)) {
-      base.push({ value: assigned._id, label: assigned.name });
-    }
+    (order?.pickTasks ?? []).forEach((t) => {
+      if (typeof t.picker === 'object') {
+        const assigned = t.picker as User;
+        if (!base.some((o) => o.value === assigned._id)) base.push({ value: assigned._id, label: assigned.name });
+      }
+    });
     return base;
   }, [pickers, order]);
+
+  const pickerName = (userOrId: string | User | null | undefined) => {
+    if (!userOrId) return null;
+    if (typeof userOrId === 'object') return userOrId.name;
+    return pickerOptions.find((o) => o.value === userOrId)?.label ?? userOrId;
+  };
 
   const deliveryOptions = useMemo(() => {
     const base = deliveryPartners?.items.map((p) => ({ value: p._id, label: p.name })) ?? [];
@@ -91,11 +99,12 @@ export default function OrdersPage() {
   };
 
   const assignPickerMutation = useMutation({
-    mutationFn: (pickerId: string) => assignPickerToOrder(detailId as string, pickerId),
+    mutationFn: ({ itemId, pickerId }: { itemId: string; pickerId: string }) => assignPickerToOrder(detailId as string, itemId, pickerId),
     onSuccess: () => {
-      message.success('Picker assigned');
+      message.success('Item reassigned');
       invalidateDetail();
     },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Could not reassign item'),
   });
 
   const assignDeliveryMutation = useMutation({
@@ -192,24 +201,39 @@ export default function OrdersPage() {
               {order.couponCode && <Descriptions.Item label="Coupon">{order.couponCode}</Descriptions.Item>}
             </Descriptions>
 
-            <Typography.Title level={5}>Items</Typography.Title>
-            <ul>
+            <Typography.Title level={5}>Items (split across {order.pickTasks.length || 0} picker(s))</Typography.Title>
+            <Space direction="vertical" style={{ width: '100%', marginBottom: 12 }}>
               {order.items.map((item) => (
-                <li key={item._id}>
-                  {item.nameSnapshot} × {item.qty} — {formatCurrency(item.price * item.qty)}
-                </li>
+                <div key={item._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <span>
+                    {item.pickedAt ? '✅ ' : '⬜ '}
+                    {item.nameSnapshot} × {item.qty} — {formatCurrency(item.price * item.qty)}
+                  </span>
+                  <Select
+                    size="small"
+                    style={{ width: 160 }}
+                    placeholder="Picker"
+                    value={typeof item.assignedPicker === 'object' ? (item.assignedPicker as User)?._id : item.assignedPicker || undefined}
+                    options={pickerOptions}
+                    onChange={(pickerId) => assignPickerMutation.mutate({ itemId: item._id, pickerId })}
+                  />
+                </div>
               ))}
-            </ul>
+            </Space>
 
-            <Typography.Title level={5}>Assignment</Typography.Title>
+            <Typography.Title level={5}>Pick Tasks</Typography.Title>
             <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
-              <Select
-                style={{ width: '100%' }}
-                placeholder="Assign picker"
-                value={typeof order.picker === 'object' ? (order.picker as User)?._id : order.picker || undefined}
-                options={pickerOptions}
-                onChange={(pickerId) => assignPickerMutation.mutate(pickerId)}
-              />
+              {order.pickTasks.length === 0 && <Typography.Text type="secondary">No pickers assigned yet.</Typography.Text>}
+              {order.pickTasks.map((task) => (
+                <div key={task._id} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>{pickerName(task.picker)}</span>
+                  <StatusTag status={task.status} />
+                </div>
+              ))}
+            </Space>
+
+            <Typography.Title level={5}>Delivery</Typography.Title>
+            <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
               <Select
                 style={{ width: '100%' }}
                 placeholder="Assign delivery partner"

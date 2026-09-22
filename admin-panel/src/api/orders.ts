@@ -10,8 +10,8 @@ export function fetchOrder(id: string) {
   return unwrap<Order>(apiClient.get(`/admin/orders/${id}`));
 }
 
-export function assignPickerToOrder(orderId: string, pickerId: string) {
-  return unwrap<Order>(apiClient.patch(`/admin/orders/${orderId}/assign-picker`, { pickerId }));
+export function assignPickerToOrder(orderId: string, itemId: string, pickerId: string) {
+  return unwrap<Order>(apiClient.patch(`/admin/orders/${orderId}/assign-picker`, { itemId, pickerId }));
 }
 
 export function assignDeliveryToOrder(orderId: string, deliveryId: string) {

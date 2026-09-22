@@ -219,9 +219,12 @@ paths['/admin/orders/{id}'] = {
 };
 paths['/admin/orders/{id}/assign-picker'] = {
   patch: {
-    tags: TAG_ORDERS, summary: 'Manually assign/reassign a picker to an order', ...bearer(), parameters: [idParam()],
-    requestBody: jsonBody({ pickerId: { type: 'string' } }, ['pickerId']),
-    responses: { 200: envelope(ref('Order'), 'Picker assigned'), 400: errorResponse('Picker not found or not approved'), 401: RESPONSES_401, 404: RESPONSES_404 },
+    tags: TAG_ORDERS,
+    summary: 'Manually reassign ONE item to a (possibly new) picker',
+    description: "The automatic 3-way split at order acceptance (see assignment.service.js#splitOrderAcrossPickers) is the default — this is for rebalancing afterward, e.g. a picker goes offline mid-order. Creates a pickTask for the target picker if they weren't already on this order.",
+    ...bearer(), parameters: [idParam()],
+    requestBody: jsonBody({ itemId: { type: 'string' }, pickerId: { type: 'string' } }, ['itemId', 'pickerId']),
+    responses: { 200: envelope(ref('Order'), 'Item reassigned'), 400: errorResponse('Picker not found or not approved'), 401: RESPONSES_401, 404: RESPONSES_404 },
   },
 };
 paths['/admin/orders/{id}/assign-delivery'] = {

@@ -5,7 +5,7 @@ const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const { transitionOrder } = require('../../services/order.service');
 const { notifyUser } = require('../../services/notification.service');
-const { findAvailablePicker } = require('../../services/assignment.service');
+const { splitOrderAcrossPickers } = require('../../services/assignment.service');
 const { creditWallet } = require('../../services/payment.service');
 const { resolveStoreScope } = require('../../utils/storeScope');
 const { PERMISSIONS } = require('../../utils/permissions');
@@ -40,7 +40,7 @@ const getOrderDetail = catchAsync(async (req, res) => {
   const order = await Order.findById(req.params.id)
     .populate('customer', 'name phone')
     .populate('store')
-    .populate('picker', 'name phone')
+    .populate('pickTasks.picker', 'name phone')
     .populate('delivery', 'name phone');
   if (!order) throw new ApiError(404, 'Order not found');
   resolveStoreScope(req.user, order.store._id, PERMISSIONS.MANAGE_ORDERS);
@@ -56,17 +56,20 @@ const acceptOrder = catchAsync(async (req, res) => {
 
   await transitionOrder({ order, toStatus: 'accepted', changedBy: req.user.id, note: 'Accepted by store' });
 
-  // Best-effort auto-assign a picker linked to the fulfilling store.
-  const picker = await findAvailablePicker(order.store);
-  if (picker) {
-    order.picker = picker.user;
+  // Best-effort split across up to 3 available pickers at the fulfilling store — see
+  // assignment.service.js#splitOrderAcrossPickers. (In practice customer orders are
+  // auto-accepted at placement — see customer/orders.controller.js — so this path mainly covers
+  // an order that was left at 'placed' for some reason and needs a manual push.)
+  const pickerIds = await splitOrderAcrossPickers(order, order.store);
+  if (pickerIds.length) {
     await order.save();
-    await notifyUser(picker.user, {
+    await transitionOrder({ order, toStatus: 'picking', changedBy: req.user.id, note: `Split across ${pickerIds.length} picker(s)` });
+    await Promise.all(pickerIds.map((pickerId) => notifyUser(pickerId, {
       title: 'New pick-list assigned',
       body: `Order ${order.orderNumber} is ready to be picked.`,
       type: 'picker_assignment',
       data: { orderId: order._id },
-    });
+    })));
   }
 
   new ApiResponse(200, order, 'Order accepted').send(res);
@@ -85,26 +88,36 @@ const rejectOrder = catchAsync(async (req, res) => {
   new ApiResponse(200, order, 'Order rejected').send(res);
 });
 
-// PATCH /admin/orders/:id/assign-picker { pickerId }
+// PATCH /admin/orders/:id/assign-picker { itemId, pickerId }
+// Reassigns ONE item to a (possibly new) picker. The automatic 3-way split at order acceptance
+// (see assignment.service.js#splitOrderAcrossPickers) is the default path — this is for manually
+// rebalancing afterward, e.g. a picker goes offline mid-order. Creates a pickTask for the target
+// picker if they weren't already working this order.
 const assignPicker = catchAsync(async (req, res) => {
-  const { pickerId } = req.body;
+  const { itemId, pickerId } = req.body;
   const order = await Order.findById(req.params.id);
   if (!order) throw new ApiError(404, 'Order not found');
+
+  const item = order.items.id(itemId);
+  if (!item) throw new ApiError(404, 'Order item not found');
 
   const picker = await PickerProfile.findOne({ user: pickerId, status: 'approved' });
   if (!picker) throw new ApiError(400, 'Picker not found or not approved');
 
-  order.picker = pickerId;
+  item.assignedPicker = pickerId;
+  if (!order.pickTasks.some((t) => t.picker.toString() === pickerId)) {
+    order.pickTasks.push({ picker: pickerId, status: 'assigned' });
+  }
   await order.save();
 
   await notifyUser(pickerId, {
-    title: 'New pick-list assigned',
-    body: `Order ${order.orderNumber} has been assigned to you.`,
+    title: 'New pick-list item assigned',
+    body: `An item on order ${order.orderNumber} has been assigned to you.`,
     type: 'picker_assignment',
-    data: { orderId: order._id },
+    data: { orderId: order._id, itemId: item._id },
   });
 
-  new ApiResponse(200, order, 'Picker assigned').send(res);
+  new ApiResponse(200, order, 'Item reassigned').send(res);
 });
 
 // PATCH /admin/orders/:id/assign-delivery { deliveryId }

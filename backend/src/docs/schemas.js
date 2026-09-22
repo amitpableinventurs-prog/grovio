@@ -177,6 +177,7 @@ const Product = {
     variants: { type: 'array', items: ProductVariant },
     isAvailable: { type: 'boolean' },
     status: { type: 'string', enum: ['active', 'inactive'] },
+    qrToken: { type: 'string', nullable: true, description: 'System-generated scannable code — printed as a label, scanned by the Picker app to verify the item' },
     createdAt: dateTime,
   },
 };
@@ -250,9 +251,22 @@ const OrderItem = {
     price: money,
     qty: { type: 'integer', example: 2 },
     pickedQty: { type: 'integer', nullable: true },
+    assignedPicker: { type: 'string', nullable: true, description: 'Which of the order\'s pickTasks this item belongs to' },
+    pickedAt: { ...dateTime, nullable: true, description: 'Set when the assigned picker successfully scans this item' },
     isAvailable: { type: 'boolean' },
     substituteProduct: { type: 'string', nullable: true },
     substituteNote: { type: 'string', nullable: true },
+  },
+};
+
+const PickTask = {
+  type: 'object',
+  properties: {
+    _id: id,
+    picker: id,
+    status: { type: 'string', enum: ['assigned', 'picking', 'completed'] },
+    startedAt: { ...dateTime, nullable: true },
+    completedAt: { ...dateTime, nullable: true },
   },
 };
 
@@ -275,7 +289,7 @@ const Order = {
     vendor: id,
     store: id,
     address: id,
-    picker: { type: 'string', nullable: true },
+    pickTasks: { type: 'array', items: PickTask, description: 'Up to 3 pickers working this order in parallel — see orderItem.assignedPicker for which items belong to which' },
     delivery: { type: 'string', nullable: true },
     deliveryAcceptedAt: { ...dateTime, nullable: true },
     pickerHandoverAt: { ...dateTime, nullable: true },
@@ -294,7 +308,7 @@ const Order = {
     paymentStatus: { type: 'string', enum: ['pending', 'paid', 'failed', 'refunded'] },
     orderStatus: {
       type: 'string',
-      enum: ['placed', 'accepted', 'rejected', 'picking', 'packed', 'assigned', 'out_for_delivery', 'delivery_failed', 'delivered', 'cancelled', 'returned'],
+      enum: ['placed', 'accepted', 'rejected', 'picking', 'partially_picked', 'packed', 'assigned', 'picked_up', 'out_for_delivery', 'delivery_failed', 'delivered', 'cancelled', 'returned'],
     },
     cancelReason: { type: 'string', nullable: true },
     placedAt: dateTime,
@@ -507,6 +521,7 @@ module.exports = {
   WishlistItem,
   Wishlist,
   OrderItem,
+  PickTask,
   StatusLog,
   Order,
   OrderTracking,

@@ -24,10 +24,12 @@ const COLOR_MAP: Record<string, string> = {
   placed: 'blue',
   accepted: 'cyan',
   picking: 'blue',
+  partially_picked: 'gold',
   packed: 'geekblue',
   assigned: 'purple',
   picked_up: 'lime',
   out_for_delivery: 'orange',
+  completed: 'green',
 };
 
 export default function StatusTag({ status }: { status: string }) {

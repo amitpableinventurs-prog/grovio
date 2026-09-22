@@ -12,9 +12,10 @@ router.get('/location', ctrl.getLocation);
 router.get('/jobs', ctrl.listJobs);
 router.get('/jobs/:id', ctrl.getJobDetail);
 router.post('/jobs/:id/start', ctrl.startPicking);
+router.post('/jobs/:id/items/:itemId/scan', ctrl.scanItem);
 router.patch('/jobs/:id/items/:itemId', ctrl.updateJobItem);
 router.post('/jobs/:id/substitutions', ctrl.recordSubstitution);
-router.post('/jobs/:id/complete', ctrl.completeJob);
+router.post('/jobs/:id/complete', ctrl.completeMyPicking);
 router.get('/jobs/:id/otp', ctrl.getHandoverOtp);
 router.get('/jobs/:id/qr', ctrl.getHandoverQr);
 

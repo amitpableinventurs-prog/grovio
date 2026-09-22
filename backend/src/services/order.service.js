@@ -11,7 +11,8 @@ const ApiError = require('../utils/apiError');
 const TRANSITIONS = {
   placed: ['accepted', 'rejected', 'cancelled'],
   accepted: ['picking', 'cancelled'],
-  picking: ['packed', 'cancelled'],
+  picking: ['partially_picked', 'packed', 'cancelled'],
+  partially_picked: ['packed', 'cancelled'],
   packed: ['assigned', 'cancelled'],
   assigned: ['picked_up', 'cancelled'],
   picked_up: ['out_for_delivery', 'cancelled'],
@@ -27,6 +28,7 @@ const STATUS_MESSAGES = {
   accepted: 'Your order has been accepted by the store.',
   rejected: 'Your order was rejected by the store.',
   picking: 'Your order is being picked and packed.',
+  partially_picked: 'Part of your order has been picked — the rest is on its way.',
   packed: 'Your order has been packed and is awaiting pickup.',
   assigned: 'A delivery partner has been assigned to your order.',
   picked_up: 'Your order has been picked up and will be out for delivery shortly.',
@@ -175,16 +177,44 @@ async function transitionOrder({ order, toStatus, changedBy, note }) {
     });
   }
 
-  if (handoverOtp && order.picker) {
-    await notifyUser(order.picker, {
+  // Any picker who worked this order can hand it over (see getHandoverOtp/getHandoverQr's
+  // authorization, which checks pickTasks the same way) — notify all of them, not just one.
+  if (handoverOtp && order.pickTasks?.length) {
+    const pickerIds = [...new Set(order.pickTasks.map((t) => t.picker.toString()))];
+    await Promise.all(pickerIds.map((pickerId) => notifyUser(pickerId, {
       title: `Order ${order.orderNumber}`,
       body: `Give this handover OTP to the delivery partner when they arrive: ${handoverOtp}`,
       type: 'handover_otp',
       data: { orderId: order._id, handoverOtp },
-    });
+    })));
   }
 
   return order;
 }
 
-module.exports = { transitionOrder, TRANSITIONS, ensureHandoverOtp, verifyHandoverOtp, ensureHandoverQrToken, verifyHandoverQr };
+// Called after a picker marks their own pickTask 'completed' (see picker.controller.js#completeMyPicking).
+// Rolls the order-level status up based on how many of the pickTasks are done: the first
+// completion (with others still pending) moves the order to 'partially_picked'; the last one
+// moves it straight to 'packed' — "fully picked" and "ready for dispatch" are treated as the same
+// automatic transition here, since the items are already consolidated at the store (see the
+// architecture decision in the picker.controller.js module comment).
+async function advancePickingStatus({ order, changedBy }) {
+  const allCompleted = order.pickTasks.every((t) => t.status === 'completed');
+  const anyCompleted = order.pickTasks.some((t) => t.status === 'completed');
+
+  if (allCompleted && order.orderStatus !== 'packed') {
+    await transitionOrder({ order, toStatus: 'packed', changedBy, note: 'All pickers completed — order packed' });
+  } else if (anyCompleted && order.orderStatus === 'picking') {
+    await transitionOrder({ order, toStatus: 'partially_picked', changedBy, note: 'Some pickers completed' });
+  }
+}
+
+module.exports = {
+  transitionOrder,
+  TRANSITIONS,
+  ensureHandoverOtp,
+  verifyHandoverOtp,
+  ensureHandoverQrToken,
+  verifyHandoverQr,
+  advancePickingStatus,
+};

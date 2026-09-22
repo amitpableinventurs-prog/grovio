@@ -5,7 +5,7 @@ const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const generateOrderNumber = require('../../utils/orderNumber');
 const { transitionOrder } = require('../../services/order.service');
-const { findAvailablePicker } = require('../../services/assignment.service');
+const { splitOrderAcrossPickers } = require('../../services/assignment.service');
 const { debitWallet, creditWallet } = require('../../services/payment.service');
 const { notifyUser } = require('../../services/notification.service');
 
@@ -152,20 +152,21 @@ const placeOrder = catchAsync(async (req, res) => {
   cart.couponCode = null;
   await cart.save();
 
-  // Stores are company-owned now — there's no vendor to approve the order, so it's
-  // accepted immediately and handed straight to an available picker at this store.
+  // Stores are company-owned now — there's no vendor to approve the order, so it's accepted
+  // immediately and split across up to 3 available pickers at this store, who then work their
+  // assigned items in parallel — see assignment.service.js#splitOrderAcrossPickers.
   await transitionOrder({ order, toStatus: 'accepted', changedBy: req.user.id, note: 'Auto-accepted (no vendor approval required)' });
 
-  const picker = await findAvailablePicker(store._id);
-  if (picker) {
-    order.picker = picker.user;
+  const pickerIds = await splitOrderAcrossPickers(order, store._id);
+  if (pickerIds.length) {
     await order.save();
-    await notifyUser(picker.user, {
+    await transitionOrder({ order, toStatus: 'picking', changedBy: req.user.id, note: `Split across ${pickerIds.length} picker(s)` });
+    await Promise.all(pickerIds.map((pickerId) => notifyUser(pickerId, {
       title: 'New order assigned',
       body: `Order ${order.orderNumber} is ready to be picked at ${store.name}.`,
       type: 'new_order',
       data: { orderId: order._id },
-    });
+    })));
   }
 
   new ApiResponse(201, order, 'Order placed successfully').send(res);

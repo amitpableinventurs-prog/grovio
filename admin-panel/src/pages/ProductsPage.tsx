@@ -193,6 +193,17 @@ export default function ProductsPage() {
               ),
           },
           { title: 'Stock', dataIndex: 'stockQty' },
+          {
+            title: 'QR Code',
+            render: (_, r) =>
+              r.qrToken ? (
+                <Typography.Text code copyable={{ text: r.qrToken }} style={{ fontSize: 11 }}>
+                  {r.qrToken}
+                </Typography.Text>
+              ) : (
+                '—'
+              ),
+          },
           { title: 'Status', render: (_, r) => <StatusTag status={r.status} /> },
           {
             title: 'Actions',

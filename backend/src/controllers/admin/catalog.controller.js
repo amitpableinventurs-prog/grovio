@@ -5,6 +5,7 @@ const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const { logAdminActivity } = require('../../services/audit.service');
 const { resolveStoreScope } = require('../../utils/storeScope');
+const { generateProductQrToken } = require('../../utils/productQr');
 
 // ---------- Categories ----------
 
@@ -114,6 +115,7 @@ const createProduct = catchAsync(async (req, res) => {
     stockQty: stockQty || 0,
     sku,
     images,
+    qrToken: generateProductQrToken(),
   });
 
   await logAdminActivity({ adminId: req.user.id, action: 'product.create', entityType: 'Product', entityId: product._id, metadata: { storeId } });

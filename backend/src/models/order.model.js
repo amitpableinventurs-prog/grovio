@@ -8,9 +8,27 @@ const orderItemSchema = new Schema({
   price: { type: Number, required: true },
   qty: { type: Number, required: true },
   pickedQty: { type: Number, default: null },
+  // When the order is split across pickTasks (see below), this is which picker is responsible
+  // for this specific item. Set when the order is accepted (see assignment.service.js#splitItemsAcrossPickers).
+  assignedPicker: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  // Set when the assigned picker successfully scans this item's product QR — see
+  // picker/picker.controller.js#scanItem. Distinct from pickedQty being non-null: pickedQty could
+  // in principle be set without a scan (e.g. old data, or a manual override), pickedAt specifically
+  // marks a verified scan.
+  pickedAt: { type: Date, default: null },
   isAvailable: { type: Boolean, default: true },
   substituteProduct: { type: Schema.Types.ObjectId, ref: 'Product', default: null },
   substituteNote: { type: String, default: null },
+});
+
+// One entry per picker working this order — an order is split across up to 3 pickers who work
+// their portion (the items whose orderItem.assignedPicker matches them) in parallel. Replaces the
+// old single `picker` field.
+const pickTaskSchema = new Schema({
+  picker: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  status: { type: String, enum: ['assigned', 'picking', 'completed'], default: 'assigned' },
+  startedAt: { type: Date, default: null },
+  completedAt: { type: Date, default: null },
 });
 
 const statusLogSchema = new Schema({
@@ -24,7 +42,9 @@ const orderSchema = new Schema({
   customer: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   store: { type: Schema.Types.ObjectId, ref: 'Store', required: true },
   address: { type: Schema.Types.ObjectId, ref: 'Address', required: true },
-  picker: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  // Up to 3 pickers working this order in parallel, each responsible for the items whose
+  // orderItem.assignedPicker matches them — see pickTaskSchema above.
+  pickTasks: { type: [pickTaskSchema], default: [] },
   delivery: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   deliveryAcceptedAt: { type: Date, default: null },
   deliveryPin: { type: String, default: null, select: false },
@@ -64,7 +84,7 @@ const orderSchema = new Schema({
   codCollectionMethod: { type: String, enum: ['cash', 'upi'], default: null },
   orderStatus: {
     type: String,
-    enum: ['placed', 'accepted', 'rejected', 'picking', 'packed', 'assigned', 'picked_up', 'out_for_delivery', 'delivery_failed', 'delivered', 'cancelled', 'returned'],
+    enum: ['placed', 'accepted', 'rejected', 'picking', 'partially_picked', 'packed', 'assigned', 'picked_up', 'out_for_delivery', 'delivery_failed', 'delivered', 'cancelled', 'returned'],
     default: 'placed',
   },
   cancelReason: { type: String, default: null },

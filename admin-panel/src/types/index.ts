@@ -120,6 +120,7 @@ export interface Product {
   variants: ProductVariant[];
   isAvailable: boolean;
   status: 'active' | 'inactive';
+  qrToken?: string | null;
   createdAt: string;
 }
 
@@ -128,6 +129,7 @@ export type OrderStatus =
   | 'accepted'
   | 'rejected'
   | 'picking'
+  | 'partially_picked'
   | 'packed'
   | 'assigned'
   | 'picked_up'
@@ -146,9 +148,19 @@ export interface OrderItem {
   price: number;
   qty: number;
   pickedQty?: number | null;
+  assignedPicker?: string | User | null;
+  pickedAt?: string | null;
   isAvailable: boolean;
   substituteProduct?: string | null;
   substituteNote?: string | null;
+}
+
+export interface PickTask {
+  _id: string;
+  picker: string | User;
+  status: 'assigned' | 'picking' | 'completed';
+  startedAt?: string | null;
+  completedAt?: string | null;
 }
 
 export interface StatusLog {
@@ -180,7 +192,7 @@ export interface Order {
   vendor: string | Vendor;
   store: string | Store;
   address: string;
-  picker?: string | User | null;
+  pickTasks: PickTask[];
   delivery?: string | User | null;
   items: OrderItem[];
   statusLogs: StatusLog[];
