@@ -76,10 +76,29 @@ paths['/customer/addresses/{id}'] = {
 };
 
 paths['/customer/checkout/summary'] = {
-  post: { tags: TAG_ORDERS, summary: 'Server-side recalculation of totals before placing the order (no side effects)', ...bearer(), requestBody: jsonBody({ couponCode: { type: 'string', description: 'Optional override of the cart\'s applied coupon' } }), responses: { 200: envelope({ type: 'object', properties: { storeId: { type: 'string' }, itemTotal: { type: 'number' }, deliveryFee: { type: 'number' }, discount: { type: 'number' }, tax: { type: 'number' }, grandTotal: { type: 'number' }, couponCode: { type: 'string', nullable: true } } }), 400: errorResponse('Cart empty / store closed / coupon invalid'), 401: RESPONSES_401 } },
+  post: {
+    tags: TAG_ORDERS, summary: 'Server-side recalculation of totals before placing the order (no side effects)', ...bearer(),
+    requestBody: jsonBody({ couponCode: { type: 'string', description: 'Optional override of the cart\'s applied coupon' } }),
+    responses: {
+      200: envelope({
+        type: 'object',
+        properties: {
+          storeId: { type: 'string' }, itemTotal: { type: 'number' }, deliveryFee: { type: 'number' }, discount: { type: 'number' }, tax: { type: 'number' }, grandTotal: { type: 'number' }, couponCode: { type: 'string', nullable: true },
+          walletBalance: { type: 'number', description: 'Current Grovio Wallet balance — use to show/enable a "Pay with Wallet" option' },
+          walletSufficient: { type: 'boolean', description: 'walletBalance >= grandTotal' },
+        },
+      }),
+      400: errorResponse('Cart empty / store closed / coupon invalid'), 401: RESPONSES_401,
+    },
+  },
 };
 paths['/customer/orders'] = {
-  post: { tags: TAG_ORDERS, summary: 'Place an order from the current cart', ...bearer(), requestBody: jsonBody({ addressId: { type: 'string' }, paymentMethod: { type: 'string', enum: ['COD', 'RAZORPAY', 'WALLET'], default: 'COD' } }, ['addressId']), responses: { 201: envelope(ref('Order'), 'Order placed successfully'), 400: errorResponse('Cart empty / item out of stock / store closed'), 401: RESPONSES_401 } },
+  post: {
+    tags: TAG_ORDERS, summary: 'Place an order from the current cart', ...bearer(),
+    description: 'paymentMethod: "WALLET" debits the Grovio Wallet immediately and the order is created already paid — check checkoutSummary\'s walletBalance/walletSufficient first to avoid offering it when the balance is too low.',
+    requestBody: jsonBody({ addressId: { type: 'string' }, paymentMethod: { type: 'string', enum: ['COD', 'RAZORPAY', 'WALLET'], default: 'COD' } }, ['addressId']),
+    responses: { 201: envelope(ref('Order'), 'Order placed successfully'), 400: errorResponse('Cart empty / item out of stock / store closed / Insufficient wallet balance'), 401: RESPONSES_401 },
+  },
   get: { tags: TAG_ORDERS, summary: 'My order history', ...bearer(), parameters: [...PAGE_QS, q('status')], responses: { 200: envelope(paginated(ref('Order'))), 401: RESPONSES_401 } },
 };
 paths['/customer/orders/{id}'] = {

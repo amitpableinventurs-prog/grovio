@@ -1,4 +1,4 @@
-const { Cart, Order, Product, Store, Address, Coupon, CouponUsage, Setting, Refund } = require('../../models');
+const { Cart, Order, Product, Store, Address, Coupon, CouponUsage, Setting, Refund, Wallet } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
@@ -79,6 +79,12 @@ const checkoutSummary = catchAsync(async (req, res) => {
   const { couponCode } = req.body;
   const { itemTotal, deliveryFee, discount, tax, grandTotal, coupon, store } = await loadAndPriceCart(req.user.id, couponCode);
 
+  // Included so the client can show/enable "Pay with Wallet" (and how much is available) at
+  // checkout without a separate GET /customer/wallet call — placeOrder still re-checks the
+  // balance itself when paymentMethod: 'WALLET' is actually submitted, this is just a preview.
+  const wallet = await Wallet.findOne({ user: req.user.id });
+  const walletBalance = wallet ? wallet.balance : 0;
+
   new ApiResponse(200, {
     storeId: store._id,
     itemTotal,
@@ -87,6 +93,8 @@ const checkoutSummary = catchAsync(async (req, res) => {
     tax,
     grandTotal,
     couponCode: coupon ? coupon.code : null,
+    walletBalance,
+    walletSufficient: walletBalance >= grandTotal,
   }).send(res);
 });
 
