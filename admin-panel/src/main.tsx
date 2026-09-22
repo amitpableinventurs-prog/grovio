@@ -16,7 +16,21 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ConfigProvider theme={{ token: { colorPrimary: '#16a34a', borderRadius: 8 } }}>
+    <ConfigProvider
+      theme={{
+        token: { colorPrimary: '#16a34a', borderRadius: 8 },
+        components: {
+          Table: {
+            headerBg: '#16a34a',
+            headerColor: '#ffffff',
+            headerSortActiveBg: '#15803d',
+            headerSortHoverBg: '#15803d',
+            headerSplitColor: 'rgba(255, 255, 255, 0.25)',
+            borderColor: '#e5e7eb',
+          },
+        },
+      }}
+    >
       <AntApp>
         <QueryClientProvider client={queryClient}>
           <App />
