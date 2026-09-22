@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Table, Typography, Space, Button, Modal, Form, Input, Select, App as AntApp } from 'antd';
+import { Table, Typography, Space, Button, Modal, Form, Input, Select, Popconfirm, App as AntApp } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchStores, updateStore } from '../api/stores';
 import type { Store, Vendor } from '../types';
@@ -50,15 +50,26 @@ export default function StoresPage() {
           {
             title: 'Actions',
             render: (_, r) => (
-              <Button
-                size="small"
-                onClick={() => {
-                  setEditing(r);
-                  form.setFieldsValue({ zoneId: r.zoneId, status: r.status, openTime: r.openTime, closeTime: r.closeTime });
-                }}
-              >
-                Edit
-              </Button>
+              <Space>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setEditing(r);
+                    form.setFieldsValue({ zoneId: r.zoneId, status: r.status, openTime: r.openTime, closeTime: r.closeTime });
+                  }}
+                >
+                  Edit
+                </Button>
+                <Popconfirm
+                  title={r.status === 'active' ? 'Deactivate this store?' : 'Activate this store?'}
+                  description={r.status === 'active' ? 'Customers will no longer see this store.' : undefined}
+                  onConfirm={() => updateMutation.mutate({ id: r._id, values: { status: r.status === 'active' ? 'inactive' : 'active' } })}
+                >
+                  <Button size="small" danger={r.status === 'active'} loading={updateMutation.isPending && updateMutation.variables?.id === r._id}>
+                    {r.status === 'active' ? 'Deactivate' : 'Activate'}
+                  </Button>
+                </Popconfirm>
+              </Space>
             ),
           },
         ]}
