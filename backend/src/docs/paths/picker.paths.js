@@ -34,21 +34,11 @@ paths['/picker/jobs/{id}/complete'] = {
     responses: { 200: envelope(ref('Order'), 'Your portion is marked ready for pickup'), 400: errorResponse('You have already completed your portion of this order'), 401: RESPONSES_401, 404: RESPONSES_404 },
   },
 };
-paths['/picker/jobs/{id}/pickup/otp'] = {
-  get: {
-    tags: TAG,
-    summary: 'Get the pickup OTP for MY store to read out to the delivery partner in person when they arrive (auto-generated once a delivery partner is assigned; refreshed here if expired)',
-    ...bearer(), parameters: [idParam()],
-    responses: { 200: envelope({ type: 'object', properties: { otp: { type: 'string', example: '4821' }, expiresAt: { type: 'string', format: 'date-time' } } }), 400: errorResponse('No delivery partner assigned yet, or already picked up'), 401: RESPONSES_401, 404: RESPONSES_404 },
-  },
+paths['/picker/jobs/{id}/otp'] = {
+  get: { tags: TAG, summary: 'Get the handover OTP to read out to the delivery partner in person — hub picker only (auto-generated on delivery assignment; refreshed here if expired)', ...bearer(), parameters: [idParam()], responses: { 200: envelope({ type: 'object', properties: { otp: { type: 'string', example: '4821' }, expiresAt: { type: 'string', format: 'date-time' } } }), 400: errorResponse('No delivery partner assigned yet'), 401: RESPONSES_401, 404: errorResponse('Job not found, not assigned to you, or you are not the hub picker for this order') } },
 };
-paths['/picker/jobs/{id}/pickup/qr'] = {
-  get: {
-    tags: TAG,
-    summary: 'Get the pickup QR token for MY store to render as a QR code for the delivery partner to scan (alternative to the OTP above)',
-    ...bearer(), parameters: [idParam()],
-    responses: { 200: envelope({ type: 'object', properties: { qrToken: { type: 'string' }, expiresAt: { type: 'string', format: 'date-time' } } }), 400: errorResponse('No delivery partner assigned yet, or already picked up'), 401: RESPONSES_401, 404: RESPONSES_404 },
-  },
+paths['/picker/jobs/{id}/qr'] = {
+  get: { tags: TAG, summary: 'Get the handover QR token to render as a QR code for the delivery partner to scan — hub picker only (alternative to the OTP above; auto-generated on delivery assignment, refreshed here if expired)', ...bearer(), parameters: [idParam()], responses: { 200: envelope({ type: 'object', properties: { qrToken: { type: 'string' }, expiresAt: { type: 'string', format: 'date-time' } } }), 400: errorResponse('No delivery partner assigned yet'), 401: RESPONSES_401, 404: errorResponse('Job not found, not assigned to you, or you are not the hub picker for this order') } },
 };
 paths['/picker/history'] = {
   get: { tags: TAG, summary: 'Completed/cancelled/failed jobs history', ...bearer(), parameters: PAGE_QS, responses: { 200: envelope(paginated(ref('Order'))), 401: RESPONSES_401 } },

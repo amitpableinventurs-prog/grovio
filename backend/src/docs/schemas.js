@@ -246,7 +246,7 @@ const OrderItem = {
   properties: {
     _id: id,
     product: id,
-    pickupStore: { type: 'string', description: "Which store this item is actually picked from — a multi-store order has one pickup point per distinct value here (see the order's pickTasks)" },
+    pickupStore: { type: 'string', description: 'Which store this item is actually picked from — a multi-store order consolidates everything at the hub store (Order.store) for a single delivery pickup' },
     variantId: { type: 'string', nullable: true },
     variantLabel: { type: 'string', nullable: true },
     nameSnapshot: { type: 'string', example: 'Fresh Apples' },
@@ -265,11 +265,10 @@ const PickTask = {
   properties: {
     _id: id,
     picker: id,
-    store: { type: 'string', description: 'Which store — i.e. which pickup point — this picker/task represents' },
+    store: { type: 'string', description: 'Which store this picker is working at' },
     status: { type: 'string', enum: ['assigned', 'picking', 'completed'], description: "'completed' means picked + packed + the picker pressed \"Ready for Pickup\" — there is no scan-verified picking step" },
     startedAt: { ...dateTime, nullable: true },
     completedAt: { ...dateTime, nullable: true },
-    pickedUpAt: { ...dateTime, nullable: true, description: "Set once the delivery partner has confirmed collection from this pickup point (scan or OTP) — see GET /delivery/jobs/{id}/pickups" },
   },
 };
 

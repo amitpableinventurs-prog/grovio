@@ -9,15 +9,15 @@ function distance(lat1, lng1, lat2, lng2) {
 
 // Splits an order's items round-robin across up to `maxPickers` available (approved, online)
 // pickers PER STORE represented in the order (item.pickupStore) — a cart spanning multiple
-// stores has one picker pool per store, each becoming its own pickup point for the delivery
-// partner later (see delivery.controller.js#verifyPickupOtpCtrl) rather than being physically
-// consolidated anywhere. Creates the matching pickTasks (one per assigned picker, tagged with
-// which store they're working at) — each picker then only works the items assigned to them (see
-// picker.controller.js#completeMyPicking). A store whose items end up with no available pickers
-// is simply left unassigned, same as today's single-store "nobody available" case — those items
-// just wait. Mutates `order` in place (items[].assignedPicker, pickTasks) but does not save it,
-// so the caller can do so as part of its own transitionOrder/save sequence. Returns the assigned
-// picker user IDs (empty if none were available anywhere).
+// stores has one picker pool per store. Non-hub stores' pickers get their picked items to the
+// hub (order.store) themselves; the delivery partner only ever collects once, at the hub (see
+// delivery.controller.js#verifyHandoverOtpCtrl). Creates the matching pickTasks (one per assigned
+// picker, tagged with which store they're working at) — each picker then only works the items
+// assigned to them (see picker.controller.js#completeMyPicking). A store whose items end up with
+// no available pickers is simply left unassigned, same as today's single-store "nobody available"
+// case — those items just wait. Mutates `order` in place (items[].assignedPicker, pickTasks) but
+// does not save it, so the caller can do so as part of its own transitionOrder/save sequence.
+// Returns the assigned picker user IDs (empty if none were available anywhere).
 async function splitOrderAcrossPickers(order, maxPickers = 3) {
   const itemIndexesByStore = new Map();
   order.items.forEach((item, index) => {

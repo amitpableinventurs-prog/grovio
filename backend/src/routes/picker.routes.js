@@ -15,8 +15,8 @@ router.post('/jobs/:id/start', ctrl.startPicking);
 router.patch('/jobs/:id/items/:itemId', ctrl.updateJobItem);
 router.post('/jobs/:id/substitutions', ctrl.recordSubstitution);
 router.post('/jobs/:id/complete', ctrl.completeMyPicking);
-router.get('/jobs/:id/pickup/otp', ctrl.getPickupOtp);
-router.get('/jobs/:id/pickup/qr', ctrl.getPickupQr);
+router.get('/jobs/:id/otp', ctrl.getHandoverOtp);
+router.get('/jobs/:id/qr', ctrl.getHandoverQr);
 
 router.get('/history', ctrl.listHistory);
 router.get('/performance', ctrl.getPerformance);
