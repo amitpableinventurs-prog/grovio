@@ -1,4 +1,4 @@
-const { Banner, ContentPage } = require('../../models');
+const { Banner, ContentPage, Wishlist } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
@@ -21,4 +21,23 @@ const getContentPage = catchAsync(async (req, res) => {
   new ApiResponse(200, page).send(res);
 });
 
-module.exports = { listActiveBanners, uploadFile, getContentPage };
+// GET /common/wishlist/:shareToken — public (no auth): a read-only view of a customer's shared
+// wishlist. Only reachable once the owner opts in via POST /customer/wishlist/share — the token
+// is unguessable (16 random bytes), and only the owner's first name is exposed, not phone/email.
+const getSharedWishlist = catchAsync(async (req, res) => {
+  const wishlist = await Wishlist.findOne({ shareToken: req.params.shareToken })
+    .populate('user', 'name')
+    .populate({
+      path: 'items.product',
+      select: 'name images price discountPrice unit isAvailable status store',
+      populate: { path: 'store', select: 'name' },
+    });
+  if (!wishlist) throw new ApiError(404, 'Shared wishlist not found');
+
+  new ApiResponse(200, {
+    ownerName: wishlist.user?.name?.split(' ')[0] || 'A Grovio user',
+    items: wishlist.items,
+  }).send(res);
+});
+
+module.exports = { listActiveBanners, uploadFile, getContentPage, getSharedWishlist };

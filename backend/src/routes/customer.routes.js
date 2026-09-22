@@ -36,6 +36,8 @@ router.get('/wishlist', wishlistCtrl.getWishlist);
 router.post('/wishlist/items', wishlistCtrl.addToWishlist);
 router.delete('/wishlist/items/:productId', wishlistCtrl.removeFromWishlist);
 router.delete('/wishlist', wishlistCtrl.clearWishlist);
+router.post('/wishlist/share', wishlistCtrl.shareWishlist);
+router.delete('/wishlist/share', wishlistCtrl.unshareWishlist);
 
 // Addresses
 router.get('/addresses', addressCtrl.listAddresses);

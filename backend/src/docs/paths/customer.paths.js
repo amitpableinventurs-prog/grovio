@@ -65,6 +65,13 @@ paths['/customer/wishlist/items'] = {
 paths['/customer/wishlist/items/{productId}'] = {
   delete: { tags: TAG_WISHLIST, summary: 'Remove a product from the wishlist', ...bearer(), parameters: [idParam('productId', 'Product ID')], responses: { 200: envelope(ref('Wishlist'), 'Removed from wishlist'), 401: RESPONSES_401 } },
 };
+paths['/customer/wishlist/share'] = {
+  post: {
+    tags: TAG_WISHLIST, summary: 'Enable public read-only sharing of my wishlist (idempotent — returns the existing token if already shared)', ...bearer(),
+    responses: { 200: envelope({ type: 'object', properties: { shareToken: { type: 'string' } } }, 'Wishlist sharing enabled'), 401: RESPONSES_401 },
+  },
+  delete: { tags: TAG_WISHLIST, summary: 'Disable sharing — any previously shared link stops working', ...bearer(), responses: { 200: envelope(null, 'Wishlist sharing disabled'), 401: RESPONSES_401 } },
+};
 
 paths['/customer/addresses'] = {
   get: { tags: TAG_ADDR, summary: 'List my saved addresses', ...bearer(), responses: { 200: envelope({ type: 'array', items: ref('Address') }), 401: RESPONSES_401 } },

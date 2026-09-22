@@ -9,6 +9,7 @@ const supportCtrl = require('../controllers/common/support.controller');
 // Public
 router.get('/banners', publicCtrl.listActiveBanners);
 router.get('/content/:slug', publicCtrl.getContentPage);
+router.get('/wishlist/:shareToken', publicCtrl.getSharedWishlist);
 
 // Authenticated (any role)
 router.post('/upload', authenticate, upload.single('file'), publicCtrl.uploadFile);

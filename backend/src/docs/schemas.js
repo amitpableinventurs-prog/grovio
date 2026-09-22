@@ -237,6 +237,7 @@ const Wishlist = {
     _id: id,
     user: id,
     items: { type: 'array', items: WishlistItem },
+    shareToken: { type: 'string', nullable: true, description: 'Set once sharing is enabled via POST /customer/wishlist/share' },
   },
 };
 

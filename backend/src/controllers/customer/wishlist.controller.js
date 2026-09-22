@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { Wishlist, Product } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
@@ -53,4 +54,25 @@ const clearWishlist = catchAsync(async (req, res) => {
   new ApiResponse(200, wishlist, 'Wishlist cleared').send(res);
 });
 
-module.exports = { getWishlist, addToWishlist, removeFromWishlist, clearWishlist };
+// POST /customer/wishlist/share -> turns on public read-only viewing of this wishlist and
+// returns the token to build a link from (e.g. https://app.grovio.com/wishlist/shared/:shareToken
+// — the frontend owns the actual URL shape). Idempotent: calling it again while already shared
+// just returns the existing token rather than rotating it, so a link already sent out keeps working.
+const shareWishlist = catchAsync(async (req, res) => {
+  const wishlist = await getOrCreateWishlist(req.user.id);
+  if (!wishlist.shareToken) {
+    wishlist.shareToken = crypto.randomBytes(16).toString('hex');
+    await wishlist.save();
+  }
+  new ApiResponse(200, { shareToken: wishlist.shareToken }, 'Wishlist sharing enabled').send(res);
+});
+
+// DELETE /customer/wishlist/share -> turns sharing back off; any previously shared link stops working
+const unshareWishlist = catchAsync(async (req, res) => {
+  const wishlist = await getOrCreateWishlist(req.user.id);
+  wishlist.shareToken = null;
+  await wishlist.save();
+  new ApiResponse(200, null, 'Wishlist sharing disabled').send(res);
+});
+
+module.exports = { getWishlist, addToWishlist, removeFromWishlist, clearWishlist, shareWishlist, unshareWishlist };

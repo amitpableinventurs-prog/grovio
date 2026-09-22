@@ -198,6 +198,17 @@ paths['/common/content/{slug}'] = {
     responses: { 200: envelope(ref('ContentPage')), 404: RESPONSES_404 },
   },
 };
+paths['/common/wishlist/{shareToken}'] = {
+  get: {
+    tags: ['Common'],
+    summary: "Read-only view of a customer's shared wishlist (public — reachable once they enable it via POST /customer/wishlist/share)",
+    parameters: [{ name: 'shareToken', in: 'path', required: true, schema: { type: 'string' } }],
+    responses: {
+      200: envelope({ type: 'object', properties: { ownerName: { type: 'string', example: 'Rahul' }, items: { type: 'array', items: ref('WishlistItem') } } }),
+      404: errorResponse('Shared wishlist not found'),
+    },
+  },
+};
 paths['/common/upload'] = {
   post: {
     tags: ['Common'], summary: 'Upload a single file (any authenticated role)', ...bearer(),
