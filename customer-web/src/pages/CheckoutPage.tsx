@@ -198,13 +198,6 @@ export default function CheckoutPage() {
                 store.
               </div>
             )}
-            {summary.stores.length > 1 &&
-              summary.stores.map((s) => (
-                <div key={s.storeId} className="flex justify-between border-b border-gray-100 pb-2">
-                  <span className="font-medium text-gray-900">{s.storeName}</span>
-                  <span>{formatPrice(s.grandTotal)}</span>
-                </div>
-              ))}
             <div className="flex justify-between">
               <span>Item Total</span>
               <span>{formatPrice(summary.itemTotal)}</span>
@@ -227,11 +220,14 @@ export default function CheckoutPage() {
         )}
 
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        {!activeAddressId && !error && (
+          <p className="mt-3 text-sm text-amber-700">Add a delivery address above to continue.</p>
+        )}
 
         <button
           onClick={() => placeOrderMutation.mutate()}
           disabled={!activeAddressId || placeOrderMutation.isPending || payingViaGateway}
-          className="mt-5 w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+          className="mt-5 w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {payingViaGateway
             ? 'Waiting for payment...'
