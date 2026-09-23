@@ -49,6 +49,7 @@ A **Vendor** is the business entity (owner account, documents, overall commissio
 - **Admin & Vendor**: `POST /api/v1/auth/login` (email + password). Vendors self-register via `POST /api/v1/auth/register-vendor` (creates the Vendor business + their first Store) and need admin approval before they can log in.
 - **Customer / Picker / Delivery**: `POST /api/v1/auth/send-otp` / `resend-otp` → `POST /api/v1/auth/verify-otp`. Send either `{ countryCode, mobile }` (what the Flutter apps send, e.g. `"+91"` + `"9876543210"`) or a single combined `{ phone }` (handy for Swagger/Postman). `verify-otp` takes `otp` (an alias `code` also works) and an optional `role` (defaults to `customer` — the Customer app never sends it; Picker/Delivery pass their own role explicitly on first signup only). The response's **`isNewUser`** flag is the single source of truth for whether the client should show a "create your profile" screen before Home. In dev, the OTP is logged to the console and returned in the response as `debugOtp` (`OTP_DEBUG_MODE=true`); set `OTP_FIXED_CODE` (e.g. `1234`) to always issue that exact code instead of a random one.
   - **Resend cooldown**: server-enforced, not just a UI timer — repeat `send-otp`/`resend-otp` calls within `OTP_RESEND_COOLDOWN_SECONDS` (default 30) get `429` with `{ retryAfter }`.
+  - **Picker app** uses the dedicated `POST /auth/picker/send-otp` / `resend-otp` / `verify-otp` (same body, no `role` needed). Before an OTP is sent or consumed, they reject a number registered under another role (409) and a disabled picker (403). On first signup they create a `pending` PickerProfile. They return `pickerProfile` plus `onboarding: { status, profileComplete, kycComplete, nextStep }`, where `nextStep` is `profile` (PUT /auth/me) → `kyc` (PATCH /picker/profile) → `pending_approval` → `home` (or `blocked`). `GET /auth/picker/me` returns the same for splash-screen routing.
   - **Wrong-OTP lockout**: after `OTP_MAX_VERIFY_ATTEMPTS` (default 5) incorrect attempts on the same OTP, verify-otp returns `400` with `errors: [{ reason: 'max_attempts' }]` and the client must request a fresh OTP. Other failure reasons are `invalid | expired | not_found`, each with its own message, so the UI can show a specific inline error rather than one generic one.
 - **Profile**: `PUT /me` accepts `{ name, email, gender, profileImage }` — `gender` is `male | female | other`.
 - **Tokens**: login/verify-otp return `{ accessToken, refreshToken }`. Access tokens are short-lived (`JWT_EXPIRES_IN`, default 1d); refresh tokens are long-lived (`REFRESH_TOKEN_EXPIRES_DAYS`, default 30) and stored **hashed** in the `RefreshToken` collection. `POST /auth/refresh` rotates them (old one is revoked, a new pair issued). `POST /auth/logout` revokes one session; `POST /auth/logout-all` revokes every session for that user.
@@ -64,7 +65,17 @@ A **Vendor** is the business entity (owner account, documents, overall commissio
 
 ## Realtime
 
-Socket.IO on the same port. Connect with `auth: { token: <accessToken> }`. Events: `order:status`, `order:picker_assigned`, `delivery:location`, `notification`.
+Socket.IO on the same port. Connect with `auth: { token: <accessToken> }`; the handshake runs the same checks as HTTP auth (valid JWT, user exists and is active).
+
+On connect every socket joins `user:<id>`. Admins also join `orders:all` (full `manage_orders` / `*`) or `store:<assignedStore>` (store managers).
+
+**Live order feed.** Every `Order` save is pushed automatically (Mongoose hook in `order.model.js` → `src/sockets/orderEvents.js`, coalesced per order over ~50ms). It goes to the customer, the assigned delivery partner, the assigned pickers, the hub/contributing stores' managers, and full-access admins:
+- `order:created` / `order:updated`, with payload `{ orderId, orderNumber, orderStatus, paymentStatus, paymentMethod, grandTotal, customer, store, delivery, pickTasks[{ picker, store, status }], updatedAt }`. This is a summary; refetch the order over HTTP for full detail.
+- Bulk `Order.updateOne` / `updateMany` calls bypass the hook. If you add one, call `publishOrderChange()` yourself.
+
+Per-order room: `socket.emit('order:subscribe', orderId, ack)` joins it. Access is checked against the same visibility rules as the HTTP order endpoints, and the ack is `{ ok: true }` or `{ ok: false, message }`. `order:unsubscribe` leaves it. That room receives `order:status`, `delivery:location` and `picker:location`. `notification` goes to `user:<id>`.
+
+The admin panel and customer web both use this (`src/realtime/`): order queries refresh live, and admins get a new-order toast and a Live indicator in the header.
 
 ## Endpoint Reference (all under `/api/v1`)
 
@@ -75,6 +86,9 @@ Socket.IO on the same port. Connect with `auth: { token: <accessToken> }`. Event
 | POST | /auth/login | Public |
 | POST | /auth/send-otp, /auth/resend-otp | Public |
 | POST | /auth/verify-otp | Public |
+| POST | /auth/picker/send-otp, /auth/picker/resend-otp | Public (Picker app) |
+| POST | /auth/picker/verify-otp | Public (Picker app) |
+| GET | /auth/picker/me | picker |
 | POST | /auth/refresh | Public (valid refresh token) |
 | POST | /auth/google, /auth/apple | Public (returns 501 — not configured) |
 | GET/PUT | /me (also /auth/me) | Any authenticated user |

@@ -1,12 +1,14 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/auth/auth.controller');
+const pickerCtrl = require('../controllers/auth/pickerAuth.controller');
 const validate = require('../middleware/validate.middleware');
-const { authenticate } = require('../middleware/auth.middleware');
+const { authenticate, authorize } = require('../middleware/auth.middleware');
 const {
   registerVendorRules,
   loginRules,
   sendOtpRules,
   verifyOtpRules,
+  pickerVerifyOtpRules,
 } = require('../validators/auth.validator');
 
 router.post('/register-vendor', registerVendorRules, validate, ctrl.registerVendor);
@@ -15,6 +17,12 @@ router.post('/send-otp', sendOtpRules, validate, ctrl.sendOtp);
 router.post('/resend-otp', sendOtpRules, validate, ctrl.resendOtp);
 router.post('/verify-otp', verifyOtpRules, validate, ctrl.verifyOtp);
 router.post('/refresh', ctrl.refresh);
+
+// Picker app: phone + OTP login/signup, locked to role 'picker' (see pickerAuth.controller.js).
+router.post('/picker/send-otp', sendOtpRules, validate, pickerCtrl.sendOtp);
+router.post('/picker/resend-otp', sendOtpRules, validate, pickerCtrl.resendOtp);
+router.post('/picker/verify-otp', pickerVerifyOtpRules, validate, pickerCtrl.verifyOtp);
+router.get('/picker/me', authenticate, authorize('picker'), pickerCtrl.me);
 
 // Google/Apple social login are not wired up yet — they need OAuth app credentials
 // (Google client ID/secret, Apple key) from the client team before the token-verification

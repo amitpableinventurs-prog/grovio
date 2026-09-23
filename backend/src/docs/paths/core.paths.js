@@ -134,6 +134,108 @@ paths['/auth/verify-otp'] = {
   },
 };
 
+// ---------- Picker app auth ----------
+const pickerOnboardingSchema = {
+  type: 'object',
+  description: 'Where the app should route the picker next',
+  properties: {
+    status: { type: 'string', enum: ['pending', 'approved', 'blocked'] },
+    profileComplete: { type: 'boolean', description: 'Name filled in (PUT /auth/me)' },
+    kycComplete: { type: 'boolean', description: 'ID proof type, number and document uploaded (PATCH /picker/profile)' },
+    nextStep: { type: 'string', enum: ['profile', 'kyc', 'pending_approval', 'home', 'blocked'], example: 'profile' },
+  },
+};
+const pickerOtpSentSchema = {
+  type: 'object',
+  properties: {
+    sent: { type: 'boolean' },
+    phone: { type: 'string', example: '+919988778899' },
+    isRegistered: { type: 'boolean', description: 'false = verifying will create a new picker account' },
+    resendCooldownSeconds: { type: 'integer', example: 30 },
+    debugOtp: { type: 'string', example: '1234', description: 'Only present when OTP_DEBUG_MODE=true' },
+  },
+};
+
+paths['/auth/picker/send-otp'] = {
+  post: {
+    tags: ['Auth'],
+    summary: 'Picker app — send login/signup OTP',
+    description: 'Same OTP flow as /auth/send-otp, but only for picker accounts: a number already registered as a customer, delivery partner or admin gets 409, and a disabled picker gets 403, before any SMS is sent.',
+    requestBody: jsonBody(otpPhoneFields),
+    responses: {
+      200: envelope(pickerOtpSentSchema, 'OTP sent successfully'),
+      403: errorResponse('Your account has been disabled'),
+      409: errorResponse('This number is already registered with a different Grovio account'),
+      429: errorResponse('Please wait Ns before requesting another OTP'),
+    },
+  },
+};
+
+paths['/auth/picker/resend-otp'] = {
+  post: {
+    tags: ['Auth'],
+    summary: 'Picker app — resend OTP (same body/behavior as send-otp, cooldown applies)',
+    requestBody: jsonBody(otpPhoneFields),
+    responses: {
+      200: envelope(pickerOtpSentSchema, 'OTP resent successfully'),
+      409: errorResponse('This number is already registered with a different Grovio account'),
+      429: errorResponse('Please wait Ns before requesting another OTP'),
+    },
+  },
+};
+
+paths['/auth/picker/verify-otp'] = {
+  post: {
+    tags: ['Auth'],
+    summary: 'Picker app — verify OTP (logs in, or creates a pending picker on first verification)',
+    description:
+      'A new number creates a picker account with a PickerProfile in `status: "pending"`. Use `onboarding.nextStep` to route: ' +
+      '`profile` → PUT /auth/me (name/email/gender/dateOfBirth), `kyc` → PATCH /picker/profile (ID proof + document), ' +
+      '`pending_approval` → waiting screen until an admin approves via PATCH /admin/pickers/{id}/status, `home` → approved, `blocked` → contact support. ' +
+      'On a wrong/expired/exhausted OTP this returns 400 with `errors: [{ reason, attemptsLeft }]` (`invalid | expired | max_attempts | not_found`). ' +
+      'Refresh/logout use the shared /auth/refresh and /auth/logout.',
+    requestBody: jsonBody({
+      ...otpPhoneFields,
+      otp: { type: 'string', example: '1234' },
+      name: { type: 'string', description: 'Optional — can be set later via PUT /auth/me' },
+      deviceId: { type: 'string' },
+      platform: { type: 'string', enum: ['android', 'ios', 'web'] },
+    }, ['otp']),
+    responses: {
+      200: envelope({
+        type: 'object',
+        properties: {
+          accessToken: { type: 'string' },
+          refreshToken: { type: 'string' },
+          isNewUser: { type: 'boolean' },
+          user: ref('User'),
+          pickerProfile: ref('PickerProfile'),
+          onboarding: pickerOnboardingSchema,
+        },
+      }, 'Login successful'),
+      400: errorResponse('Incorrect OTP'),
+      403: errorResponse('Your account has been disabled'),
+      409: errorResponse('This number is already registered with a different Grovio account'),
+    },
+  },
+};
+
+paths['/auth/picker/me'] = {
+  get: {
+    tags: ['Auth'],
+    summary: 'Picker app — current picker, profile and onboarding step (for splash-screen routing)',
+    ...bearer(),
+    responses: {
+      200: envelope({
+        type: 'object',
+        properties: { user: ref('User'), pickerProfile: ref('PickerProfile'), onboarding: pickerOnboardingSchema },
+      }),
+      401: RESPONSES_401,
+      403: RESPONSES_403,
+    },
+  },
+};
+
 paths['/auth/refresh'] = {
   post: {
     tags: ['Auth'],

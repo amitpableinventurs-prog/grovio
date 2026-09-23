@@ -39,4 +39,16 @@ const verifyOtpRules = [
   body('licenseNumber').optional().isString(),
 ];
 
-module.exports = { registerVendorRules, loginRules, sendOtpRules, verifyOtpRules };
+// POST /auth/picker/verify-otp — role is implied, so no role/vehicle fields.
+const pickerVerifyOtpRules = [
+  body('countryCode').optional().isString(),
+  body('mobile').optional().isString(),
+  body('phone').optional().isString(),
+  body('otp').optional().isString(),
+  body('code').optional().isString(),
+  body('name').optional().isString(),
+  body('deviceId').optional().isString(),
+  body('platform').optional().isIn(['android', 'ios', 'web']),
+];
+
+module.exports = { registerVendorRules, loginRules, sendOtpRules, verifyOtpRules, pickerVerifyOtpRules };
