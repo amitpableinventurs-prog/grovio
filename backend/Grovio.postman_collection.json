@@ -1651,6 +1651,355 @@
           }
         },
         {
+          "id": "6e03919d-3b53-4c86-8c84-eefd40759793",
+          "name": "Picker app — Register step: save name, email, gender and date of birth",
+          "request": {
+            "name": "Picker app — Register step: save name, email, gender and date of birth",
+            "description": {
+              "content": "The \"Register — Tell us a bit about you\" screen shown after OTP signup (`onboarding.nextStep === \"profile\"`). The mobile number on that screen is read-only: show `user.phone` from verify-otp / GET /auth/picker/me. It is not part of this body. `dateOfBirth` is `DD/MM/YYYY` (ISO `YYYY-MM-DD` also accepted); the picker must be at least 18. `gender` is case-insensitive. Validation errors return 422 with `errors: [{ field, message }]`, so each message can be shown under its input. On success `onboarding.nextStep` becomes `kyc` (→ PATCH /picker/profile). Can be called again to correct details.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "auth",
+                "picker",
+                "register"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ravi Kumar\",\n  \"email\": \"ravi.kumar@example.com\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"15/08/1998\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "55fd3ca1-638b-4759-8968-ee2b2771f3a1",
+              "name": "Profile saved",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "register"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ravi Kumar\",\n  \"email\": \"ravi.kumar@example.com\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"15/08/1998\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Profile saved\",\n  \"data\": {\n    \"user\": {\n      \"_id\": \"66f1a2b3c4d5e6f789012345\",\n      \"name\": \"Test Customer\",\n      \"email\": \"admin@grovio.com\",\n      \"phone\": \"8880002222\",\n      \"role\": \"vendor\",\n      \"gender\": \"male\",\n      \"dateOfBirth\": \"1957-11-27\",\n      \"profileImage\": \"string\",\n      \"fcmToken\": \"string\",\n      \"isActive\": true,\n      \"isVerified\": true,\n      \"createdAt\": \"2026-09-15T10:05:56.144Z\",\n      \"updatedAt\": \"2026-09-15T10:05:56.144Z\"\n    },\n    \"pickerProfile\": {\n      \"_id\": \"66f1a2b3c4d5e6f789012345\",\n      \"user\": \"66f1a2b3c4d5e6f789012345\",\n      \"store\": \"66f1a2b3c4d5e6f789012345\",\n      \"status\": \"blocked\",\n      \"isAvailable\": false,\n      \"employeeId\": \"string\",\n      \"address\": \"string\",\n      \"idProofType\": \"Aadhaar\",\n      \"idProofNumber\": \"string\",\n      \"idProofDocument\": \"string\",\n      \"emergencyContactName\": \"string\",\n      \"emergencyContactPhone\": \"string\",\n      \"joiningDate\": \"2026-09-15T10:05:56.144Z\",\n      \"shift\": \"string\"\n    },\n    \"onboarding\": {\n      \"status\": \"blocked\",\n      \"profileComplete\": true,\n      \"kycComplete\": false,\n      \"nextStep\": \"profile\"\n    }\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "e8310000-80a6-40c6-9072-6d98e35c6afc",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "register"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ravi Kumar\",\n  \"email\": \"ravi.kumar@example.com\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"15/08/1998\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "e00e57ff-b4fb-455d-8051-5c99177146fc",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "register"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ravi Kumar\",\n  \"email\": \"ravi.kumar@example.com\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"15/08/1998\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "45ba5916-a365-4687-aad9-dc9364b4c528",
+              "name": "This email is already used by another account",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "register"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ravi Kumar\",\n  \"email\": \"ravi.kumar@example.com\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"15/08/1998\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"This email is already used by another account\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "5691a106-1d16-47d4-86ae-6d674cd4efbc",
+              "name": "Validation failed",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "register"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ravi Kumar\",\n  \"email\": \"ravi.kumar@example.com\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"15/08/1998\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
           "id": "d8e252fd-b060-4174-ade4-414a80982622",
           "name": "Picker app — log out this device",
           "request": {

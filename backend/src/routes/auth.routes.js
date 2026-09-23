@@ -9,6 +9,7 @@ const {
   sendOtpRules,
   verifyOtpRules,
   pickerVerifyOtpRules,
+  pickerRegisterRules,
   pickerLogoutRules,
 } = require('../validators/auth.validator');
 
@@ -24,6 +25,7 @@ router.post('/picker/send-otp', sendOtpRules, validate, pickerCtrl.sendOtp);
 router.post('/picker/resend-otp', sendOtpRules, validate, pickerCtrl.resendOtp);
 router.post('/picker/verify-otp', pickerVerifyOtpRules, validate, pickerCtrl.verifyOtp);
 router.get('/picker/me', authenticate, authorize('picker'), pickerCtrl.me);
+router.post('/picker/register', authenticate, authorize('picker'), pickerRegisterRules, validate, pickerCtrl.register);
 router.post('/picker/logout', authenticate, authorize('picker'), pickerLogoutRules, validate, pickerCtrl.logout);
 router.post('/picker/logout-all', authenticate, authorize('picker'), pickerCtrl.logoutAll);
 

@@ -140,7 +140,7 @@ const pickerOnboardingSchema = {
   description: 'Where the app should route the picker next',
   properties: {
     status: { type: 'string', enum: ['pending', 'approved', 'blocked'] },
-    profileComplete: { type: 'boolean', description: 'Name filled in (PUT /auth/me)' },
+    profileComplete: { type: 'boolean', description: 'Name, email, gender and date of birth saved (POST /auth/picker/register)' },
     kycComplete: { type: 'boolean', description: 'ID proof type, number and document uploaded (PATCH /picker/profile)' },
     nextStep: { type: 'string', enum: ['profile', 'kyc', 'pending_approval', 'home', 'blocked'], example: 'profile' },
   },
@@ -189,7 +189,7 @@ paths['/auth/picker/verify-otp'] = {
     summary: 'Picker app — verify OTP (logs in, or creates a pending picker on first verification)',
     description:
       'A new number creates a picker account with a PickerProfile in `status: "pending"`. Use `onboarding.nextStep` to route: ' +
-      '`profile` → PUT /auth/me (name/email/gender/dateOfBirth), `kyc` → PATCH /picker/profile (ID proof + document), ' +
+      '`profile` → POST /auth/picker/register (name/email/gender/dateOfBirth), `kyc` → PATCH /picker/profile (ID proof + document), ' +
       '`pending_approval` → waiting screen until an admin approves via PATCH /admin/pickers/{id}/status, `home` → approved, `blocked` → contact support. ' +
       'On a wrong/expired/exhausted OTP this returns 400 with `errors: [{ reason, attemptsLeft }]` (`invalid | expired | max_attempts | not_found`). ' +
       'Token refresh uses the shared /auth/refresh; sign out with /auth/picker/logout.',
@@ -231,6 +231,36 @@ paths['/auth/picker/me'] = {
       }),
       401: RESPONSES_401,
       403: RESPONSES_403,
+    },
+  },
+};
+
+paths['/auth/picker/register'] = {
+  post: {
+    tags: ['Auth'],
+    summary: 'Picker app — Register step: save name, email, gender and date of birth',
+    description:
+      'The "Register — Tell us a bit about you" screen shown after OTP signup (`onboarding.nextStep === "profile"`). ' +
+      'The mobile number on that screen is read-only: show `user.phone` from verify-otp / GET /auth/picker/me. It is not part of this body. ' +
+      '`dateOfBirth` is `DD/MM/YYYY` (ISO `YYYY-MM-DD` also accepted); the picker must be at least 18. `gender` is case-insensitive. ' +
+      'Validation errors return 422 with `errors: [{ field, message }]`, so each message can be shown under its input. ' +
+      'On success `onboarding.nextStep` becomes `kyc` (→ PATCH /picker/profile). Can be called again to correct details.',
+    ...bearer(),
+    requestBody: jsonBody({
+      name: { type: 'string', example: 'Ravi Kumar' },
+      email: { type: 'string', example: 'ravi.kumar@example.com' },
+      gender: { type: 'string', enum: ['male', 'female', 'other'], example: 'male' },
+      dateOfBirth: { type: 'string', example: '15/08/1998', description: 'DD/MM/YYYY' },
+    }, ['name', 'email', 'gender', 'dateOfBirth']),
+    responses: {
+      200: envelope({
+        type: 'object',
+        properties: { user: ref('User'), pickerProfile: ref('PickerProfile'), onboarding: pickerOnboardingSchema },
+      }, 'Profile saved'),
+      401: RESPONSES_401,
+      403: RESPONSES_403,
+      409: errorResponse('This email is already used by another account'),
+      422: RESPONSES_422,
     },
   },
 };

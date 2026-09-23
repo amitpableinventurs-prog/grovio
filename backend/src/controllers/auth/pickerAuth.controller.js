@@ -5,8 +5,8 @@
 //    instead of silently logging that other account into the Picker app;
 //  - the response carries the PickerProfile plus an `onboarding.nextStep` so the app knows
 //    which screen to route to after login (profile -> KYC upload -> awaiting approval -> home).
-// Token refresh (/auth/refresh) and PUT /auth/me are shared with every other role; logout has
-// picker-specific endpoints below since it also has to take the picker offline.
+// Token refresh (/auth/refresh) is shared with every other role; the Register step and logout have
+// picker-specific endpoints below (stricter validation, and logout also takes the picker offline).
 const { User, PickerProfile, Wallet } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
@@ -29,12 +29,13 @@ const PLACEHOLDER_NAME = 'User';
 // Where the app should send the picker after login / on app launch:
 //   blocked          — admin blocked this picker; show a "contact support" screen
 //   home             — approved, can work
-//   profile          — fill in name/email/gender/DOB via PUT /auth/me
+//   profile          — fill in name/email/gender/DOB via POST /auth/picker/register
 //   kyc              — upload ID proof via PATCH /picker/profile
 //   pending_approval — everything submitted, waiting on PATCH /admin/pickers/:id/status
 // An approved picker always goes home, even if admin onboarding skipped a KYC document.
 function pickerOnboarding(user, profile) {
-  const profileComplete = !!user.name && user.name !== PLACEHOLDER_NAME;
+  const profileComplete = !!user.name && user.name !== PLACEHOLDER_NAME
+    && !!user.email && !!user.gender && !!user.dateOfBirth;
   const kycComplete = !!(profile?.idProofType && profile?.idProofNumber && profile?.idProofDocument);
 
   let nextStep;
@@ -133,6 +134,62 @@ const me = catchAsync(async (req, res) => {
   }).send(res);
 });
 
+const MIN_PICKER_AGE = 18;
+
+// The app's date picker shows DD/MM/YYYY, so that's the primary format; ISO YYYY-MM-DD is also
+// accepted. Rejects impossible dates (31/02/2000), future dates and pickers under 18.
+// Returns a Date at UTC midnight so the stored day never shifts with server timezone.
+function parseDateOfBirth(value) {
+  const str = String(value).trim();
+  let m = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  let day, month, year;
+  if (m) [, day, month, year] = m.map(Number);
+  else if ((m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/))) [, year, month, day] = m.map(Number);
+  else throw new ApiError(422, 'Validation failed', [{ field: 'dateOfBirth', message: 'Enter date of birth as DD/MM/YYYY' }]);
+
+  const dob = new Date(Date.UTC(year, month - 1, day));
+  if (dob.getUTCFullYear() !== year || dob.getUTCMonth() !== month - 1 || dob.getUTCDate() !== day) {
+    throw new ApiError(422, 'Validation failed', [{ field: 'dateOfBirth', message: 'Enter a valid date of birth' }]);
+  }
+
+  const now = new Date();
+  const eighteenthBirthday = new Date(Date.UTC(year + MIN_PICKER_AGE, month - 1, day));
+  if (dob > now || year < now.getUTCFullYear() - 100) {
+    throw new ApiError(422, 'Validation failed', [{ field: 'dateOfBirth', message: 'Enter a valid date of birth' }]);
+  }
+  if (eighteenthBirthday > now) {
+    throw new ApiError(422, 'Validation failed', [{ field: 'dateOfBirth', message: `You must be at least ${MIN_PICKER_AGE} years old to register` }]);
+  }
+  return dob;
+}
+
+// POST /auth/picker/register  { name, email, gender, dateOfBirth }
+// The "Register — Tell us a bit about you" step right after OTP signup. The mobile number shown
+// on that screen is the account's OTP-verified phone (read-only, returned in `user.phone`), so it
+// isn't accepted here. Can be called again to correct details before approval.
+const register = catchAsync(async (req, res) => {
+  const { name, email, gender } = req.body;
+  const dateOfBirth = parseDateOfBirth(req.body.dateOfBirth);
+
+  const emailTaken = await User.exists({ email, _id: { $ne: req.user._id } });
+  if (emailTaken) {
+    throw new ApiError(409, 'This email is already used by another account', [{ field: 'email', message: 'This email is already used by another account' }]);
+  }
+
+  req.user.name = name;
+  req.user.email = email;
+  req.user.gender = gender;
+  req.user.dateOfBirth = dateOfBirth;
+  await req.user.save();
+
+  const profile = await PickerProfile.findOne({ user: req.user._id });
+  new ApiResponse(200, {
+    user: safeUserOf(req.user),
+    pickerProfile: profile,
+    onboarding: pickerOnboarding(req.user, profile),
+  }, 'Profile saved').send(res);
+});
+
 // A logged-out picker can't receive pick jobs, so take them offline/unavailable (otherwise
 // assignment could keep routing orders to a phone nobody is signed in on) and drop the push token.
 async function takePickerOffline(user) {
@@ -159,4 +216,4 @@ const logoutAll = catchAsync(async (req, res) => {
   new ApiResponse(200, null, 'Logged out from all devices').send(res);
 });
 
-module.exports = { sendOtp, resendOtp, verifyOtp, me, logout, logoutAll, pickerOnboarding };
+module.exports = { sendOtp, resendOtp, verifyOtp, me, register, logout, logoutAll, pickerOnboarding };
