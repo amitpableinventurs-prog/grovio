@@ -145,11 +145,14 @@ const pickerOnboardingSchema = {
     nextStep: { type: 'string', enum: ['profile', 'kyc', 'pending_approval', 'home', 'blocked'], example: 'profile' },
   },
 };
+const pickerPhoneFields = {
+  mobile: { type: 'string', example: '9876543210', description: '10-digit mobile number as typed on the login screen' },
+  countryCode: { type: 'string', example: '+91', description: 'Optional, defaults to +91' },
+};
 const pickerOtpSentSchema = {
   type: 'object',
   properties: {
     sent: { type: 'boolean' },
-    phone: { type: 'string', example: '+919988778899' },
     isRegistered: { type: 'boolean', description: 'false = verifying will create a new picker account' },
     resendCooldownSeconds: { type: 'integer', example: 30 },
     debugOtp: { type: 'string', example: '1234', description: 'Only present when OTP_DEBUG_MODE=true' },
@@ -161,7 +164,7 @@ paths['/auth/picker/send-otp'] = {
     tags: ['Auth'],
     summary: 'Picker app — send login/signup OTP',
     description: 'Same OTP flow as /auth/send-otp, but only for picker accounts: a number already registered as a customer, delivery partner or admin gets 409, and a disabled picker gets 403, before any SMS is sent.',
-    requestBody: jsonBody(otpPhoneFields),
+    requestBody: jsonBody(pickerPhoneFields, ['mobile']),
     responses: {
       200: envelope(pickerOtpSentSchema, 'OTP sent successfully'),
       403: errorResponse('Your account has been disabled'),
@@ -175,7 +178,7 @@ paths['/auth/picker/resend-otp'] = {
   post: {
     tags: ['Auth'],
     summary: 'Picker app — resend OTP (same body/behavior as send-otp, cooldown applies)',
-    requestBody: jsonBody(otpPhoneFields),
+    requestBody: jsonBody(pickerPhoneFields, ['mobile']),
     responses: {
       200: envelope(pickerOtpSentSchema, 'OTP resent successfully'),
       409: errorResponse('This number is already registered with a different Grovio account'),
@@ -195,12 +198,12 @@ paths['/auth/picker/verify-otp'] = {
       'On a wrong/expired/exhausted OTP this returns 400 with `errors: [{ reason, attemptsLeft }]` (`invalid | expired | max_attempts | not_found`). ' +
       'Refresh/logout use the shared /auth/refresh and /auth/logout.',
     requestBody: jsonBody({
-      ...otpPhoneFields,
+      ...pickerPhoneFields,
       otp: { type: 'string', example: '1234' },
       name: { type: 'string', description: 'Optional — can be set later via PUT /auth/me' },
       deviceId: { type: 'string' },
       platform: { type: 'string', enum: ['android', 'ios', 'web'] },
-    }, ['otp']),
+    }, ['mobile', 'otp']),
     responses: {
       200: envelope({
         type: 'object',

@@ -8,6 +8,7 @@ const {
   loginRules,
   sendOtpRules,
   verifyOtpRules,
+  pickerSendOtpRules,
   pickerVerifyOtpRules,
 } = require('../validators/auth.validator');
 
@@ -19,8 +20,8 @@ router.post('/verify-otp', verifyOtpRules, validate, ctrl.verifyOtp);
 router.post('/refresh', ctrl.refresh);
 
 // Picker app: phone + OTP login/signup, locked to role 'picker' (see pickerAuth.controller.js).
-router.post('/picker/send-otp', sendOtpRules, validate, pickerCtrl.sendOtp);
-router.post('/picker/resend-otp', sendOtpRules, validate, pickerCtrl.resendOtp);
+router.post('/picker/send-otp', pickerSendOtpRules, validate, pickerCtrl.sendOtp);
+router.post('/picker/resend-otp', pickerSendOtpRules, validate, pickerCtrl.resendOtp);
 router.post('/picker/verify-otp', pickerVerifyOtpRules, validate, pickerCtrl.verifyOtp);
 router.get('/picker/me', authenticate, authorize('picker'), pickerCtrl.me);
 

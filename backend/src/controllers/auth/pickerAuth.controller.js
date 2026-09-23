@@ -12,7 +12,6 @@ const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const otpService = require('../../services/otp.service');
 const tokenService = require('../../services/token.service');
-const { resolvePhone } = require('../../utils/phone');
 
 const OTP_ERROR_MESSAGES = {
   not_found: 'No OTP was found for this number. Please request a new one.',
@@ -58,36 +57,49 @@ async function findPickerAccount(phone) {
   return user;
 }
 
+// The Picker app sends the number exactly as typed on its login screen: `mobile` (digits only),
+// with the country code fixed to +91 in the UI — `countryCode` is optional and defaults to that.
+// Stored as the canonical "+919876543210" form, the same key every other role's account uses.
+const DEFAULT_COUNTRY_CODE = '+91';
+function resolvePickerPhone(body) {
+  const mobile = String(body.mobile ?? '').trim();
+  const digits = String(body.countryCode ?? DEFAULT_COUNTRY_CODE).replace(/\D/g, '');
+  const cc = `+${digits}`;
+  const validLength = cc === DEFAULT_COUNTRY_CODE ? /^\d{10}$/ : /^\d{6,14}$/;
+  if (!digits || !validLength.test(mobile)) {
+    throw new ApiError(400, cc === DEFAULT_COUNTRY_CODE ? 'Enter a valid 10-digit mobile number' : 'Enter a valid mobile number');
+  }
+  return `${cc}${mobile}`;
+}
+
 function safeUserOf(user) {
   const safeUser = user.toObject();
   delete safeUser.password;
   return safeUser;
 }
 
-// POST /auth/picker/send-otp  { countryCode, mobile } | { phone }
+// POST /auth/picker/send-otp  { mobile, countryCode? }
 const sendOtp = catchAsync(async (req, res) => {
-  const phone = resolvePhone(req.body);
+  const phone = resolvePickerPhone(req.body);
   const user = await findPickerAccount(phone);
   const result = await otpService.sendOtp(phone);
-  new ApiResponse(200, { ...result, phone, isRegistered: !!user }, 'OTP sent successfully').send(res);
+  new ApiResponse(200, { ...result, isRegistered: !!user }, 'OTP sent successfully').send(res);
 });
 
 // POST /auth/picker/resend-otp  — same body/behavior as send-otp; the server-side cooldown applies.
 const resendOtp = catchAsync(async (req, res) => {
-  const phone = resolvePhone(req.body);
+  const phone = resolvePickerPhone(req.body);
   const user = await findPickerAccount(phone);
   const result = await otpService.sendOtp(phone);
-  new ApiResponse(200, { ...result, phone, isRegistered: !!user }, 'OTP resent successfully').send(res);
+  new ApiResponse(200, { ...result, isRegistered: !!user }, 'OTP resent successfully').send(res);
 });
 
-// POST /auth/picker/verify-otp  { countryCode, mobile, otp, deviceId?, platform?, name? }
+// POST /auth/picker/verify-otp  { mobile, countryCode?, otp, deviceId?, platform?, name? }
 // Logs an existing picker in, or creates a new picker account (PickerProfile status 'pending')
 // on first verification.
 const verifyOtp = catchAsync(async (req, res) => {
-  const phone = resolvePhone(req.body);
-  const { name, deviceId, platform } = req.body;
-  const otp = req.body.otp ?? req.body.code;
-  if (!otp) throw new ApiError(400, 'otp is required');
+  const phone = resolvePickerPhone(req.body);
+  const { otp, name, deviceId, platform } = req.body;
 
   let user = await findPickerAccount(phone);
 

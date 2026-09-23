@@ -39,16 +39,20 @@ const verifyOtpRules = [
   body('licenseNumber').optional().isString(),
 ];
 
+// Picker app: `mobile` only (no combined `phone`); countryCode defaults to +91. The exact
+// digit-count check lives in pickerAuth.controller.js#resolvePickerPhone.
+const pickerSendOtpRules = [
+  body('mobile').notEmpty().withMessage('mobile is required').isString(),
+  body('countryCode').optional().isString(),
+];
+
 // POST /auth/picker/verify-otp — role is implied, so no role/vehicle fields.
 const pickerVerifyOtpRules = [
-  body('countryCode').optional().isString(),
-  body('mobile').optional().isString(),
-  body('phone').optional().isString(),
-  body('otp').optional().isString(),
-  body('code').optional().isString(),
+  ...pickerSendOtpRules,
+  body('otp').notEmpty().withMessage('otp is required').isString(),
   body('name').optional().isString(),
   body('deviceId').optional().isString(),
   body('platform').optional().isIn(['android', 'ios', 'web']),
 ];
 
-module.exports = { registerVendorRules, loginRules, sendOtpRules, verifyOtpRules, pickerVerifyOtpRules };
+module.exports = { registerVendorRules, loginRules, sendOtpRules, verifyOtpRules, pickerSendOtpRules, pickerVerifyOtpRules };
