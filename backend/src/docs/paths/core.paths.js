@@ -63,18 +63,18 @@ paths['/auth/login'] = {
   },
 };
 
+// Every OTP endpoint takes just `mobile`. A non-Indian number can also send `countryCode`
+// (defaults to +91) — deliberately left out of the schema so the example body stays one field.
 const otpPhoneFields = {
-  countryCode: { type: 'string', example: '+91', description: 'Alternative to `phone` — send this + mobile' },
-  mobile: { type: 'string', example: '9876543210', description: 'Alternative to `phone` — send this + countryCode' },
-  phone: { type: 'string', example: '+919876543210', description: 'Alternative to countryCode+mobile — already-combined number' },
+  mobile: { type: 'string', example: '9876543210', description: '10-digit mobile number (country code +91 is assumed)' },
 };
 
 paths['/auth/send-otp'] = {
   post: {
     tags: ['Auth'],
     summary: 'Send OTP to a phone number (Customer/Picker/Delivery login)',
-    description: 'Send either `{ countryCode, mobile }` (what the Flutter apps use) or a combined `{ phone }`. Rate-limited server-side: repeat calls within the cooldown window return 429.',
-    requestBody: jsonBody(otpPhoneFields),
+    description: 'Send `{ mobile }` — the 10-digit number only (+91 is assumed; pass `countryCode` only for a non-Indian number). Rate-limited server-side: repeat calls within the cooldown window return 429.',
+    requestBody: jsonBody(otpPhoneFields, ['mobile']),
     responses: {
       200: envelope({ type: 'object', properties: { sent: { type: 'boolean' }, resendCooldownSeconds: { type: 'integer', example: 30 }, debugOtp: { type: 'string', example: '1234', description: 'Only present when OTP_DEBUG_MODE=true' } } }, 'OTP sent successfully'),
       429: errorResponse('Please wait Ns before requesting another OTP'),
@@ -86,7 +86,7 @@ paths['/auth/resend-otp'] = {
   post: {
     tags: ['Auth'],
     summary: 'Resend OTP (identical behavior/body to send-otp, same cooldown applies)',
-    requestBody: jsonBody(otpPhoneFields),
+    requestBody: jsonBody(otpPhoneFields, ['mobile']),
     responses: {
       200: envelope({ type: 'object', properties: { sent: { type: 'boolean' }, resendCooldownSeconds: { type: 'integer', example: 30 }, debugOtp: { type: 'string' } } }, 'OTP resent successfully'),
       429: errorResponse('Please wait Ns before requesting another OTP'),
@@ -118,7 +118,7 @@ paths['/auth/verify-otp'] = {
       emergencyContactPhone: { type: 'string', description: 'Optional, role=picker signup' },
       deviceId: { type: 'string' },
       platform: { type: 'string', enum: ['android', 'ios', 'web'] },
-    }, ['otp']),
+    }, ['mobile', 'otp']),
     responses: {
       200: envelope({
         type: 'object',
@@ -145,10 +145,6 @@ const pickerOnboardingSchema = {
     nextStep: { type: 'string', enum: ['profile', 'kyc', 'pending_approval', 'home', 'blocked'], example: 'profile' },
   },
 };
-const pickerPhoneFields = {
-  mobile: { type: 'string', example: '9876543210', description: '10-digit mobile number as typed on the login screen' },
-  countryCode: { type: 'string', example: '+91', description: 'Optional, defaults to +91' },
-};
 const pickerOtpSentSchema = {
   type: 'object',
   properties: {
@@ -164,7 +160,7 @@ paths['/auth/picker/send-otp'] = {
     tags: ['Auth'],
     summary: 'Picker app — send login/signup OTP',
     description: 'Same OTP flow as /auth/send-otp, but only for picker accounts: a number already registered as a customer, delivery partner or admin gets 409, and a disabled picker gets 403, before any SMS is sent.',
-    requestBody: jsonBody(pickerPhoneFields, ['mobile']),
+    requestBody: jsonBody(otpPhoneFields, ['mobile']),
     responses: {
       200: envelope(pickerOtpSentSchema, 'OTP sent successfully'),
       403: errorResponse('Your account has been disabled'),
@@ -178,7 +174,7 @@ paths['/auth/picker/resend-otp'] = {
   post: {
     tags: ['Auth'],
     summary: 'Picker app — resend OTP (same body/behavior as send-otp, cooldown applies)',
-    requestBody: jsonBody(pickerPhoneFields, ['mobile']),
+    requestBody: jsonBody(otpPhoneFields, ['mobile']),
     responses: {
       200: envelope(pickerOtpSentSchema, 'OTP resent successfully'),
       409: errorResponse('This number is already registered with a different Grovio account'),
@@ -196,9 +192,9 @@ paths['/auth/picker/verify-otp'] = {
       '`profile` → PUT /auth/me (name/email/gender/dateOfBirth), `kyc` → PATCH /picker/profile (ID proof + document), ' +
       '`pending_approval` → waiting screen until an admin approves via PATCH /admin/pickers/{id}/status, `home` → approved, `blocked` → contact support. ' +
       'On a wrong/expired/exhausted OTP this returns 400 with `errors: [{ reason, attemptsLeft }]` (`invalid | expired | max_attempts | not_found`). ' +
-      'Refresh/logout use the shared /auth/refresh and /auth/logout.',
+      'Token refresh uses the shared /auth/refresh; sign out with /auth/picker/logout.',
     requestBody: jsonBody({
-      ...pickerPhoneFields,
+      ...otpPhoneFields,
       otp: { type: 'string', example: '1234' },
       name: { type: 'string', description: 'Optional — can be set later via PUT /auth/me' },
       deviceId: { type: 'string' },
@@ -236,6 +232,32 @@ paths['/auth/picker/me'] = {
       401: RESPONSES_401,
       403: RESPONSES_403,
     },
+  },
+};
+
+paths['/auth/picker/logout'] = {
+  post: {
+    tags: ['Auth'],
+    summary: 'Picker app — log out this device',
+    description: 'Revokes the given refresh token (must belong to the logged-in picker), sets the picker offline and unavailable so no new pick jobs are assigned, and clears the push token. The app should then discard both tokens.',
+    ...bearer(),
+    requestBody: jsonBody({ refreshToken: { type: 'string' } }, ['refreshToken']),
+    responses: {
+      200: envelope(null, 'Logged out'),
+      400: errorResponse('Invalid or already-revoked refresh token'),
+      401: RESPONSES_401,
+      403: RESPONSES_403,
+    },
+  },
+};
+
+paths['/auth/picker/logout-all'] = {
+  post: {
+    tags: ['Auth'],
+    summary: 'Picker app — log out from all devices',
+    description: 'Revokes every refresh token for this picker, sets them offline and unavailable, and clears the push token.',
+    ...bearer(),
+    responses: { 200: envelope(null, 'Logged out from all devices'), 401: RESPONSES_401, 403: RESPONSES_403 },
   },
 };
 

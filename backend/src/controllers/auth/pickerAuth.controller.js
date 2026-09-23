@@ -5,13 +5,15 @@
 //    instead of silently logging that other account into the Picker app;
 //  - the response carries the PickerProfile plus an `onboarding.nextStep` so the app knows
 //    which screen to route to after login (profile -> KYC upload -> awaiting approval -> home).
-// Token refresh, logout and PUT /auth/me are shared with every other role.
+// Token refresh (/auth/refresh) and PUT /auth/me are shared with every other role; logout has
+// picker-specific endpoints below since it also has to take the picker offline.
 const { User, PickerProfile, Wallet } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const otpService = require('../../services/otp.service');
 const tokenService = require('../../services/token.service');
+const { resolveMobile } = require('../../utils/phone');
 
 const OTP_ERROR_MESSAGES = {
   not_found: 'No OTP was found for this number. Please request a new one.',
@@ -57,21 +59,6 @@ async function findPickerAccount(phone) {
   return user;
 }
 
-// The Picker app sends the number exactly as typed on its login screen: `mobile` (digits only),
-// with the country code fixed to +91 in the UI — `countryCode` is optional and defaults to that.
-// Stored as the canonical "+919876543210" form, the same key every other role's account uses.
-const DEFAULT_COUNTRY_CODE = '+91';
-function resolvePickerPhone(body) {
-  const mobile = String(body.mobile ?? '').trim();
-  const digits = String(body.countryCode ?? DEFAULT_COUNTRY_CODE).replace(/\D/g, '');
-  const cc = `+${digits}`;
-  const validLength = cc === DEFAULT_COUNTRY_CODE ? /^\d{10}$/ : /^\d{6,14}$/;
-  if (!digits || !validLength.test(mobile)) {
-    throw new ApiError(400, cc === DEFAULT_COUNTRY_CODE ? 'Enter a valid 10-digit mobile number' : 'Enter a valid mobile number');
-  }
-  return `${cc}${mobile}`;
-}
-
 function safeUserOf(user) {
   const safeUser = user.toObject();
   delete safeUser.password;
@@ -80,7 +67,7 @@ function safeUserOf(user) {
 
 // POST /auth/picker/send-otp  { mobile, countryCode? }
 const sendOtp = catchAsync(async (req, res) => {
-  const phone = resolvePickerPhone(req.body);
+  const phone = resolveMobile(req.body);
   const user = await findPickerAccount(phone);
   const result = await otpService.sendOtp(phone);
   new ApiResponse(200, { ...result, isRegistered: !!user }, 'OTP sent successfully').send(res);
@@ -88,7 +75,7 @@ const sendOtp = catchAsync(async (req, res) => {
 
 // POST /auth/picker/resend-otp  — same body/behavior as send-otp; the server-side cooldown applies.
 const resendOtp = catchAsync(async (req, res) => {
-  const phone = resolvePickerPhone(req.body);
+  const phone = resolveMobile(req.body);
   const user = await findPickerAccount(phone);
   const result = await otpService.sendOtp(phone);
   new ApiResponse(200, { ...result, isRegistered: !!user }, 'OTP resent successfully').send(res);
@@ -98,7 +85,7 @@ const resendOtp = catchAsync(async (req, res) => {
 // Logs an existing picker in, or creates a new picker account (PickerProfile status 'pending')
 // on first verification.
 const verifyOtp = catchAsync(async (req, res) => {
-  const phone = resolvePickerPhone(req.body);
+  const phone = resolveMobile(req.body);
   const { otp, name, deviceId, platform } = req.body;
 
   let user = await findPickerAccount(phone);
@@ -146,4 +133,30 @@ const me = catchAsync(async (req, res) => {
   }).send(res);
 });
 
-module.exports = { sendOtp, resendOtp, verifyOtp, me, pickerOnboarding };
+// A logged-out picker can't receive pick jobs, so take them offline/unavailable (otherwise
+// assignment could keep routing orders to a phone nobody is signed in on) and drop the push token.
+async function takePickerOffline(user) {
+  await PickerProfile.updateOne({ user: user._id }, { isAvailable: false, onlineStatus: 'offline' });
+  if (user.fcmToken) {
+    user.fcmToken = null;
+    await user.save();
+  }
+}
+
+// POST /auth/picker/logout  { refreshToken } — signs out this device only.
+const logout = catchAsync(async (req, res) => {
+  const { refreshToken } = req.body;
+  const revoked = await tokenService.revokeRefreshToken(refreshToken, req.user._id);
+  if (!revoked) throw new ApiError(400, 'Invalid or already-revoked refresh token');
+  await takePickerOffline(req.user);
+  new ApiResponse(200, null, 'Logged out').send(res);
+});
+
+// POST /auth/picker/logout-all — signs out every device this picker is logged in on.
+const logoutAll = catchAsync(async (req, res) => {
+  await tokenService.revokeAllForUser(req.user._id);
+  await takePickerOffline(req.user);
+  new ApiResponse(200, null, 'Logged out from all devices').send(res);
+});
+
+module.exports = { sendOtp, resendOtp, verifyOtp, me, logout, logoutAll, pickerOnboarding };

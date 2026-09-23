@@ -109,8 +109,8 @@
                 <input id="name" name="name" type="text" required autocomplete="name" />
               </div>
               <div class="field">
-                <label for="phone">Mobile Number</label>
-                <input id="phone" name="phone" type="tel" required autocomplete="tel" placeholder="+919876543210" />
+                <label for="phone">Mobile Number (+91)</label>
+                <input id="phone" name="phone" type="tel" required autocomplete="tel-national" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" title="10-digit mobile number" placeholder="9876543210" />
               </div>
             </div>
           </fieldset>
@@ -196,17 +196,17 @@
       sendOtpBtn.disabled = true;
       sendOtpBtn.textContent = 'Sending OTP…';
 
-      const phone = detailsForm.phone.value.trim();
+      const mobile = detailsForm.phone.value.trim();
       try {
         const res = await fetch('/api/v1/auth/send-otp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone }),
+          body: JSON.stringify({ mobile }),
         });
         const body = await res.json();
         if (!res.ok || !body.success) throw new Error(body.message || 'Could not send OTP. Please try again.');
 
-        document.getElementById('otp-phone-label').textContent = phone;
+        document.getElementById('otp-phone-label').textContent = `+91 ${mobile}`;
         detailsForm.style.display = 'none';
         otpForm.style.display = 'block';
         stepLede.textContent = 'Almost done — just verify your number.';
@@ -229,7 +229,7 @@
       verifyOtpBtn.textContent = 'Verifying…';
 
       const payload = {
-        phone: detailsForm.phone.value.trim(),
+        mobile: detailsForm.phone.value.trim(),
         otp: otpForm.otp.value.trim(),
         role: 'delivery',
         name: detailsForm.name.value.trim(),

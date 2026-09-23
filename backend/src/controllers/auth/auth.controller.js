@@ -5,7 +5,7 @@ const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const otpService = require('../../services/otp.service');
 const tokenService = require('../../services/token.service');
-const { resolvePhone } = require('../../utils/phone');
+const { resolveMobile } = require('../../utils/phone');
 const { PERMISSIONS } = require('../../utils/permissions');
 
 async function respondWithTokens(res, user, { deviceId, platform } = {}, statusCode = 200, message = 'Success') {
@@ -82,13 +82,13 @@ const loginWithPassword = catchAsync(async (req, res) => {
 // single combined { phone } (handy for Swagger/Postman testing) — see utils/phone.js.
 
 const sendOtp = catchAsync(async (req, res) => {
-  const phone = resolvePhone(req.body);
+  const phone = resolveMobile(req.body);
   const result = await otpService.sendOtp(phone);
   new ApiResponse(200, result, 'OTP sent successfully').send(res);
 });
 
 const resendOtp = catchAsync(async (req, res) => {
-  const phone = resolvePhone(req.body);
+  const phone = resolveMobile(req.body);
   const result = await otpService.sendOtp(phone);
   new ApiResponse(200, result, 'OTP resent successfully').send(res);
 });
@@ -101,7 +101,7 @@ const OTP_ERROR_MESSAGES = {
 };
 
 const verifyOtp = catchAsync(async (req, res) => {
-  const phone = resolvePhone(req.body);
+  const phone = resolveMobile(req.body);
   const { role, name, deviceId, platform } = req.body;
   const otp = req.body.otp ?? req.body.code; // `otp` per the app contract; `code` kept as an alias
 

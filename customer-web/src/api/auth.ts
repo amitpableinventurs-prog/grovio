@@ -8,20 +8,21 @@ interface AuthSession {
   isNewUser?: boolean;
 }
 
-export function sendOtp(phone: string) {
+// `mobile` is the 10-digit number only — the backend assumes +91.
+export function sendOtp(mobile: string) {
   return unwrap<{ sent: boolean; resendCooldownSeconds: number; debugOtp?: string }>(
-    apiClient.post('/auth/send-otp', { phone })
+    apiClient.post('/auth/send-otp', { mobile })
   );
 }
 
-export function resendOtp(phone: string) {
+export function resendOtp(mobile: string) {
   return unwrap<{ sent: boolean; resendCooldownSeconds: number; debugOtp?: string }>(
-    apiClient.post('/auth/resend-otp', { phone })
+    apiClient.post('/auth/resend-otp', { mobile })
   );
 }
 
-export function verifyOtp(phone: string, otp: string) {
-  return unwrap<AuthSession>(apiClient.post('/auth/verify-otp', { phone, otp, role: 'customer' }));
+export function verifyOtp(mobile: string, otp: string) {
+  return unwrap<AuthSession>(apiClient.post('/auth/verify-otp', { mobile, otp, role: 'customer' }));
 }
 
 export function getMe() {

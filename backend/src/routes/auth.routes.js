@@ -8,8 +8,8 @@ const {
   loginRules,
   sendOtpRules,
   verifyOtpRules,
-  pickerSendOtpRules,
   pickerVerifyOtpRules,
+  pickerLogoutRules,
 } = require('../validators/auth.validator');
 
 router.post('/register-vendor', registerVendorRules, validate, ctrl.registerVendor);
@@ -20,10 +20,12 @@ router.post('/verify-otp', verifyOtpRules, validate, ctrl.verifyOtp);
 router.post('/refresh', ctrl.refresh);
 
 // Picker app: phone + OTP login/signup, locked to role 'picker' (see pickerAuth.controller.js).
-router.post('/picker/send-otp', pickerSendOtpRules, validate, pickerCtrl.sendOtp);
-router.post('/picker/resend-otp', pickerSendOtpRules, validate, pickerCtrl.resendOtp);
+router.post('/picker/send-otp', sendOtpRules, validate, pickerCtrl.sendOtp);
+router.post('/picker/resend-otp', sendOtpRules, validate, pickerCtrl.resendOtp);
 router.post('/picker/verify-otp', pickerVerifyOtpRules, validate, pickerCtrl.verifyOtp);
 router.get('/picker/me', authenticate, authorize('picker'), pickerCtrl.me);
+router.post('/picker/logout', authenticate, authorize('picker'), pickerLogoutRules, validate, pickerCtrl.logout);
+router.post('/picker/logout-all', authenticate, authorize('picker'), pickerCtrl.logoutAll);
 
 // Google/Apple social login are not wired up yet — they need OAuth app credentials
 // (Google client ID/secret, Apple key) from the client team before the token-verification

@@ -398,7 +398,7 @@
             "auth": null,
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\"\n}",
+              "raw": "{\n  \"mobile\": \"9876543210\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -532,7 +532,7 @@
             "auth": null,
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\"\n}",
+              "raw": "{\n  \"mobile\": \"9876543210\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -669,7 +669,7 @@
             "auth": null,
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"otp\": \"1234\",\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\",\n  \"role\": \"delivery\",\n  \"name\": \"Test Customer\",\n  \"deviceId\": \"string\",\n  \"platform\": \"ios\"\n}",
+              "raw": "{\n  \"mobile\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"role\": \"delivery\",\n  \"name\": \"Test Customer\",\n  \"deviceId\": \"string\",\n  \"platform\": \"ios\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -763,6 +763,1356 @@
                 }
               ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Incorrect OTP. Please try again.\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "8fde0cad-87f5-4d7d-87ea-d33c94809cc1",
+          "name": "Picker app — send login/signup OTP",
+          "request": {
+            "name": "Picker app — send login/signup OTP",
+            "description": {
+              "content": "Same OTP flow as /auth/send-otp, but only for picker accounts: a number already registered as a customer, delivery partner or admin gets 409, and a disabled picker gets 403, before any SMS is sent.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "auth",
+                "picker",
+                "send-otp"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": null
+          },
+          "response": [
+            {
+              "id": "2b4c8336-6276-4258-b3b3-daaad6297c5f",
+              "name": "OTP sent successfully",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "send-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP sent successfully\",\n  \"data\": {\n    \"sent\": false,\n    \"isRegistered\": false,\n    \"resendCooldownSeconds\": 30,\n    \"debugOtp\": \"1234\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "9bc46fd0-d47a-441a-b7da-0ce286560022",
+              "name": "Your account has been disabled",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "send-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Your account has been disabled\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "a9fe111b-4425-4704-8c31-16df6bac2675",
+              "name": "This number is already registered with a different Grovio account",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "send-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"This number is already registered with a different Grovio account\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "386adc2f-5ecb-4bfa-84a6-81f3c68b07a9",
+              "name": "Please wait Ns before requesting another OTP",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "send-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Too Many Requests",
+              "code": 429,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Please wait Ns before requesting another OTP\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "4984128f-b7b3-4feb-a16b-faeec300ac55",
+          "name": "Picker app — resend OTP (same body/behavior as send-otp, cooldown applies)",
+          "request": {
+            "name": "Picker app — resend OTP (same body/behavior as send-otp, cooldown applies)",
+            "description": {},
+            "url": {
+              "path": [
+                "auth",
+                "picker",
+                "resend-otp"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": null
+          },
+          "response": [
+            {
+              "id": "b83d4a8e-b60a-4218-ba41-07e3d0f96975",
+              "name": "OTP resent successfully",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "resend-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP resent successfully\",\n  \"data\": {\n    \"sent\": true,\n    \"isRegistered\": true,\n    \"resendCooldownSeconds\": 30,\n    \"debugOtp\": \"1234\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "5970e296-bb1c-4689-a5d3-7984fb918753",
+              "name": "This number is already registered with a different Grovio account",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "resend-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"This number is already registered with a different Grovio account\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "c5e1a841-eb41-4e9d-a9c2-f21ea22ca0d1",
+              "name": "Please wait Ns before requesting another OTP",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "resend-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Too Many Requests",
+              "code": 429,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Please wait Ns before requesting another OTP\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "f3c3bcb2-31ce-4457-ac03-dd13dec14790",
+          "name": "Picker app — verify OTP (logs in, or creates a pending picker on first verification)",
+          "request": {
+            "name": "Picker app — verify OTP (logs in, or creates a pending picker on first verification)",
+            "description": {
+              "content": "A new number creates a picker account with a PickerProfile in `status: \"pending\"`. Use `onboarding.nextStep` to route: `profile` → PUT /auth/me (name/email/gender/dateOfBirth), `kyc` → PATCH /picker/profile (ID proof + document), `pending_approval` → waiting screen until an admin approves via PATCH /admin/pickers/{id}/status, `home` → approved, `blocked` → contact support. On a wrong/expired/exhausted OTP this returns 400 with `errors: [{ reason, attemptsLeft }]` (`invalid | expired | max_attempts | not_found`). Token refresh uses the shared /auth/refresh; sign out with /auth/picker/logout.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "auth",
+                "picker",
+                "verify-otp"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"deviceId\": \"picker-device-1\",\n  \"platform\": \"android\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": null
+          },
+          "response": [
+            {
+              "id": "c944889d-e2b9-4d30-adb5-83fcab9a3262",
+              "name": "Login successful",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "verify-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mobile\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"name\": \"string\",\n  \"deviceId\": \"string\",\n  \"platform\": \"android\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"accessToken\": \"string\",\n    \"refreshToken\": \"string\",\n    \"isNewUser\": false,\n    \"user\": {\n      \"_id\": \"66f1a2b3c4d5e6f789012345\",\n      \"name\": \"Test Customer\",\n      \"email\": \"admin@grovio.com\",\n      \"phone\": \"8880002222\",\n      \"role\": \"vendor\",\n      \"gender\": \"male\",\n      \"dateOfBirth\": \"1969-11-09\",\n      \"profileImage\": \"string\",\n      \"fcmToken\": \"string\",\n      \"isActive\": true,\n      \"isVerified\": true,\n      \"createdAt\": \"2026-09-15T10:05:56.144Z\",\n      \"updatedAt\": \"2026-09-15T10:05:56.144Z\"\n    },\n    \"pickerProfile\": {\n      \"_id\": \"66f1a2b3c4d5e6f789012345\",\n      \"user\": \"66f1a2b3c4d5e6f789012345\",\n      \"store\": \"66f1a2b3c4d5e6f789012345\",\n      \"status\": \"blocked\",\n      \"isAvailable\": false,\n      \"employeeId\": \"string\",\n      \"address\": \"string\",\n      \"idProofType\": \"Aadhaar\",\n      \"idProofNumber\": \"string\",\n      \"idProofDocument\": \"string\",\n      \"emergencyContactName\": \"string\",\n      \"emergencyContactPhone\": \"string\",\n      \"joiningDate\": \"2026-09-15T10:05:56.144Z\",\n      \"shift\": \"string\"\n    },\n    \"onboarding\": {\n      \"status\": \"pending\",\n      \"profileComplete\": true,\n      \"kycComplete\": false,\n      \"nextStep\": \"profile\"\n    }\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "293c68a9-26c9-406c-910c-d65ba073c71e",
+              "name": "Incorrect OTP",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "verify-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mobile\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"name\": \"string\",\n  \"deviceId\": \"string\",\n  \"platform\": \"android\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Incorrect OTP\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "d178d221-b602-4ae1-92bd-553a4b0ef799",
+              "name": "Your account has been disabled",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "verify-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mobile\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"name\": \"string\",\n  \"deviceId\": \"string\",\n  \"platform\": \"android\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Your account has been disabled\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "945de633-725c-4dad-8aed-df93a53199f4",
+              "name": "This number is already registered with a different Grovio account",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "verify-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mobile\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"name\": \"string\",\n  \"deviceId\": \"string\",\n  \"platform\": \"android\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"This number is already registered with a different Grovio account\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "352494a9-7d63-4346-aae5-57d59f959961",
+          "name": "Picker app — current picker, profile and onboarding step (for splash-screen routing)",
+          "request": {
+            "name": "Picker app — current picker, profile and onboarding step (for splash-screen routing)",
+            "description": {},
+            "url": {
+              "path": [
+                "auth",
+                "picker",
+                "me"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "18524403-710b-4db2-b455-9b546b694cc8",
+              "name": "Success",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "me"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Success\",\n  \"data\": {\n    \"user\": {\n      \"_id\": \"66f1a2b3c4d5e6f789012345\",\n      \"name\": \"Test Customer\",\n      \"email\": \"admin@grovio.com\",\n      \"phone\": \"8880002222\",\n      \"role\": \"customer\",\n      \"gender\": \"other\",\n      \"dateOfBirth\": \"1982-10-18\",\n      \"profileImage\": \"string\",\n      \"fcmToken\": \"string\",\n      \"isActive\": true,\n      \"isVerified\": true,\n      \"createdAt\": \"2026-09-15T10:05:56.144Z\",\n      \"updatedAt\": \"2026-09-15T10:05:56.144Z\"\n    },\n    \"pickerProfile\": {\n      \"_id\": \"66f1a2b3c4d5e6f789012345\",\n      \"user\": \"66f1a2b3c4d5e6f789012345\",\n      \"store\": \"66f1a2b3c4d5e6f789012345\",\n      \"status\": \"blocked\",\n      \"isAvailable\": true,\n      \"employeeId\": \"string\",\n      \"address\": \"string\",\n      \"idProofType\": \"Aadhaar\",\n      \"idProofNumber\": \"string\",\n      \"idProofDocument\": \"string\",\n      \"emergencyContactName\": \"string\",\n      \"emergencyContactPhone\": \"string\",\n      \"joiningDate\": \"2026-09-15T10:05:56.144Z\",\n      \"shift\": \"string\"\n    },\n    \"onboarding\": {\n      \"status\": \"pending\",\n      \"profileComplete\": true,\n      \"kycComplete\": false,\n      \"nextStep\": \"profile\"\n    }\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "75c5aef0-79be-44eb-9042-2daf775f0b08",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "me"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "1326de8f-5541-4814-9335-02dae1671bae",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "me"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "d8e252fd-b060-4174-ade4-414a80982622",
+          "name": "Picker app — log out this device",
+          "request": {
+            "name": "Picker app — log out this device",
+            "description": {
+              "content": "Revokes the given refresh token (must belong to the logged-in picker), sets the picker offline and unavailable so no new pick jobs are assigned, and clears the push token. The app should then discard both tokens.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "auth",
+                "picker",
+                "logout"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"<refreshToken from verify-otp>\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "125ba687-2684-4c03-8a08-f56e1e7407c6",
+              "name": "Logged out",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "logout"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Logged out\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "edd8c138-0feb-42b9-a512-b6edfa8663e0",
+              "name": "Invalid or already-revoked refresh token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "logout"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid or already-revoked refresh token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "4135504e-04f1-4c01-a918-e673320cc972",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "logout"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "5a540505-bae1-4134-ace9-e23803aaf94c",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "logout"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "feeadbb9-0694-4dc7-ae2b-e2b516fa5f26",
+          "name": "Picker app — log out from all devices",
+          "request": {
+            "name": "Picker app — log out from all devices",
+            "description": {
+              "content": "Revokes every refresh token for this picker, sets them offline and unavailable, and clears the push token.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "auth",
+                "picker",
+                "logout-all"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "0abde677-a21b-421a-8c53-4d1772dac31a",
+              "name": "Logged out from all devices",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "logout-all"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Logged out from all devices\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "2f9e54a5-9b86-46a4-be95-40c51f240351",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "logout-all"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "e80406a5-2278-4afa-84a4-50c838005424",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "logout-all"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             }

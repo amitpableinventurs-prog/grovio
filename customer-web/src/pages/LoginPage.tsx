@@ -25,13 +25,13 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     const digits = phone.replace(/\D/g, '');
-    if (digits.length < 10) {
+    if (digits.length !== 10) {
       setError('Enter a valid 10-digit mobile number');
       return;
     }
     setLoading(true);
     try {
-      const res = await authApi.sendOtp(`+91${digits}`);
+      const res = await authApi.sendOtp(digits);
       setDebugOtp(res.debugOtp || null);
       setStep('otp');
     } catch (err) {
@@ -51,7 +51,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const digits = phone.replace(/\D/g, '');
-      const session = await authApi.verifyOtp(`+91${digits}`, otp.trim());
+      const session = await authApi.verifyOtp(digits, otp.trim());
       setSession(session);
       navigate(redirectTo, { replace: true });
     } catch (err) {

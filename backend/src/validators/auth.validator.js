@@ -16,18 +16,15 @@ const loginRules = [
   body('password').notEmpty().withMessage('Password is required'),
 ];
 
-// Actual "must have countryCode+mobile OR phone" enforcement happens in utils/phone.js
-// (resolvePhone) — express-validator here just checks the shape when fields are present.
+// OTP endpoints take `mobile` only (no combined `phone`); countryCode is optional and defaults to
+// +91. The exact digit-count check lives in utils/phone.js#resolveMobile.
 const sendOtpRules = [
+  body('mobile').notEmpty().withMessage('mobile is required').isString(),
   body('countryCode').optional().isString(),
-  body('mobile').optional().isString(),
-  body('phone').optional().isString(),
 ];
 
 const verifyOtpRules = [
-  body('countryCode').optional().isString(),
-  body('mobile').optional().isString(),
-  body('phone').optional().isString(),
+  ...sendOtpRules,
   body('otp').optional().isString(),
   body('code').optional().isString(),
   body('deviceId').optional().isString(),
@@ -39,20 +36,17 @@ const verifyOtpRules = [
   body('licenseNumber').optional().isString(),
 ];
 
-// Picker app: `mobile` only (no combined `phone`); countryCode defaults to +91. The exact
-// digit-count check lives in pickerAuth.controller.js#resolvePickerPhone.
-const pickerSendOtpRules = [
-  body('mobile').notEmpty().withMessage('mobile is required').isString(),
-  body('countryCode').optional().isString(),
-];
-
 // POST /auth/picker/verify-otp — role is implied, so no role/vehicle fields.
 const pickerVerifyOtpRules = [
-  ...pickerSendOtpRules,
+  ...sendOtpRules,
   body('otp').notEmpty().withMessage('otp is required').isString(),
   body('name').optional().isString(),
   body('deviceId').optional().isString(),
   body('platform').optional().isIn(['android', 'ios', 'web']),
 ];
 
-module.exports = { registerVendorRules, loginRules, sendOtpRules, verifyOtpRules, pickerSendOtpRules, pickerVerifyOtpRules };
+const pickerLogoutRules = [
+  body('refreshToken').notEmpty().withMessage('refreshToken is required').isString(),
+];
+
+module.exports = { registerVendorRules, loginRules, sendOtpRules, verifyOtpRules, pickerVerifyOtpRules, pickerLogoutRules };
