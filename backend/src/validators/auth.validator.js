@@ -19,7 +19,7 @@ const loginRules = [
 // OTP endpoints take a single `phone` field — the 10-digit number only; countryCode is optional and
 // defaults to +91. The exact digit-count check lives in utils/phone.js#resolveOtpPhone.
 const sendOtpRules = [
-  body('phone').notEmpty().withMessage('phone is required').isString(),
+  body('phone').notEmpty().withMessage('phone is required').bail().isString().withMessage('phone must be a string'),
   body('countryCode').optional().isString(),
 ];
 
