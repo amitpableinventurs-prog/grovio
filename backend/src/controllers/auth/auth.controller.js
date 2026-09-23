@@ -5,7 +5,7 @@ const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const otpService = require('../../services/otp.service');
 const tokenService = require('../../services/token.service');
-const { resolveMobile } = require('../../utils/phone');
+const { resolveOtpPhone } = require('../../utils/phone');
 const { PERMISSIONS } = require('../../utils/permissions');
 
 async function respondWithTokens(res, user, { deviceId, platform } = {}, statusCode = 200, message = 'Success') {
@@ -78,17 +78,17 @@ const loginWithPassword = catchAsync(async (req, res) => {
 });
 
 // ---------- Customer / Picker / Delivery: mobile + OTP ----------
-// Accepts either { countryCode, mobile } (what the Flutter apps send) or a
-// single combined { phone } (handy for Swagger/Postman testing) — see utils/phone.js.
+// Takes { phone } — the 10-digit number only, +91 assumed (countryCode optional) — see
+// utils/phone.js#resolveOtpPhone.
 
 const sendOtp = catchAsync(async (req, res) => {
-  const phone = resolveMobile(req.body);
+  const phone = resolveOtpPhone(req.body);
   const result = await otpService.sendOtp(phone);
   new ApiResponse(200, result, 'OTP sent successfully').send(res);
 });
 
 const resendOtp = catchAsync(async (req, res) => {
-  const phone = resolveMobile(req.body);
+  const phone = resolveOtpPhone(req.body);
   const result = await otpService.sendOtp(phone);
   new ApiResponse(200, result, 'OTP resent successfully').send(res);
 });
@@ -101,7 +101,7 @@ const OTP_ERROR_MESSAGES = {
 };
 
 const verifyOtp = catchAsync(async (req, res) => {
-  const phone = resolveMobile(req.body);
+  const phone = resolveOtpPhone(req.body);
   const { role, name, deviceId, platform } = req.body;
   const otp = req.body.otp ?? req.body.code; // `otp` per the app contract; `code` kept as an alias
 

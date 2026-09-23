@@ -13,7 +13,7 @@ const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const otpService = require('../../services/otp.service');
 const tokenService = require('../../services/token.service');
-const { resolveMobile } = require('../../utils/phone');
+const { resolveOtpPhone } = require('../../utils/phone');
 const { pickerOnboarding, PLACEHOLDER_NAME } = require('../../utils/pickerOnboarding');
 
 const OTP_ERROR_MESSAGES = {
@@ -41,9 +41,9 @@ function safeUserOf(user) {
   return safeUser;
 }
 
-// POST /auth/picker/send-otp  { mobile, countryCode? }
+// POST /auth/picker/send-otp  { phone, countryCode? }
 const sendOtp = catchAsync(async (req, res) => {
-  const phone = resolveMobile(req.body);
+  const phone = resolveOtpPhone(req.body);
   const user = await findPickerAccount(phone);
   const result = await otpService.sendOtp(phone);
   new ApiResponse(200, { ...result, isRegistered: !!user }, 'OTP sent successfully').send(res);
@@ -51,17 +51,17 @@ const sendOtp = catchAsync(async (req, res) => {
 
 // POST /auth/picker/resend-otp  — same body/behavior as send-otp; the server-side cooldown applies.
 const resendOtp = catchAsync(async (req, res) => {
-  const phone = resolveMobile(req.body);
+  const phone = resolveOtpPhone(req.body);
   const user = await findPickerAccount(phone);
   const result = await otpService.sendOtp(phone);
   new ApiResponse(200, { ...result, isRegistered: !!user }, 'OTP resent successfully').send(res);
 });
 
-// POST /auth/picker/verify-otp  { mobile, countryCode?, otp, deviceId?, platform?, name? }
+// POST /auth/picker/verify-otp  { phone, countryCode?, otp, deviceId?, platform?, name? }
 // Logs an existing picker in, or creates a new picker account (PickerProfile status 'pending')
 // on first verification.
 const verifyOtp = catchAsync(async (req, res) => {
-  const phone = resolveMobile(req.body);
+  const phone = resolveOtpPhone(req.body);
   const { otp, name, deviceId, platform } = req.body;
 
   let user = await findPickerAccount(phone);

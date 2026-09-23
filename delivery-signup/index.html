@@ -196,17 +196,17 @@
       sendOtpBtn.disabled = true;
       sendOtpBtn.textContent = 'Sending OTP…';
 
-      const mobile = detailsForm.phone.value.trim();
+      const phone = detailsForm.phone.value.trim();
       try {
         const res = await fetch('/api/v1/auth/send-otp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mobile }),
+          body: JSON.stringify({ phone }),
         });
         const body = await res.json();
         if (!res.ok || !body.success) throw new Error(body.message || 'Could not send OTP. Please try again.');
 
-        document.getElementById('otp-phone-label').textContent = `+91 ${mobile}`;
+        document.getElementById('otp-phone-label').textContent = `+91 ${phone}`;
         detailsForm.style.display = 'none';
         otpForm.style.display = 'block';
         stepLede.textContent = 'Almost done — just verify your number.';
@@ -229,7 +229,7 @@
       verifyOtpBtn.textContent = 'Verifying…';
 
       const payload = {
-        mobile: detailsForm.phone.value.trim(),
+        phone: detailsForm.phone.value.trim(),
         otp: otpForm.otp.value.trim(),
         role: 'delivery',
         name: detailsForm.name.value.trim(),

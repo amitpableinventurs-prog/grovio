@@ -25,19 +25,19 @@ function resolvePhone(body) {
 }
 
 // OTP login/signup (/auth/send-otp, /auth/verify-otp, /auth/picker/*) takes the number the way
-// every app's login screen collects it: `mobile` (digits only) with the country code fixed to
-// +91 in the UI — `countryCode` is optional and defaults to that. No combined `phone` field.
-// Resolves to the same canonical "+919876543210" form resolvePhone above produces.
+// every app's login screen collects it: `phone` holding the 10-digit number only (e.g.
+// "9876543210"), with the country code fixed to +91 in the UI — `countryCode` is optional and
+// defaults to that. Resolves to the same canonical "+919876543210" form resolvePhone above produces.
 const DEFAULT_COUNTRY_CODE = '+91';
-function resolveMobile(body) {
-  const mobile = String(body.mobile ?? '').trim();
+function resolveOtpPhone(body) {
+  const phone = String(body.phone ?? '').trim();
   const digits = String(body.countryCode ?? DEFAULT_COUNTRY_CODE).replace(/\D/g, '');
   const cc = `+${digits}`;
   const validLength = cc === DEFAULT_COUNTRY_CODE ? /^\d{10}$/ : /^\d{6,14}$/;
-  if (!digits || !validLength.test(mobile)) {
+  if (!digits || !validLength.test(phone)) {
     throw new ApiError(400, cc === DEFAULT_COUNTRY_CODE ? 'Enter a valid 10-digit mobile number' : 'Enter a valid mobile number');
   }
-  return `${cc}${mobile}`;
+  return `${cc}${phone}`;
 }
 
-module.exports = { resolvePhone, resolveMobile };
+module.exports = { resolvePhone, resolveOtpPhone };

@@ -16,10 +16,10 @@ const loginRules = [
   body('password').notEmpty().withMessage('Password is required'),
 ];
 
-// OTP endpoints take `mobile` only (no combined `phone`); countryCode is optional and defaults to
-// +91. The exact digit-count check lives in utils/phone.js#resolveMobile.
+// OTP endpoints take a single `phone` field — the 10-digit number only; countryCode is optional and
+// defaults to +91. The exact digit-count check lives in utils/phone.js#resolveOtpPhone.
 const sendOtpRules = [
-  body('mobile').notEmpty().withMessage('mobile is required').isString(),
+  body('phone').notEmpty().withMessage('phone is required').isString(),
   body('countryCode').optional().isString(),
 ];
 

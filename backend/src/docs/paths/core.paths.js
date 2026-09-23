@@ -63,18 +63,18 @@ paths['/auth/login'] = {
   },
 };
 
-// Every OTP endpoint takes just `mobile`. A non-Indian number can also send `countryCode`
+// Every OTP endpoint takes just `phone` (10 digits). A non-Indian number can also send `countryCode`
 // (defaults to +91) — deliberately left out of the schema so the example body stays one field.
 const otpPhoneFields = {
-  mobile: { type: 'string', example: '9876543210', description: '10-digit mobile number (country code +91 is assumed)' },
+  phone: { type: 'string', example: '9876543210', description: '10-digit mobile number only (country code +91 is assumed)' },
 };
 
 paths['/auth/send-otp'] = {
   post: {
     tags: ['Auth'],
     summary: 'Send OTP to a phone number (Customer/Picker/Delivery login)',
-    description: 'Send `{ mobile }` — the 10-digit number only (+91 is assumed; pass `countryCode` only for a non-Indian number). Rate-limited server-side: repeat calls within the cooldown window return 429.',
-    requestBody: jsonBody(otpPhoneFields, ['mobile']),
+    description: 'Send `{ phone }` — the 10-digit number only (+91 is assumed; pass `countryCode` only for a non-Indian number). Rate-limited server-side: repeat calls within the cooldown window return 429.',
+    requestBody: jsonBody(otpPhoneFields, ['phone']),
     responses: {
       200: envelope({ type: 'object', properties: { sent: { type: 'boolean' }, resendCooldownSeconds: { type: 'integer', example: 30 }, debugOtp: { type: 'string', example: '1234', description: 'Only present when OTP_DEBUG_MODE=true' } } }, 'OTP sent successfully'),
       429: errorResponse('Please wait Ns before requesting another OTP'),
@@ -86,7 +86,7 @@ paths['/auth/resend-otp'] = {
   post: {
     tags: ['Auth'],
     summary: 'Resend OTP (identical behavior/body to send-otp, same cooldown applies)',
-    requestBody: jsonBody(otpPhoneFields, ['mobile']),
+    requestBody: jsonBody(otpPhoneFields, ['phone']),
     responses: {
       200: envelope({ type: 'object', properties: { sent: { type: 'boolean' }, resendCooldownSeconds: { type: 'integer', example: 30 }, debugOtp: { type: 'string' } } }, 'OTP resent successfully'),
       429: errorResponse('Please wait Ns before requesting another OTP'),
@@ -118,7 +118,7 @@ paths['/auth/verify-otp'] = {
       emergencyContactPhone: { type: 'string', description: 'Optional, role=picker signup' },
       deviceId: { type: 'string' },
       platform: { type: 'string', enum: ['android', 'ios', 'web'] },
-    }, ['mobile', 'otp']),
+    }, ['phone', 'otp']),
     responses: {
       200: envelope({
         type: 'object',
@@ -160,7 +160,7 @@ paths['/auth/picker/send-otp'] = {
     tags: ['Auth'],
     summary: 'Picker app — send login/signup OTP',
     description: 'Same OTP flow as /auth/send-otp, but only for picker accounts: a number already registered as a customer, delivery partner or admin gets 409, and a disabled picker gets 403, before any SMS is sent.',
-    requestBody: jsonBody(otpPhoneFields, ['mobile']),
+    requestBody: jsonBody(otpPhoneFields, ['phone']),
     responses: {
       200: envelope(pickerOtpSentSchema, 'OTP sent successfully'),
       403: errorResponse('Your account has been disabled'),
@@ -174,7 +174,7 @@ paths['/auth/picker/resend-otp'] = {
   post: {
     tags: ['Auth'],
     summary: 'Picker app — resend OTP (same body/behavior as send-otp, cooldown applies)',
-    requestBody: jsonBody(otpPhoneFields, ['mobile']),
+    requestBody: jsonBody(otpPhoneFields, ['phone']),
     responses: {
       200: envelope(pickerOtpSentSchema, 'OTP resent successfully'),
       409: errorResponse('This number is already registered with a different Grovio account'),
@@ -199,7 +199,7 @@ paths['/auth/picker/verify-otp'] = {
       name: { type: 'string', description: 'Optional — can be set later via PUT /auth/me' },
       deviceId: { type: 'string' },
       platform: { type: 'string', enum: ['android', 'ios', 'web'] },
-    }, ['mobile', 'otp']),
+    }, ['phone', 'otp']),
     responses: {
       200: envelope({
         type: 'object',

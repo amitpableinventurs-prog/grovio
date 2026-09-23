@@ -398,7 +398,7 @@
             "auth": null,
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+              "raw": "{\n  \"phone\": \"9876543210\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -431,7 +431,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -475,7 +475,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -532,7 +532,7 @@
             "auth": null,
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+              "raw": "{\n  \"phone\": \"9876543210\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -565,7 +565,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -609,7 +609,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -669,7 +669,7 @@
             "auth": null,
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"mobile\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"role\": \"delivery\",\n  \"name\": \"Test Customer\",\n  \"deviceId\": \"string\",\n  \"platform\": \"ios\"\n}",
+              "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"role\": \"delivery\",\n  \"name\": \"Test Customer\",\n  \"deviceId\": \"string\",\n  \"platform\": \"ios\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -702,7 +702,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"otp\": \"1234\",\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\",\n  \"role\": \"delivery\",\n  \"name\": \"Test Customer\",\n  \"deviceId\": \"string\",\n  \"platform\": \"ios\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"role\": \"delivery\",\n  \"name\": \"Test Customer\",\n  \"deviceId\": \"string\",\n  \"platform\": \"ios\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -746,7 +746,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"otp\": \"1234\",\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\",\n  \"role\": \"delivery\",\n  \"name\": \"Test Customer\",\n  \"deviceId\": \"string\",\n  \"platform\": \"ios\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"role\": \"delivery\",\n  \"name\": \"Test Customer\",\n  \"deviceId\": \"string\",\n  \"platform\": \"ios\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -806,7 +806,7 @@
             "method": "POST",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+              "raw": "{\n  \"phone\": \"9876543210\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -846,7 +846,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -896,7 +896,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -946,7 +946,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -996,7 +996,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -1054,7 +1054,7 @@
             "method": "POST",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+              "raw": "{\n  \"phone\": \"9876543210\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -1094,7 +1094,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -1144,7 +1144,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -1194,7 +1194,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"mobile\": \"9876543210\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -1255,7 +1255,7 @@
             "method": "POST",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"mobile\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"deviceId\": \"picker-device-1\",\n  \"platform\": \"android\"\n}",
+              "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"deviceId\": \"picker-device-1\",\n  \"platform\": \"android\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -1295,7 +1295,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"mobile\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"name\": \"string\",\n  \"deviceId\": \"string\",\n  \"platform\": \"android\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"name\": \"string\",\n  \"deviceId\": \"string\",\n  \"platform\": \"android\"\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -1345,7 +1345,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"mobile\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"name\": \"string\",\n  \"deviceId\": \"string\",\n  \"platform\": \"android\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"name\": \"string\",\n  \"deviceId\": \"string\",\n  \"platform\": \"android\"\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -1395,7 +1395,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"mobile\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"name\": \"string\",\n  \"deviceId\": \"string\",\n  \"platform\": \"android\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"name\": \"string\",\n  \"deviceId\": \"string\",\n  \"platform\": \"android\"\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
@@ -1445,7 +1445,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"mobile\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"name\": \"string\",\n  \"deviceId\": \"string\",\n  \"platform\": \"android\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"name\": \"string\",\n  \"deviceId\": \"string\",\n  \"platform\": \"android\"\n}",
                   "options": {
                     "raw": {
                       "headerFamily": "json",
