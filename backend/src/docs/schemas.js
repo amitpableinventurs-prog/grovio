@@ -87,7 +87,7 @@ const PickerProfile = {
     address: { type: 'string', nullable: true },
     idProofType: { type: 'string', nullable: true, example: 'Aadhaar' },
     idProofNumber: { type: 'string', nullable: true },
-    idProofDocument: { type: 'string', nullable: true, description: 'Server-relative path, e.g. /uploads/xyz.jpg — set via PATCH /picker/profile or admin' },
+    idProofDocument: { type: 'string', nullable: true, description: 'Server-relative path, e.g. /uploads/xyz.jpg — set via PATCH /picker/kyc-upload or admin' },
     emergencyContactName: { type: 'string', nullable: true },
     emergencyContactPhone: { type: 'string', nullable: true },
     joiningDate: { ...dateTime, nullable: true },

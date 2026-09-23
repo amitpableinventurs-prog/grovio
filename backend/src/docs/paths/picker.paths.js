@@ -9,9 +9,12 @@ const TAG = ['Picker'];
 
 paths['/picker/profile'] = {
   get: { tags: TAG, summary: 'Get my picker profile', ...bearer(), responses: { 200: envelope(ref('PickerProfile')), 401: RESPONSES_401, 404: RESPONSES_404 } },
+};
+paths['/picker/kyc-upload'] = {
   patch: {
     tags: TAG,
-    summary: 'Fill in KYC details after signup — ID proof type/number/document, address, emergency contact. Used by the onboarding flow\'s "Upload document" step, but any field can be updated any time.',
+    summary: 'KYC upload — ID proof type/number/document, address, emergency contact (multipart)',
+    description: 'The onboarding flow\'s "Upload document" step (`onboarding.nextStep === "kyc"`). Once `idProofType`, `idProofNumber` and the `idProofDocument` file are all saved, `nextStep` becomes `pending_approval`. Any field can be updated again later; send only the fields that change.',
     ...bearer(),
     requestBody: formBody({
       idProofType: { type: 'string', example: 'Aadhaar' },
@@ -21,7 +24,7 @@ paths['/picker/profile'] = {
       emergencyContactName: { type: 'string' },
       emergencyContactPhone: { type: 'string' },
     }),
-    responses: { 200: envelope(ref('PickerProfile'), 'Profile updated'), 401: RESPONSES_401, 404: RESPONSES_404 },
+    responses: { 200: envelope(ref('PickerProfile'), 'KYC details saved'), 401: RESPONSES_401, 404: RESPONSES_404 },
   },
 };
 paths['/picker/availability'] = {

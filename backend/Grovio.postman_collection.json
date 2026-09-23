@@ -31503,6 +31503,427 @@
           }
         },
         {
+          "id": "4aa352e2-1db2-4d4d-bca4-70ec0e41fe5c",
+          "name": "KYC upload — ID proof type/number/document, address, emergency contact (multipart)",
+          "request": {
+            "name": "KYC upload — ID proof type/number/document, address, emergency contact (multipart)",
+            "description": {
+              "content": "The onboarding flow's \"Upload document\" step (`onboarding.nextStep === \"kyc\"`). Once `idProofType`, `idProofNumber` and the `idProofDocument` file are all saved, `nextStep` becomes `pending_approval`. Any field can be updated again later; send only the fields that change.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "picker",
+                "kyc-upload"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PATCH",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "description": {
+                    "content": "",
+                    "type": "text/plain"
+                  },
+                  "key": "idProofType",
+                  "value": "Aadhaar",
+                  "type": "text"
+                },
+                {
+                  "description": {
+                    "content": "",
+                    "type": "text/plain"
+                  },
+                  "key": "idProofNumber",
+                  "value": "1234-5678-9012",
+                  "type": "text"
+                },
+                {
+                  "description": {
+                    "content": "ID proof photo — jpg/png/webp, max 5MB",
+                    "type": "text/plain"
+                  },
+                  "key": "idProofDocument",
+                  "type": "file"
+                },
+                {
+                  "description": {
+                    "content": "",
+                    "type": "text/plain"
+                  },
+                  "key": "address",
+                  "value": "string",
+                  "type": "text"
+                },
+                {
+                  "description": {
+                    "content": "",
+                    "type": "text/plain"
+                  },
+                  "key": "emergencyContactName",
+                  "value": "string",
+                  "type": "text"
+                },
+                {
+                  "description": {
+                    "content": "",
+                    "type": "text/plain"
+                  },
+                  "key": "emergencyContactPhone",
+                  "value": "string",
+                  "type": "text"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "99afdcae-c1d0-495b-b55c-2d7cd7a51ea1",
+              "name": "Profile updated",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "picker",
+                    "kyc-upload"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "multipart/form-data"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofType",
+                      "value": "Aadhaar",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofNumber",
+                      "value": "1234-5678-9012",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "ID proof photo — jpg/png/webp, max 5MB",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofDocument",
+                      "type": "file"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "address",
+                      "value": "string",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "emergencyContactName",
+                      "value": "string",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "emergencyContactPhone",
+                      "value": "string",
+                      "type": "text"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Profile updated\",\n  \"data\": {\n    \"_id\": \"66f1a2b3c4d5e6f789012345\",\n    \"user\": \"66f1a2b3c4d5e6f789012345\",\n    \"store\": \"66f1a2b3c4d5e6f789012345\",\n    \"status\": \"pending\",\n    \"isAvailable\": false,\n    \"employeeId\": \"string\",\n    \"address\": \"string\",\n    \"idProofType\": \"Aadhaar\",\n    \"idProofNumber\": \"string\",\n    \"idProofDocument\": \"string\",\n    \"emergencyContactName\": \"string\",\n    \"emergencyContactPhone\": \"string\",\n    \"joiningDate\": \"2026-09-15T10:05:56.144Z\",\n    \"shift\": \"string\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "0d98782b-677d-4840-b29c-ec3871571dbd",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "picker",
+                    "kyc-upload"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "multipart/form-data"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofType",
+                      "value": "Aadhaar",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofNumber",
+                      "value": "1234-5678-9012",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "ID proof photo — jpg/png/webp, max 5MB",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofDocument",
+                      "type": "file"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "address",
+                      "value": "string",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "emergencyContactName",
+                      "value": "string",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "emergencyContactPhone",
+                      "value": "string",
+                      "type": "text"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "c30d27cf-5009-4659-8cbd-e5d5b775f26f",
+              "name": "Not found",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "picker",
+                    "kyc-upload"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "multipart/form-data"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofType",
+                      "value": "Aadhaar",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofNumber",
+                      "value": "1234-5678-9012",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "ID proof photo — jpg/png/webp, max 5MB",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofDocument",
+                      "type": "file"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "address",
+                      "value": "string",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "emergencyContactName",
+                      "value": "string",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "emergencyContactPhone",
+                      "value": "string",
+                      "type": "text"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Not found\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
           "id": "d18dd8f3-c729-4ba8-bc45-5f2479891843",
           "name": "Toggle online/offline",
           "request": {

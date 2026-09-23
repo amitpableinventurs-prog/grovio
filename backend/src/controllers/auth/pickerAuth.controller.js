@@ -30,7 +30,7 @@ const PLACEHOLDER_NAME = 'User';
 //   blocked          — admin blocked this picker; show a "contact support" screen
 //   home             — approved, can work
 //   profile          — fill in name/email/gender/DOB via POST /auth/picker/register
-//   kyc              — upload ID proof via PATCH /picker/profile
+//   kyc              — upload ID proof via PATCH /picker/kyc-upload
 //   pending_approval — everything submitted, waiting on PATCH /admin/pickers/:id/status
 // An approved picker always goes home, even if admin onboarding skipped a KYC document.
 function pickerOnboarding(user, profile) {

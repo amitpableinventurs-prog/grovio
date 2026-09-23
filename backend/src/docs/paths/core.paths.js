@@ -100,7 +100,7 @@ paths['/auth/verify-otp'] = {
     summary: 'Verify OTP — logs in, or signs up on first verification',
     description:
       'Send `otp` (the field name the apps use; `code` is accepted as an alias). `role` is optional and defaults to `customer` — the Customer app never sends it; the Delivery app passes `role: "delivery"` explicitly. ' +
-      'Self-registration works for `customer`, `delivery` and `picker` alike. When registering as `delivery` for the first time, `vehicleType`, `vehicleNumber` and `licenseNumber` are required — a DeliveryProfile is created with `status: "pending"`. When registering as `picker` for the first time, a bare account + PickerProfile (`status: "pending"`) is created immediately — no KYC fields are required here. The app\'s onboarding flow collects those afterward in separate steps: PUT /auth/me for name/email/gender/dateOfBirth, then PATCH /picker/profile (multipart) for ID-proof type/number/document. `idProofType`/`idProofNumber`/`address`/`emergencyContactName`/`emergencyContactPhone` are still accepted here too, purely for a client that wants to submit everything in one call. Either way, the account cannot actually work (accept jobs / get pick-lists assigned) until an admin approves it — see PATCH /admin/delivery-partners/{id}/status and PATCH /admin/pickers/{id}/status. ' +
+      'Self-registration works for `customer`, `delivery` and `picker` alike. When registering as `delivery` for the first time, `vehicleType`, `vehicleNumber` and `licenseNumber` are required — a DeliveryProfile is created with `status: "pending"`. When registering as `picker` for the first time, a bare account + PickerProfile (`status: "pending"`) is created immediately — no KYC fields are required here. The app\'s onboarding flow collects those afterward in separate steps: PUT /auth/me for name/email/gender/dateOfBirth, then PATCH /picker/kyc-upload (multipart) for ID-proof type/number/document. `idProofType`/`idProofNumber`/`address`/`emergencyContactName`/`emergencyContactPhone` are still accepted here too, purely for a client that wants to submit everything in one call. Either way, the account cannot actually work (accept jobs / get pick-lists assigned) until an admin approves it — see PATCH /admin/delivery-partners/{id}/status and PATCH /admin/pickers/{id}/status. ' +
       'The response\'s `isNewUser` is the single source of truth for whether to route to a "create your profile" screen or straight to Home. ' +
       'On a wrong/expired/exhausted OTP this returns 400 with `errors: [{ reason, attemptsLeft }]` where `reason` is one of `invalid | expired | max_attempts | not_found`, so the UI can show a specific inline message.',
     requestBody: jsonBody({
@@ -111,8 +111,8 @@ paths['/auth/verify-otp'] = {
       vehicleType: { type: 'string', example: 'bike', description: 'Required when role=delivery on first-time signup' },
       vehicleNumber: { type: 'string', example: 'DL01AB1234', description: 'Required when role=delivery on first-time signup' },
       licenseNumber: { type: 'string', example: 'DL-0420110012345', description: 'Required when role=delivery on first-time signup' },
-      idProofType: { type: 'string', example: 'Aadhaar', description: 'Optional, role=picker signup — can instead be filled in later via PATCH /picker/profile' },
-      idProofNumber: { type: 'string', example: '1234-5678-9012', description: 'Optional, role=picker signup — can instead be filled in later via PATCH /picker/profile' },
+      idProofType: { type: 'string', example: 'Aadhaar', description: 'Optional, role=picker signup — can instead be filled in later via PATCH /picker/kyc-upload' },
+      idProofNumber: { type: 'string', example: '1234-5678-9012', description: 'Optional, role=picker signup — can instead be filled in later via PATCH /picker/kyc-upload' },
       address: { type: 'string', description: 'Optional, role=picker signup' },
       emergencyContactName: { type: 'string', description: 'Optional, role=picker signup' },
       emergencyContactPhone: { type: 'string', description: 'Optional, role=picker signup' },
@@ -141,7 +141,7 @@ const pickerOnboardingSchema = {
   properties: {
     status: { type: 'string', enum: ['pending', 'approved', 'blocked'] },
     profileComplete: { type: 'boolean', description: 'Name, email, gender and date of birth saved (POST /auth/picker/register)' },
-    kycComplete: { type: 'boolean', description: 'ID proof type, number and document uploaded (PATCH /picker/profile)' },
+    kycComplete: { type: 'boolean', description: 'ID proof type, number and document uploaded (PATCH /picker/kyc-upload)' },
     nextStep: { type: 'string', enum: ['profile', 'kyc', 'pending_approval', 'home', 'blocked'], example: 'profile' },
   },
 };
@@ -189,7 +189,7 @@ paths['/auth/picker/verify-otp'] = {
     summary: 'Picker app — verify OTP (logs in, or creates a pending picker on first verification)',
     description:
       'A new number creates a picker account with a PickerProfile in `status: "pending"`. Use `onboarding.nextStep` to route: ' +
-      '`profile` → POST /auth/picker/register (name/email/gender/dateOfBirth), `kyc` → PATCH /picker/profile (ID proof + document), ' +
+      '`profile` → POST /auth/picker/register (name/email/gender/dateOfBirth), `kyc` → PATCH /picker/kyc-upload (ID proof + document), ' +
       '`pending_approval` → waiting screen until an admin approves via PATCH /admin/pickers/{id}/status, `home` → approved, `blocked` → contact support. ' +
       'On a wrong/expired/exhausted OTP this returns 400 with `errors: [{ reason, attemptsLeft }]` (`invalid | expired | max_attempts | not_found`). ' +
       'Token refresh uses the shared /auth/refresh; sign out with /auth/picker/logout.',
@@ -244,7 +244,7 @@ paths['/auth/picker/register'] = {
       'The mobile number on that screen is read-only: show `user.phone` from verify-otp / GET /auth/picker/me. It is not part of this body. ' +
       '`dateOfBirth` is `DD/MM/YYYY` (ISO `YYYY-MM-DD` also accepted); the picker must be at least 18. `gender` is case-insensitive. ' +
       'Validation errors return 422 with `errors: [{ field, message }]`, so each message can be shown under its input. ' +
-      'On success `onboarding.nextStep` becomes `kyc` (→ PATCH /picker/profile). Can be called again to correct details.',
+      'On success `onboarding.nextStep` becomes `kyc` (→ PATCH /picker/kyc-upload). Can be called again to correct details.',
     ...bearer(),
     requestBody: jsonBody({
       name: { type: 'string', example: 'Ravi Kumar' },

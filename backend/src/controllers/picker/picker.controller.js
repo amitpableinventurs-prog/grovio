@@ -22,7 +22,7 @@ const getProfile = catchAsync(async (req, res) => {
   new ApiResponse(200, profile).send(res);
 });
 
-// PATCH /picker/profile (multipart)  { idProofType?, idProofNumber?, address?, emergencyContactName?, emergencyContactPhone? } + idProofDocument file?
+// PATCH /picker/kyc-upload (multipart)  { idProofType?, idProofNumber?, address?, emergencyContactName?, emergencyContactPhone? } + idProofDocument file?
 // Fills in KYC details after self-registration (see auth.controller.js#verifyOtp) — the app's
 // onboarding flow collects these in a later step, separate from OTP signup: a "Register" screen
 // (name/email/gender/DOB, via PUT /auth/me) followed by an "Upload document" screen that calls
@@ -41,7 +41,7 @@ const updateProfile = catchAsync(async (req, res) => {
   if (req.files?.idProofDocument?.[0]) profile.idProofDocument = `/uploads/${req.files.idProofDocument[0].filename}`;
   await profile.save();
 
-  new ApiResponse(200, profile, 'Profile updated').send(res);
+  new ApiResponse(200, profile, 'KYC details saved').send(res);
 });
 
 const toggleAvailability = catchAsync(async (req, res) => {

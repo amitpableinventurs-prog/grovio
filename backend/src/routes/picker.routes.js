@@ -5,8 +5,13 @@ const ctrl = require('../controllers/picker/picker.controller');
 
 router.use(authenticate, authorize('picker'));
 
+const kycDocumentUpload = upload.fields([{ name: 'idProofDocument', maxCount: 1 }]);
+
 router.get('/profile', ctrl.getProfile);
-router.patch('/profile', upload.fields([{ name: 'idProofDocument', maxCount: 1 }]), ctrl.updateProfile);
+router.patch('/kyc-upload', kycDocumentUpload, ctrl.updateProfile);
+// Old path for the same KYC upload — kept only so already-shipped app builds keep working; new
+// clients use /kyc-upload above (the only one documented).
+router.patch('/profile', kycDocumentUpload, ctrl.updateProfile);
 router.patch('/availability', ctrl.toggleAvailability);
 router.post('/location', ctrl.updateLocation);
 router.get('/location', ctrl.getLocation);

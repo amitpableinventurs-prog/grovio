@@ -137,7 +137,7 @@ const verifyOtp = catchAsync(async (req, res) => {
     // A picker's KYC (ID proof type/number, address, emergency contact, and the actual document
     // photo) isn't collected here — the app's onboarding flow gathers it afterward in separate
     // steps (profile screen, then document upload) via PUT /auth/me and
-    // PATCH /picker/profile — see picker.controller.js#updateProfile. Accepted here too, purely
+    // PATCH /picker/kyc-upload — see picker.controller.js#updateProfile. Accepted here too, purely
     // for backward compatibility with a client that still wants to submit it all in one call.
     let idProofType, idProofNumber, address, emergencyContactName, emergencyContactPhone;
     if (effectiveRole === 'picker') {
