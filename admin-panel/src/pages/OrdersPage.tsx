@@ -196,6 +196,9 @@ export default function OrdersPage() {
               </Descriptions.Item>
               <Descriptions.Item label="Item Total">{formatCurrency(order.itemTotal)}</Descriptions.Item>
               <Descriptions.Item label="Delivery Fee">{formatCurrency(order.deliveryFee)}</Descriptions.Item>
+              {!!order.handlingCharge && <Descriptions.Item label="Handling Charge">{formatCurrency(order.handlingCharge)}</Descriptions.Item>}
+              {!!order.packingCharge && <Descriptions.Item label="Packing Charge">{formatCurrency(order.packingCharge)}</Descriptions.Item>}
+              {!!order.surcharge && <Descriptions.Item label={order.surchargeLabel || 'Surcharge'}>{formatCurrency(order.surcharge)}</Descriptions.Item>}
               <Descriptions.Item label="Discount">{formatCurrency(order.discount)}</Descriptions.Item>
               <Descriptions.Item label="Grand Total">{formatCurrency(order.grandTotal)}</Descriptions.Item>
               {order.couponCode && <Descriptions.Item label="Coupon">{order.couponCode}</Descriptions.Item>}

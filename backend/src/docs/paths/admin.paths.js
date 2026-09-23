@@ -298,6 +298,76 @@ paths['/admin/banners/{id}'] = {
 };
 
 // ---------- Settings ----------
+paths['/admin/orders/{id}/accept'] = {
+  patch: {
+    tags: TAG_ORDERS, summary: 'Accept an incoming (placed) order — used by the Live Orders board; splits it to pickers', ...bearer(), parameters: [idParam()],
+    responses: { 200: envelope(ref('Order'), 'Order accepted'), 400: errorResponse('Not in placed state, or an online order still waiting for payment'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
+  },
+};
+paths['/admin/orders/{id}/reject'] = {
+  patch: {
+    tags: TAG_ORDERS, summary: 'Reject an incoming (placed) order — refunds to the customer wallet if already paid', ...bearer(), parameters: [idParam()],
+    requestBody: jsonBody({ reason: { type: 'string', example: 'Store closing early' } }),
+    responses: { 200: envelope(ref('Order'), 'Order rejected'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
+  },
+};
+
+const ChargeConfig = {
+  type: 'object',
+  properties: {
+    delivery: { type: 'object', properties: {
+      enabled: { type: 'boolean' },
+      type: { type: 'string', enum: ['fixed', 'percent'], description: 'fixed = ₹ amount, percent = % of item total' },
+      value: { type: 'number' },
+      freeAbove: { type: 'number', description: 'Waive delivery when item total ≥ this. 0 = never free' },
+    } },
+    handling: { type: 'object', properties: {
+      enabled: { type: 'boolean' },
+      type: { type: 'string', enum: ['fixed', 'percent'], description: 'fixed = ₹ amount, percent = % of item total' },
+      value: { type: 'number' },
+    } },
+    packing: { type: 'object', properties: {
+      enabled: { type: 'boolean' },
+      type: { type: 'string', enum: ['fixed', 'percent'], description: 'fixed = ₹ amount, percent = % of item total' },
+      value: { type: 'number' },
+    } },
+    surcharge: { type: 'object', properties: {
+      enabled: { type: 'boolean' },
+      type: { type: 'string', enum: ['fixed', 'percent'], description: 'fixed = ₹ amount, percent = % of item total' },
+      value: { type: 'number' },
+      label: { type: 'string', example: 'Rain surcharge', description: 'Shown to customers' },
+    } },
+  },
+};
+paths['/admin/charges'] = {
+  get: {
+    tags: TAG_SETTINGS, summary: 'Get order charges — delivery, handling, packing, surcharge', ...bearer(),
+    description: 'Charges are applied once per order at checkout. Each is a fixed ₹ amount or a % of the item total (before coupon discount).',
+    responses: { 200: envelope(ChargeConfig), 401: RESPONSES_401, 403: RESPONSES_403 },
+  },
+  put: {
+    tags: TAG_SETTINGS, summary: 'Save order charges (applies to new checkouts only)', ...bearer(),
+    requestBody: { required: true, content: { 'application/json': { schema: ChargeConfig, example: {
+      delivery: { enabled: true, type: 'fixed', value: 30, freeAbove: 499 },
+      handling: { enabled: true, type: 'fixed', value: 5 },
+      packing: { enabled: true, type: 'percent', value: 2 },
+      surcharge: { enabled: false, type: 'fixed', value: 20, label: 'Rain surcharge' },
+    } } } },
+    responses: { 200: envelope(ChargeConfig, 'Charges saved'), 401: RESPONSES_401, 403: RESPONSES_403, 422: RESPONSES_422 },
+  },
+};
+paths['/admin/order-settings'] = {
+  get: {
+    tags: TAG_ORDERS, summary: 'Live Orders board settings', ...bearer(),
+    responses: { 200: envelope({ type: 'object', properties: { autoAcceptOrders: { type: 'boolean' } } }), 401: RESPONSES_401, 403: RESPONSES_403 },
+  },
+  put: {
+    tags: TAG_ORDERS, summary: 'Turn auto-accept on/off (off = orders wait on the Live Orders board)', ...bearer(),
+    requestBody: jsonBody({ autoAcceptOrders: { type: 'boolean' } }, ['autoAcceptOrders']),
+    responses: { 200: envelope({ type: 'object', properties: { autoAcceptOrders: { type: 'boolean' } } }), 401: RESPONSES_401, 403: RESPONSES_403, 422: RESPONSES_422 },
+  },
+};
+
 paths['/admin/settings'] = {
   get: {
     tags: TAG_SETTINGS,

@@ -78,6 +78,16 @@ const orderSchema = new Schema({
   statusLogs: { type: [statusLogSchema], default: [] },
   itemTotal: { type: Number, required: true },
   deliveryFee: { type: Number, default: 0 },
+  // Admin-configured charges snapshotted at checkout (see services/charges.service.js). Old orders
+  // simply read 0 / null for these.
+  handlingCharge: { type: Number, default: 0 },
+  packingCharge: { type: Number, default: 0 },
+  surcharge: { type: Number, default: 0 },
+  surchargeLabel: { type: String, default: null },
+  // What the delivery partner is paid for this order — the delivery charge before any
+  // free-delivery waiver, so a free-delivery order still pays the rider. null on orders placed
+  // before this field existed; delivery.controller.js#completeJob falls back to deliveryFee.
+  deliveryPartnerEarning: { type: Number, default: null },
   discount: { type: Number, default: 0 },
   tax: { type: Number, default: 0 },
   grandTotal: { type: Number, required: true },

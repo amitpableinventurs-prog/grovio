@@ -5,15 +5,20 @@ export interface CheckoutStoreSummary {
   storeId: string;
   storeName: string;
   itemTotal: number;
-  deliveryFee: number;
   discount: number;
-  grandTotal: number;
 }
 
+// Charges apply once per order (not per store) — see backend services/charges.service.js.
 export interface CheckoutSummary {
   stores: CheckoutStoreSummary[];
   itemTotal: number;
   deliveryFee: number;
+  freeDeliveryAbove: number | null;
+  freeDeliveryApplied: boolean;
+  handlingCharge: number;
+  packingCharge: number;
+  surcharge: number;
+  surchargeLabel: string | null;
   discount: number;
   tax: number;
   grandTotal: number;

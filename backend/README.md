@@ -206,6 +206,17 @@ The admin panel and customer web both use this (`src/realtime/`): order queries 
 `placed → accepted/rejected → picking → packed → assigned → out_for_delivery → delivered`
 Side branches: `out_for_delivery → delivery_failed → (out_for_delivery | returned | cancelled)`, and `cancelled`/`returned` from most earlier states. Every transition is logged (pushed into `Order.statusLogs`) and pushed over Socket.IO.
 
+**Accepting orders.** A new order waits at `placed` until someone accepts it on the admin panel's **Live Orders** board (`PATCH /admin/orders/:id/accept`), which then splits it to pickers. The board updates live over Socket.IO, plays a chime, and flags orders that have waited over 3 or 8 minutes.
+- Online (Razorpay) orders can't be accepted until they're paid.
+- Rejecting a paid order (`PATCH /admin/orders/:id/reject`) refunds it to the customer's wallet.
+- Turning on **auto-accept** (`PUT /admin/order-settings { autoAcceptOrders: true }`, the switch on the board) accepts orders the moment they're placed instead.
+
+**Charges.** Delivery, handling, packing and a surcharge are set on the admin **Charges** page (`GET/PUT /admin/charges`, stored as the `orderCharges` setting; see `src/services/charges.service.js`).
+- They're applied **once per order**. Each is a fixed ₹ amount or a % of the item total, with an on/off toggle.
+- Delivery can be free above an item total. The surcharge carries a customer-facing label (e.g. "Rain surcharge").
+- Each order snapshots its charges (`deliveryFee`, `handlingCharge`, `packingCharge`, `surcharge`, `surchargeLabel`) plus `deliveryPartnerEarning`, the delivery charge before any free-delivery waiver. That is what the rider is paid, so free-delivery orders still pay the rider.
+- `POST /customer/checkout/summary` returns every charge plus `freeDeliveryAbove` / `freeDeliveryApplied`.
+
 ## Notes / Next Steps
 
 - OTP delivery is stubbed (`src/services/otp.service.js`) — plug in MSG91/Twilio for production.

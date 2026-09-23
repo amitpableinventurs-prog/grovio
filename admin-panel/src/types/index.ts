@@ -221,6 +221,11 @@ export interface Order {
   statusLogs: StatusLog[];
   itemTotal: number;
   deliveryFee: number;
+  handlingCharge?: number;
+  packingCharge?: number;
+  surcharge?: number;
+  surchargeLabel?: string | null;
+  deliveryPartnerEarning?: number | null;
   discount: number;
   tax: number;
   grandTotal: number;
@@ -336,4 +341,18 @@ export interface DashboardStats {
   cancelledOrders: number;
   gmv: number;
   averageOrderValue: number;
+}
+
+// Order charges configured on the Charges page — see backend/src/services/charges.service.js.
+export type ChargeType = 'fixed' | 'percent';
+export interface ChargeRule {
+  enabled: boolean;
+  type: ChargeType;
+  value: number;
+}
+export interface ChargeConfig {
+  delivery: ChargeRule & { freeAbove: number };
+  handling: ChargeRule;
+  packing: ChargeRule;
+  surcharge: ChargeRule & { label: string };
 }

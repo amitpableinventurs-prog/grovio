@@ -124,6 +124,10 @@ export interface Order {
   statusLogs: StatusLog[];
   itemTotal: number;
   deliveryFee: number;
+  handlingCharge?: number;
+  packingCharge?: number;
+  surcharge?: number;
+  surchargeLabel?: string | null;
   discount: number;
   tax: number;
   grandTotal: number;

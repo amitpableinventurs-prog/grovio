@@ -4,6 +4,7 @@ import * as ordersApi from '../api/orders';
 import { apiErrorMessage } from '../api/client';
 import { formatPrice } from '../utils/format';
 import OrderStatusBadge from '../components/OrderStatusBadge';
+import BillBreakdown from '../components/BillBreakdown';
 import Loader from '../components/Loader';
 import { useState } from 'react';
 
@@ -46,6 +47,12 @@ export default function OrderDetailPage() {
           <OrderStatusBadge status={order.orderStatus} />
         </div>
 
+        {order.orderStatus === 'placed' && (
+          <div className="rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm text-blue-800">
+            Waiting for the store to confirm your order. This page updates on its own as soon as they do.
+          </div>
+        )}
+
         <section className="rounded-xl border border-gray-200 bg-white p-5">
           <h2 className="font-semibold text-gray-900 mb-3">Order Status</h2>
           <ol className="flex flex-col gap-3">
@@ -87,20 +94,7 @@ export default function OrderDetailPage() {
       <div className="rounded-xl border border-gray-200 bg-white p-5 h-fit">
         <h2 className="font-semibold text-gray-900 mb-4">Bill Details</h2>
         <div className="space-y-2 text-sm text-gray-600">
-          <div className="flex justify-between">
-            <span>Item Total</span>
-            <span>{formatPrice(order.itemTotal)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Delivery Charge</span>
-            <span>{formatPrice(order.deliveryFee)}</span>
-          </div>
-          {order.discount > 0 && (
-            <div className="flex justify-between text-brand-700">
-              <span>Discount</span>
-              <span>-{formatPrice(order.discount)}</span>
-            </div>
-          )}
+          <BillBreakdown bill={order} />
         </div>
         <div className="mt-3 flex justify-between border-t border-gray-200 pt-3 font-bold text-gray-900">
           <span>Total Payable</span>

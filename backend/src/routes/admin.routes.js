@@ -13,6 +13,7 @@ const ordersCtrl = require('../controllers/admin/orders.controller');
 const couponsCtrl = require('../controllers/admin/coupons.controller');
 const bannersCtrl = require('../controllers/admin/banners.controller');
 const settingsCtrl = require('../controllers/admin/settings.controller');
+const orderSettingsCtrl = require('../controllers/admin/orderSettings.controller');
 const reportsCtrl = require('../controllers/admin/reports.controller');
 const supportCtrl = require('../controllers/common/support.controller');
 const inventoryCtrl = require('../controllers/admin/inventory.controller');
@@ -133,6 +134,14 @@ router.delete('/banners/:id', p(PERMISSIONS.MANAGE_PROMOTIONS), bannersCtrl.dele
 // Settings
 router.get('/settings', p(PERMISSIONS.MANAGE_SETTINGS), settingsCtrl.getSettings);
 router.put('/settings', p(PERMISSIONS.MANAGE_SETTINGS), settingsCtrl.updateSettings);
+
+// Order charges (delivery / handling / packing / surcharge) — see services/charges.service.js
+router.get('/charges', p(PERMISSIONS.MANAGE_SETTINGS), orderSettingsCtrl.getCharges);
+router.put('/charges', p(PERMISSIONS.MANAGE_SETTINGS), orderSettingsCtrl.updateCharges);
+
+// Live Orders board: store managers can read the auto-accept state; only order managers flip it.
+router.get('/order-settings', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), orderSettingsCtrl.getOrderSettings);
+router.put('/order-settings', p(PERMISSIONS.MANAGE_ORDERS), orderSettingsCtrl.updateOrderSettings);
 
 // Content Pages (About Us, Privacy Policy, Terms & Conditions — served publicly via
 // GET /common/content/:slug)

@@ -8,6 +8,7 @@ const { transitionOrder } = require('../../services/order.service');
 const { splitOrderAcrossPickers } = require('../../services/assignment.service');
 const { debitWallet, creditWallet } = require('../../services/payment.service');
 const { notifyUser } = require('../../services/notification.service');
+const { getChargeConfig, computeCharges, round2 } = require('../../services/charges.service');
 
 async function getSetting(key, fallback) {
   const row = await Setting.findOne({ key });
@@ -71,7 +72,6 @@ async function loadAndPriceCart(userId, couponCodeOverride) {
   const stores = await Store.find({ _id: { $in: [...itemsByStore.keys()] } });
   const storeById = new Map(stores.map((s) => [s._id.toString(), s]));
 
-  const deliveryFeePerStore = Number(await getSetting('deliveryFee', process.env.DEFAULT_DELIVERY_FEE || 25));
   const itemTotal = cart.items.reduce((sum, i) => sum + Number(i.priceSnapshot) * i.qty, 0);
   const couponCode = couponCodeOverride !== undefined ? couponCodeOverride : cart.couponCode;
   const { discount, coupon } = await resolveCoupon(couponCode, itemTotal, userId);
@@ -93,29 +93,29 @@ async function loadAndPriceCart(userId, couponCodeOverride) {
       : Number((discount * (groupItemTotal / itemTotal)).toFixed(2));
     discountRemaining = Number((discountRemaining - groupDiscount).toFixed(2));
 
-    const groupGrandTotal = Number((groupItemTotal + deliveryFeePerStore + 0 - groupDiscount).toFixed(2));
     storeGroups.push({
       store,
       items,
       itemTotal: groupItemTotal,
-      deliveryFee: deliveryFeePerStore,
       discount: groupDiscount,
-      tax: 0,
-      grandTotal: groupGrandTotal,
     });
   }
 
-  const deliveryFee = deliveryFeePerStore * itemsByStore.size;
+  // Delivery / handling / packing / surcharge are charged ONCE per order (not per store), as
+  // configured on the admin Charges page — see services/charges.service.js.
+  const charges = computeCharges(itemTotal, await getChargeConfig());
   const tax = 0;
-  const grandTotal = Number((itemTotal + deliveryFee + tax - discount).toFixed(2));
+  const grandTotal = round2(
+    itemTotal + charges.deliveryFee + charges.handlingCharge + charges.packingCharge + charges.surcharge + tax - discount
+  );
 
-  return { cart, storeGroups, itemTotal, deliveryFee, discount, coupon, tax, grandTotal };
+  return { cart, storeGroups, itemTotal, charges, discount, coupon, tax, grandTotal };
 }
 
 // POST /customer/checkout/summary  { couponCode? }  -> recalculate totals without placing the order
 const checkoutSummary = catchAsync(async (req, res) => {
   const { couponCode } = req.body;
-  const { itemTotal, deliveryFee, discount, tax, grandTotal, coupon, storeGroups } = await loadAndPriceCart(req.user.id, couponCode);
+  const { itemTotal, charges, discount, tax, grandTotal, coupon, storeGroups } = await loadAndPriceCart(req.user.id, couponCode);
 
   // Included so the client can show/enable "Pay with Wallet" (and how much is available) at
   // checkout without a separate GET /customer/wallet call — placeOrder still re-checks the
@@ -128,12 +128,17 @@ const checkoutSummary = catchAsync(async (req, res) => {
       storeId: g.store._id,
       storeName: g.store.name,
       itemTotal: g.itemTotal,
-      deliveryFee: g.deliveryFee,
       discount: g.discount,
-      grandTotal: g.grandTotal,
     })),
     itemTotal,
-    deliveryFee,
+    deliveryFee: charges.deliveryFee,
+    // Show "Add ₹X more for free delivery" while freeDeliveryApplied is false.
+    freeDeliveryAbove: charges.freeDeliveryAbove,
+    freeDeliveryApplied: charges.freeDeliveryApplied,
+    handlingCharge: charges.handlingCharge,
+    packingCharge: charges.packingCharge,
+    surcharge: charges.surcharge,
+    surchargeLabel: charges.surchargeLabel,
     discount,
     tax,
     grandTotal,
@@ -159,7 +164,7 @@ const placeOrder = catchAsync(async (req, res) => {
   const address = await Address.findOne({ _id: addressId, user: req.user.id });
   if (!address) throw new ApiError(404, 'Address not found');
 
-  const { cart, storeGroups, itemTotal, deliveryFee, discount, coupon, tax, grandTotal } = await loadAndPriceCart(req.user.id);
+  const { cart, storeGroups, itemTotal, charges, discount, coupon, tax, grandTotal } = await loadAndPriceCart(req.user.id);
 
   if (paymentMethod === 'WALLET') {
     await debitWallet({ userId: req.user.id, amount: grandTotal, reason: 'Order payment' });
@@ -189,7 +194,12 @@ const placeOrder = catchAsync(async (req, res) => {
     store: hubGroup.store._id,
     address: addressId,
     itemTotal,
-    deliveryFee,
+    deliveryFee: charges.deliveryFee,
+    handlingCharge: charges.handlingCharge,
+    packingCharge: charges.packingCharge,
+    surcharge: charges.surcharge,
+    surchargeLabel: charges.surchargeLabel,
+    deliveryPartnerEarning: charges.deliveryPartnerEarning,
     discount,
     tax,
     grandTotal,
@@ -219,10 +229,18 @@ const placeOrder = catchAsync(async (req, res) => {
   cart.couponCode = null;
   await cart.save();
 
-  // Stores are company-owned now — there's no vendor to approve the order, so it's accepted
-  // immediately and split across up to 3 pickers per store represented in it, who then work their
-  // assigned items in parallel — see assignment.service.js#splitOrderAcrossPickers.
-  await transitionOrder({ order, toStatus: 'accepted', changedBy: req.user.id, note: 'Auto-accepted (no vendor approval required)' });
+  // By default the order waits at 'placed' until an admin/store manager accepts it on the admin
+  // panel's Live Orders board (PATCH /admin/orders/:id/accept, which then splits it to pickers);
+  // the board hears about it through the order:created socket event. With the `autoAcceptOrders`
+  // setting on, it's accepted right here instead and split across up to 3 pickers per store —
+  // see assignment.service.js#splitOrderAcrossPickers. Read uncached so flipping the switch on
+  // the board applies to the very next order.
+  const autoAccept = (await getSetting('autoAcceptOrders', 'false')) === 'true';
+  if (!autoAccept) {
+    return new ApiResponse(201, order, 'Order placed successfully').send(res);
+  }
+
+  await transitionOrder({ order, toStatus: 'accepted', changedBy: req.user.id, note: 'Auto-accepted' });
 
   const pickerIds = await splitOrderAcrossPickers(order);
   if (pickerIds.length) {

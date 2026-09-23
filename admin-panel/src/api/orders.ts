@@ -30,6 +30,22 @@ export function issueRefund(orderId: string, amount: number, reason: string) {
   return unwrap(apiClient.post(`/admin/orders/${orderId}/refund`, { amount, reason }));
 }
 
+export function acceptOrder(orderId: string) {
+  return unwrap<Order>(apiClient.patch(`/admin/orders/${orderId}/accept`));
+}
+
+export function rejectOrder(orderId: string, reason: string) {
+  return unwrap<Order>(apiClient.patch(`/admin/orders/${orderId}/reject`, { reason }));
+}
+
+export function fetchOrderSettings() {
+  return unwrap<{ autoAcceptOrders: boolean }>(apiClient.get('/admin/order-settings'));
+}
+
+export function updateOrderSettings(autoAcceptOrders: boolean) {
+  return unwrap<{ autoAcceptOrders: boolean }>(apiClient.put('/admin/order-settings', { autoAcceptOrders }));
+}
+
 export function fetchScannerLogs(orderId: string) {
   return unwrap<Paginated<ScannerLog>>(apiClient.get('/admin/scanner-logs', { params: { orderId, limit: 50 } }));
 }

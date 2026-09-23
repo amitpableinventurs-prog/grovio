@@ -13178,6 +13178,1151 @@
           "protocolProfileBehavior": {
             "disableBodyPruning": true
           }
+        },
+        {
+          "id": "935a5669-f516-48e8-9a26-c7471a011605",
+          "name": "Accept an incoming (placed) order — used by the Live Orders board; splits it to pickers",
+          "request": {
+            "name": "Accept an incoming (placed) order — used by the Live Orders board; splits it to pickers",
+            "description": {},
+            "url": {
+              "path": [
+                "admin",
+                "orders",
+                ":id",
+                "accept"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "66f1a2b3c4d5e6f789012345",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) Resource ID (Mongo ObjectId)",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PATCH",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "d07d33af-39df-4ab6-9219-dded0ec9c0e6",
+              "name": "Order accepted",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "accept"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Order accepted\",\n  \"data\": {\n    \"_id\": \"66f1a2b3c4d5e6f789012345\",\n    \"orderNumber\": \"GRV-MU2IAXWQ-5201\",\n    \"customer\": \"66f1a2b3c4d5e6f789012345\",\n    \"vendor\": \"66f1a2b3c4d5e6f789012345\",\n    \"store\": \"66f1a2b3c4d5e6f789012345\",\n    \"address\": \"66f1a2b3c4d5e6f789012345\",\n    \"pickTasks\": [\n      {\n        \"_id\": \"66f1a2b3c4d5e6f789012345\",\n        \"picker\": \"66f1a2b3c4d5e6f789012345\",\n        \"store\": \"string\",\n        \"status\": \"picking\",\n        \"startedAt\": \"2026-09-15T10:05:56.144Z\",\n        \"completedAt\": \"2026-09-15T10:05:56.144Z\"\n      },\n      {\n        \"_id\": \"66f1a2b3c4d5e6f789012345\",\n        \"picker\": \"66f1a2b3c4d5e6f789012345\",\n        \"store\": \"string\",\n        \"status\": \"completed\",\n        \"startedAt\": \"2026-09-15T10:05:56.144Z\",\n        \"completedAt\": \"2026-09-15T10:05:56.144Z\"\n      }\n    ],\n    \"delivery\": \"string\",\n    \"deliveryAcceptedAt\": \"2026-09-15T10:05:56.144Z\",\n    \"pickerHandoverAt\": \"2026-09-15T10:05:56.144Z\",\n    \"arrivedAtPickupAt\": \"2026-09-15T10:05:56.144Z\",\n    \"arrivedAtDropAt\": \"2026-09-15T10:05:56.144Z\",\n    \"failureReason\": \"string\",\n    \"items\": [\n      {\n        \"_id\": \"66f1a2b3c4d5e6f789012345\",\n        \"product\": \"66f1a2b3c4d5e6f789012345\",\n        \"pickupStore\": \"string\",\n        \"variantId\": \"string\",\n        \"variantLabel\": \"string\",\n        \"nameSnapshot\": \"Fresh Apples\",\n        \"price\": 120,\n        \"qty\": 2,\n        \"pickedQty\": 5012,\n        \"assignedPicker\": \"string\",\n        \"isAvailable\": true,\n        \"substituteProduct\": \"string\",\n        \"substituteNote\": \"string\"\n      },\n      {\n        \"_id\": \"66f1a2b3c4d5e6f789012345\",\n        \"product\": \"66f1a2b3c4d5e6f789012345\",\n        \"pickupStore\": \"string\",\n        \"variantId\": \"string\",\n        \"variantLabel\": \"string\",\n        \"nameSnapshot\": \"Fresh Apples\",\n        \"price\": 120,\n        \"qty\": 2,\n        \"pickedQty\": 7404,\n        \"assignedPicker\": \"string\",\n        \"isAvailable\": true,\n        \"substituteProduct\": \"string\",\n        \"substituteNote\": \"string\"\n      }\n    ],\n    \"statusLogs\": [\n      {\n        \"status\": \"accepted\",\n        \"changedBy\": \"string\",\n        \"note\": \"string\",\n        \"createdAt\": \"2026-09-15T10:05:56.144Z\"\n      },\n      {\n        \"status\": \"accepted\",\n        \"changedBy\": \"string\",\n        \"note\": \"string\",\n        \"createdAt\": \"2026-09-15T10:05:56.144Z\"\n      }\n    ],\n    \"itemTotal\": 120,\n    \"deliveryFee\": 25,\n    \"handlingCharge\": 5,\n    \"packingCharge\": 0,\n    \"surcharge\": 0,\n    \"surchargeLabel\": \"Rain surcharge\",\n    \"discount\": 0,\n    \"tax\": 0,\n    \"grandTotal\": 120,\n    \"couponCode\": \"string\",\n    \"paymentMethod\": \"COD\",\n    \"paymentStatus\": \"refunded\",\n    \"orderStatus\": \"picked_up\",\n    \"cancelReason\": \"string\",\n    \"placedAt\": \"2026-09-15T10:05:56.144Z\",\n    \"deliveredAt\": \"2026-09-15T10:05:56.144Z\",\n    \"settled\": true,\n    \"createdAt\": \"2026-09-15T10:05:56.144Z\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "dd594e50-d729-4226-b3b1-80bf0010985c",
+              "name": "Not in placed state, or an online order still waiting for payment",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "accept"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Not in placed state, or an online order still waiting for payment\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "03a207b2-0d7f-4d10-8d06-0806645bb6e2",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "accept"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "db783f47-1213-482a-8425-c7131ac827fc",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "accept"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "8a907c8b-557f-485d-8c83-5fcb93902df3",
+              "name": "Not found",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "accept"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Not found\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "fbe59f47-32f3-43f1-83a3-8433447f0a0f",
+          "name": "Reject an incoming (placed) order — refunds to the customer wallet if already paid",
+          "request": {
+            "name": "Reject an incoming (placed) order — refunds to the customer wallet if already paid",
+            "description": {},
+            "url": {
+              "path": [
+                "admin",
+                "orders",
+                ":id",
+                "reject"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "66f1a2b3c4d5e6f789012345",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) Resource ID (Mongo ObjectId)",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PATCH",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Items out of stock\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "be312b33-ab65-47eb-bd35-afec00d9b907",
+              "name": "Order rejected",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "reject"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Store closing early\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Order rejected\",\n  \"data\": {\n    \"_id\": \"66f1a2b3c4d5e6f789012345\",\n    \"orderNumber\": \"GRV-MU2IAXWQ-5201\",\n    \"customer\": \"66f1a2b3c4d5e6f789012345\",\n    \"vendor\": \"66f1a2b3c4d5e6f789012345\",\n    \"store\": \"66f1a2b3c4d5e6f789012345\",\n    \"address\": \"66f1a2b3c4d5e6f789012345\",\n    \"pickTasks\": [\n      {\n        \"_id\": \"66f1a2b3c4d5e6f789012345\",\n        \"picker\": \"66f1a2b3c4d5e6f789012345\",\n        \"store\": \"string\",\n        \"status\": \"picking\",\n        \"startedAt\": \"2026-09-15T10:05:56.144Z\",\n        \"completedAt\": \"2026-09-15T10:05:56.144Z\"\n      },\n      {\n        \"_id\": \"66f1a2b3c4d5e6f789012345\",\n        \"picker\": \"66f1a2b3c4d5e6f789012345\",\n        \"store\": \"string\",\n        \"status\": \"picking\",\n        \"startedAt\": \"2026-09-15T10:05:56.144Z\",\n        \"completedAt\": \"2026-09-15T10:05:56.144Z\"\n      }\n    ],\n    \"delivery\": \"string\",\n    \"deliveryAcceptedAt\": \"2026-09-15T10:05:56.144Z\",\n    \"pickerHandoverAt\": \"2026-09-15T10:05:56.144Z\",\n    \"arrivedAtPickupAt\": \"2026-09-15T10:05:56.144Z\",\n    \"arrivedAtDropAt\": \"2026-09-15T10:05:56.144Z\",\n    \"failureReason\": \"string\",\n    \"items\": [\n      {\n        \"_id\": \"66f1a2b3c4d5e6f789012345\",\n        \"product\": \"66f1a2b3c4d5e6f789012345\",\n        \"pickupStore\": \"string\",\n        \"variantId\": \"string\",\n        \"variantLabel\": \"string\",\n        \"nameSnapshot\": \"Fresh Apples\",\n        \"price\": 120,\n        \"qty\": 2,\n        \"pickedQty\": 2027,\n        \"assignedPicker\": \"string\",\n        \"isAvailable\": true,\n        \"substituteProduct\": \"string\",\n        \"substituteNote\": \"string\"\n      },\n      {\n        \"_id\": \"66f1a2b3c4d5e6f789012345\",\n        \"product\": \"66f1a2b3c4d5e6f789012345\",\n        \"pickupStore\": \"string\",\n        \"variantId\": \"string\",\n        \"variantLabel\": \"string\",\n        \"nameSnapshot\": \"Fresh Apples\",\n        \"price\": 120,\n        \"qty\": 2,\n        \"pickedQty\": 2170,\n        \"assignedPicker\": \"string\",\n        \"isAvailable\": false,\n        \"substituteProduct\": \"string\",\n        \"substituteNote\": \"string\"\n      }\n    ],\n    \"statusLogs\": [\n      {\n        \"status\": \"accepted\",\n        \"changedBy\": \"string\",\n        \"note\": \"string\",\n        \"createdAt\": \"2026-09-15T10:05:56.144Z\"\n      },\n      {\n        \"status\": \"accepted\",\n        \"changedBy\": \"string\",\n        \"note\": \"string\",\n        \"createdAt\": \"2026-09-15T10:05:56.144Z\"\n      }\n    ],\n    \"itemTotal\": 120,\n    \"deliveryFee\": 25,\n    \"handlingCharge\": 5,\n    \"packingCharge\": 0,\n    \"surcharge\": 0,\n    \"surchargeLabel\": \"Rain surcharge\",\n    \"discount\": 0,\n    \"tax\": 0,\n    \"grandTotal\": 120,\n    \"couponCode\": \"string\",\n    \"paymentMethod\": \"COD\",\n    \"paymentStatus\": \"pending\",\n    \"orderStatus\": \"rejected\",\n    \"cancelReason\": \"string\",\n    \"placedAt\": \"2026-09-15T10:05:56.144Z\",\n    \"deliveredAt\": \"2026-09-15T10:05:56.144Z\",\n    \"settled\": true,\n    \"createdAt\": \"2026-09-15T10:05:56.144Z\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "a56a5c3c-8d81-4dbb-9a44-9a179010c41e",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "reject"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Store closing early\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "5baeebec-c7b5-40a4-96da-37f6c15f479b",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "reject"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Store closing early\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "69459959-1e28-4ba1-99bc-75f51157a4b6",
+              "name": "Not found",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "reject"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Store closing early\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Not found\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "34953ed4-af84-45a1-9d91-e6a42714eff4",
+          "name": "Live Orders board settings",
+          "request": {
+            "name": "Live Orders board settings",
+            "description": {},
+            "url": {
+              "path": [
+                "admin",
+                "order-settings"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "e1a91a47-2ecc-4d5f-97ed-8713bcbceba7",
+              "name": "Success",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-settings"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Success\",\n  \"data\": {\n    \"autoAcceptOrders\": false\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "e5de31d0-80bf-4255-bf0d-e2dd8154e555",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-settings"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "9380e678-2818-4f8b-b836-871f3e02517a",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-settings"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "be2c90c5-1330-4157-82e7-136f3a83bfb8",
+          "name": "Turn auto-accept on/off (off = orders wait on the Live Orders board)",
+          "request": {
+            "name": "Turn auto-accept on/off (off = orders wait on the Live Orders board)",
+            "description": {},
+            "url": {
+              "path": [
+                "admin",
+                "order-settings"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"autoAcceptOrders\": false\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "e682da3e-a3d9-43c1-b25c-2a94999399d0",
+              "name": "Success",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-settings"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"autoAcceptOrders\": false\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Success\",\n  \"data\": {\n    \"autoAcceptOrders\": false\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "c8905eab-08be-43f7-ac9f-e28a73bf7604",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-settings"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"autoAcceptOrders\": false\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "537dee97-378a-4e79-a60b-ec97ef4f05e7",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-settings"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"autoAcceptOrders\": false\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "876e66bd-efc9-43d3-b620-3eb8e4c20083",
+              "name": "Validation failed",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-settings"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"autoAcceptOrders\": false\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
         }
       ],
       "event": []
@@ -15270,6 +16415,466 @@
                 }
               ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "035a2280-3eee-467d-8cf2-ab2c296229ba",
+          "name": "Get order charges — delivery, handling, packing, surcharge",
+          "request": {
+            "name": "Get order charges — delivery, handling, packing, surcharge",
+            "description": {
+              "content": "Charges are applied once per order at checkout. Each is a fixed ₹ amount or a % of the item total (before coupon discount).",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "admin",
+                "charges"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "36706bbe-2956-4c84-ac3b-6e6ec709b0b2",
+              "name": "Success",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "charges"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Success\",\n  \"data\": {\n    \"delivery\": {\n      \"enabled\": false,\n      \"type\": \"percent\",\n      \"value\": 9716.465728623092,\n      \"freeAbove\": 1264.4249573181899\n    },\n    \"handling\": {\n      \"enabled\": true,\n      \"type\": \"fixed\",\n      \"value\": 9352.279252074923\n    },\n    \"packing\": {\n      \"enabled\": false,\n      \"type\": \"fixed\",\n      \"value\": 9749.733330012677\n    },\n    \"surcharge\": {\n      \"enabled\": true,\n      \"type\": \"fixed\",\n      \"value\": 5274.043212886588,\n      \"label\": \"Rain surcharge\"\n    }\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "e6984db7-0a75-4b51-b211-432600df5718",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "charges"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "1d55d2f2-d5be-4bf7-86d9-5445bb2ca2d9",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "charges"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "f7454fea-808e-457e-b2d2-54c6e0c01ef4",
+          "name": "Save order charges (applies to new checkouts only)",
+          "request": {
+            "name": "Save order charges (applies to new checkouts only)",
+            "description": {},
+            "url": {
+              "path": [
+                "admin",
+                "charges"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"delivery\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 30,\n    \"freeAbove\": 499\n  },\n  \"handling\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 5\n  },\n  \"packing\": {\n    \"enabled\": true,\n    \"type\": \"percent\",\n    \"value\": 2\n  },\n  \"surcharge\": {\n    \"enabled\": false,\n    \"type\": \"fixed\",\n    \"value\": 20,\n    \"label\": \"Rain surcharge\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "4b695368-5ac2-4b54-bedb-4529ae6eaf1c",
+              "name": "Charges saved",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "charges"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"delivery\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 30,\n    \"freeAbove\": 499\n  },\n  \"handling\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 5\n  },\n  \"packing\": {\n    \"enabled\": true,\n    \"type\": \"percent\",\n    \"value\": 2\n  },\n  \"surcharge\": {\n    \"enabled\": false,\n    \"type\": \"fixed\",\n    \"value\": 20,\n    \"label\": \"Rain surcharge\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Charges saved\",\n  \"data\": {\n    \"delivery\": {\n      \"enabled\": true,\n      \"type\": \"percent\",\n      \"value\": 8731.321451804533,\n      \"freeAbove\": 9614.911277076435\n    },\n    \"handling\": {\n      \"enabled\": false,\n      \"type\": \"fixed\",\n      \"value\": 748.8535622453929\n    },\n    \"packing\": {\n      \"enabled\": true,\n      \"type\": \"percent\",\n      \"value\": 9331.30631242395\n    },\n    \"surcharge\": {\n      \"enabled\": false,\n      \"type\": \"fixed\",\n      \"value\": 5424.224237788304,\n      \"label\": \"Rain surcharge\"\n    }\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "d0b12c19-798c-410b-8121-c02565b350b8",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "charges"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"delivery\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 30,\n    \"freeAbove\": 499\n  },\n  \"handling\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 5\n  },\n  \"packing\": {\n    \"enabled\": true,\n    \"type\": \"percent\",\n    \"value\": 2\n  },\n  \"surcharge\": {\n    \"enabled\": false,\n    \"type\": \"fixed\",\n    \"value\": 20,\n    \"label\": \"Rain surcharge\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "c58fc784-4b7f-4c23-b524-3696a6af5b53",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "charges"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"delivery\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 30,\n    \"freeAbove\": 499\n  },\n  \"handling\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 5\n  },\n  \"packing\": {\n    \"enabled\": true,\n    \"type\": \"percent\",\n    \"value\": 2\n  },\n  \"surcharge\": {\n    \"enabled\": false,\n    \"type\": \"fixed\",\n    \"value\": 20,\n    \"label\": \"Rain surcharge\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "c5799886-548d-42ad-adcb-21f4d570007d",
+              "name": "Validation failed",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "charges"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"delivery\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 30,\n    \"freeAbove\": 499\n  },\n  \"handling\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 5\n  },\n  \"packing\": {\n    \"enabled\": true,\n    \"type\": \"percent\",\n    \"value\": 2\n  },\n  \"surcharge\": {\n    \"enabled\": false,\n    \"type\": \"fixed\",\n    \"value\": 20,\n    \"label\": \"Rain surcharge\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\"\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             }

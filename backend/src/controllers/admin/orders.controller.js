@@ -60,19 +60,24 @@ const getOrderDetail = catchAsync(async (req, res) => {
   new ApiResponse(200, order).send(res);
 });
 
-// PATCH /admin/orders/:id/accept — store accepts an incoming ('placed') order.
+// PATCH /admin/orders/:id/accept — accepts an incoming ('placed') order from the Live Orders board.
 // Open to full MANAGE_ORDERS admins and to the store-manager who owns this order's store.
 const acceptOrder = catchAsync(async (req, res) => {
   const order = await Order.findById(req.params.id);
   if (!order) throw new ApiError(404, 'Order not found');
   resolveStoreScope(req.user, order.store, PERMISSIONS.MANAGE_ORDERS);
 
+  // An online order is placed first and paid right after (see payments.controller.js) — don't
+  // start picking for something that may never be paid.
+  if (order.paymentMethod === 'RAZORPAY' && order.paymentStatus !== 'paid') {
+    throw new ApiError(400, 'This order is waiting for online payment — accept it once it shows as paid.');
+  }
+
   await transitionOrder({ order, toStatus: 'accepted', changedBy: req.user.id, note: 'Accepted by store' });
 
   // Best-effort split across up to 3 available pickers at the fulfilling store — see
-  // assignment.service.js#splitOrderAcrossPickers. (In practice customer orders are
-  // auto-accepted at placement — see customer/orders.controller.js — so this path mainly covers
-  // an order that was left at 'placed' for some reason and needs a manual push.)
+  // assignment.service.js#splitOrderAcrossPickers. (Orders only skip this path when the
+  // `autoAcceptOrders` setting is on — see customer/orders.controller.js#placeOrder.)
   const pickerIds = await splitOrderAcrossPickers(order);
   if (pickerIds.length) {
     await order.save();
@@ -89,6 +94,8 @@ const acceptOrder = catchAsync(async (req, res) => {
 });
 
 // PATCH /admin/orders/:id/reject { reason }
+// Refunds to the customer's wallet if the order was already paid (wallet orders are paid at
+// placement; online orders may be paid before the admin gets to them).
 const rejectOrder = catchAsync(async (req, res) => {
   const order = await Order.findById(req.params.id);
   if (!order) throw new ApiError(404, 'Order not found');
@@ -97,6 +104,13 @@ const rejectOrder = catchAsync(async (req, res) => {
   order.cancelReason = req.body.reason || 'Rejected by store';
   await order.save();
   await transitionOrder({ order, toStatus: 'rejected', changedBy: req.user.id, note: order.cancelReason });
+
+  if (order.paymentStatus === 'paid') {
+    await creditWallet({ userId: order.customer, amount: order.grandTotal, reason: 'Order rejected - refund', refOrderId: order._id });
+    await Refund.create({ order: order._id, amount: order.grandTotal, reason: order.cancelReason, initiatedBy: req.user.id });
+    order.paymentStatus = 'refunded';
+    await order.save();
+  }
 
   new ApiResponse(200, order, 'Order rejected').send(res);
 });

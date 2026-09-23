@@ -7,6 +7,7 @@ import * as paymentsApi from '../api/payments';
 import { apiErrorMessage } from '../api/client';
 import { CART_QUERY_KEY } from '../hooks/useCart';
 import { formatPrice } from '../utils/format';
+import BillBreakdown from '../components/BillBreakdown';
 import { loadRazorpayScript, openRazorpayCheckout } from '../utils/razorpay';
 import { useAuthStore } from '../store/authStore';
 import AddressForm from '../components/AddressForm';
@@ -194,24 +195,15 @@ export default function CheckoutPage() {
           <div className="space-y-2 text-sm text-gray-600">
             {summary.stores.length > 1 && (
               <div className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                Items are from {summary.stores.length} stores — placed as one order, with a delivery charge per
-                store.
+                Items are from {summary.stores.length} stores — delivered together as one order.
               </div>
             )}
-            <div className="flex justify-between">
-              <span>Item Total</span>
-              <span>{formatPrice(summary.itemTotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Delivery Charge{summary.stores.length > 1 ? ` (${summary.stores.length} stores)` : ''}</span>
-              <span>{formatPrice(summary.deliveryFee)}</span>
-            </div>
-            {summary.discount > 0 && (
-              <div className="flex justify-between text-brand-700">
-                <span>Discount</span>
-                <span>-{formatPrice(summary.discount)}</span>
+            {summary.freeDeliveryAbove !== null && !summary.freeDeliveryApplied && (
+              <div className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">
+                Add {formatPrice(summary.freeDeliveryAbove - summary.itemTotal)} more for free delivery
               </div>
             )}
+            <BillBreakdown bill={summary} />
             <div className="mt-3 flex justify-between border-t border-gray-200 pt-3 font-bold text-gray-900">
               <span>Total Payable</span>
               <span>{formatPrice(summary.grandTotal)}</span>

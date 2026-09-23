@@ -233,8 +233,9 @@ const completeJob = catchAsync(async (req, res) => {
 
   await transitionOrder({ order, toStatus: 'delivered', changedBy: req.user.id, note: 'Delivered to customer' });
 
-  // Credit a flat delivery earning to the delivery partner's wallet.
-  const deliveryEarning = Number(order.deliveryFee);
+  // Credit the delivery earning to the delivery partner's wallet — the delivery charge before any
+  // free-delivery waiver (orders placed before that field existed fall back to deliveryFee).
+  const deliveryEarning = Number(order.deliveryPartnerEarning ?? order.deliveryFee);
   if (deliveryEarning > 0) {
     await creditWallet({ userId: req.user.id, amount: deliveryEarning, reason: 'Delivery earning', refOrderId: order._id });
   }

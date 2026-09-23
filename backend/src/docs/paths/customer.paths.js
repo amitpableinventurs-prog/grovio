@@ -92,12 +92,20 @@ paths['/customer/checkout/summary'] = {
         properties: {
           stores: {
             type: 'array',
-            description: 'Per-store breakdown — a cart spanning multiple stores places one order per store, each priced here separately',
+            description: 'Per-store item breakdown. A multi-store cart is still ONE order; charges apply once per order (top-level fields).',
             items: { type: 'object', properties: {
-              storeId: { type: 'string' }, storeName: { type: 'string' }, itemTotal: { type: 'number' }, deliveryFee: { type: 'number' }, discount: { type: 'number' }, grandTotal: { type: 'number' },
+              storeId: { type: 'string' }, storeName: { type: 'string' }, itemTotal: { type: 'number' }, discount: { type: 'number' },
             } },
           },
-          itemTotal: { type: 'number' }, deliveryFee: { type: 'number' }, discount: { type: 'number' }, tax: { type: 'number' }, grandTotal: { type: 'number' }, couponCode: { type: 'string', nullable: true },
+          itemTotal: { type: 'number' },
+          deliveryFee: { type: 'number', description: '0 when free delivery applies' },
+          freeDeliveryAbove: { type: 'number', nullable: true, description: 'Item total at which delivery becomes free; null = no free delivery. Show "Add ₹X more for free delivery" while freeDeliveryApplied is false' },
+          freeDeliveryApplied: { type: 'boolean' },
+          handlingCharge: { type: 'number' },
+          packingCharge: { type: 'number' },
+          surcharge: { type: 'number' },
+          surchargeLabel: { type: 'string', nullable: true, example: 'Rain surcharge', description: 'Show as the bill line name when surcharge > 0' },
+          discount: { type: 'number' }, tax: { type: 'number' }, grandTotal: { type: 'number' }, couponCode: { type: 'string', nullable: true },
           walletBalance: { type: 'number', description: 'Current Grovio Wallet balance — use to show/enable a "Pay with Wallet" option' },
           walletSufficient: { type: 'boolean', description: 'walletBalance >= grandTotal' },
         },

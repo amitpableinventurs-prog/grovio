@@ -1,5 +1,6 @@
 import { Button, Card, Form, Input, Select, Typography, App as AntApp, Spin, Space, Divider } from 'antd';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { fetchSettings, updateSettings } from '../api/settings';
 
 // Fields whose fetched value is a masked placeholder (e.g. "••••1234"), never the real secret —
@@ -47,9 +48,9 @@ export default function SettingsPage() {
       <Form form={form} layout="vertical" initialValues={initialValues} onFinish={(values) => mutation.mutate(values)}>
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <Card title="General" style={{ maxWidth: 640 }}>
-            <Form.Item name="deliveryFee" label="Default Delivery Fee (₹)">
-              <Input type="number" />
-            </Form.Item>
+            <Typography.Paragraph type="secondary">
+              Delivery, handling, packing and surcharge are set on the <Link to="/charges">Charges</Link> page.
+            </Typography.Paragraph>
             <Form.Item name="commissionPercent" label="Default Vendor Commission (%)">
               <Input type="number" />
             </Form.Item>
