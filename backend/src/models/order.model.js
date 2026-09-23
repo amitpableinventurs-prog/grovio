@@ -118,4 +118,25 @@ function stripSensitiveFields(doc, ret) {
 orderSchema.set('toJSON', { transform: stripSensitiveFields });
 orderSchema.set('toObject', { transform: stripSensitiveFields });
 
+// Real-time feed — every save is pushed to connected clients (see sockets/orderEvents.js).
+// Required lazily: sockets/ loads models, so a top-level require here would be circular.
+// Note this only fires for document saves (order.save() / Order.create()); a bulk
+// Order.updateOne()/updateMany() would bypass it and needs its own publishOrderChange() call.
+const orderEvents = () => require('../sockets/orderEvents');
+
+// Snapshot who could see the order as loaded, so parties removed by this save (e.g. a delivery
+// partner rejecting the job) still get the update.
+orderSchema.post('init', function snapshotRooms() {
+  this.$locals.loadedRooms = orderEvents().roomsFor(this);
+});
+orderSchema.pre('save', function markChange() {
+  this.$locals.wasNew = this.isNew;
+  this.$locals.hadChanges = this.isNew || this.modifiedPaths().length > 0;
+});
+orderSchema.post('save', function publishChange(doc) {
+  if (!doc.$locals.hadChanges) return;
+  orderEvents().publishOrderChange(doc, { created: doc.$locals.wasNew, previousRooms: doc.$locals.loadedRooms || [] });
+  doc.$locals.loadedRooms = orderEvents().roomsFor(doc);
+});
+
 module.exports = model('Order', orderSchema);

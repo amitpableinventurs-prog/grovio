@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Layout, Menu, Avatar, Dropdown, Space, Typography } from 'antd';
+import { Layout, Menu, Avatar, Dropdown, Space, Typography, Badge, Tooltip } from 'antd';
 import {
   DashboardOutlined,
   ShopOutlined,
@@ -27,6 +27,8 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { hasPermission, PERMISSIONS } from '../utils/permissions';
 import { logout as logoutApi } from '../api/auth';
+import { useOrderRealtime } from '../realtime/useOrderRealtime';
+import { useSocketConnected } from '../realtime/socket';
 
 const { Header, Sider, Content } = Layout;
 
@@ -79,6 +81,8 @@ export default function AdminLayout() {
   const { user, refreshToken, clear } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const live = useSocketConnected();
+  useOrderRealtime();
   const brandLabel = isStoreManager(user?.permissions) ? 'Grovio Vendor' : 'Grovio Admin';
 
   const visibleItems = useMemo(
@@ -131,22 +135,27 @@ export default function AdminLayout() {
           <span onClick={() => setCollapsed((c) => !c)} style={{ cursor: 'pointer', fontSize: 18 }}>
             {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
           </span>
-          <Dropdown
-            menu={{
-              items: [{ key: 'logout', icon: <LogoutOutlined />, label: 'Logout', onClick: handleLogout }],
-            }}
-            placement="bottomRight"
-          >
-            <Space style={{ cursor: 'pointer' }}>
-              <Avatar icon={<UserOutlined />} />
-              <div style={{ lineHeight: 1.2 }}>
-                <Typography.Text strong style={{ display: 'block' }}>{user?.name}</Typography.Text>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  {roleLabel(user?.permissions)}
-                </Typography.Text>
-              </div>
-            </Space>
-          </Dropdown>
+          <Space size="large">
+            <Tooltip title={live ? 'Receiving order updates in real time' : 'Real-time updates disconnected — reconnecting…'}>
+              <Badge status={live ? 'success' : 'default'} text={live ? 'Live' : 'Offline'} />
+            </Tooltip>
+            <Dropdown
+              menu={{
+                items: [{ key: 'logout', icon: <LogoutOutlined />, label: 'Logout', onClick: handleLogout }],
+              }}
+              placement="bottomRight"
+            >
+              <Space style={{ cursor: 'pointer' }}>
+                <Avatar icon={<UserOutlined />} />
+                <div style={{ lineHeight: 1.2 }}>
+                  <Typography.Text strong style={{ display: 'block' }}>{user?.name}</Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {roleLabel(user?.permissions)}
+                  </Typography.Text>
+                </div>
+              </Space>
+            </Dropdown>
+          </Space>
         </Header>
         <Content style={{ margin: 16 }}>
           <Outlet />
