@@ -7,6 +7,7 @@ const userSchema = new Schema({
   password: { type: String, select: false },
   role: { type: String, enum: ['admin', 'customer', 'picker', 'delivery'], required: true },
   gender: { type: String, enum: ['male', 'female', 'other'], default: null },
+  dateOfBirth: { type: Date, default: null },
   // Only meaningful for role === 'admin'. ['*'] means full super-admin access;
   // otherwise a subset of PERMISSIONS (see utils/permissions.js).
   permissions: { type: [String], default: [] },

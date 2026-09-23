@@ -125,9 +125,7 @@ const verifyOtp = catchAsync(async (req, res) => {
     // Both picker and delivery partners can self-register here, same as a customer — but they
     // land in {Picker,Delivery}Profile.status='pending', just like an admin-created one. Neither
     // can actually work (accept jobs / get assigned pick-lists) until an admin approves them —
-    // see PATCH /admin/delivery-partners/:id/status and admin/pickers.controller.js. Full KYC
-    // (ID proof document upload, employee ID, shift, etc.) is still filled in/verified by an
-    // admin afterward — this just captures enough to review and reach out.
+    // see PATCH /admin/delivery-partners/:id/status and admin/pickers.controller.js.
     let vehicleType, vehicleNumber, licenseNumber;
     if (effectiveRole === 'delivery') {
       ({ vehicleType, vehicleNumber, licenseNumber } = req.body);
@@ -136,12 +134,14 @@ const verifyOtp = catchAsync(async (req, res) => {
       }
     }
 
+    // A picker's KYC (ID proof type/number, address, emergency contact, and the actual document
+    // photo) isn't collected here — the app's onboarding flow gathers it afterward in separate
+    // steps (profile screen, then document upload) via PUT /auth/me and
+    // PATCH /picker/profile — see picker.controller.js#updateProfile. Accepted here too, purely
+    // for backward compatibility with a client that still wants to submit it all in one call.
     let idProofType, idProofNumber, address, emergencyContactName, emergencyContactPhone;
     if (effectiveRole === 'picker') {
       ({ idProofType, idProofNumber, address, emergencyContactName, emergencyContactPhone } = req.body);
-      if (!idProofType || !idProofNumber) {
-        throw new ApiError(400, 'idProofType and idProofNumber are required to register as a picker');
-      }
     }
 
     isNewUser = true;
@@ -209,16 +209,22 @@ const me = catchAsync(async (req, res) => {
   new ApiResponse(200, safeUser).send(res);
 });
 
-// PUT /me  { name, email, gender, profileImage }
+// PUT /me  { name, email, gender, profileImage, dateOfBirth }
 const updateMe = catchAsync(async (req, res) => {
-  const { name, email, gender, profileImage } = req.body;
+  const { name, email, gender, profileImage, dateOfBirth } = req.body;
   if (gender !== undefined && gender !== null && !['male', 'female', 'other'].includes(gender)) {
     throw new ApiError(400, 'gender must be one of male, female, other');
+  }
+  let parsedDob;
+  if (dateOfBirth !== undefined && dateOfBirth !== null) {
+    parsedDob = new Date(dateOfBirth);
+    if (Number.isNaN(parsedDob.getTime())) throw new ApiError(400, 'dateOfBirth must be a valid date');
   }
   if (name !== undefined) req.user.name = name;
   if (email !== undefined) req.user.email = email;
   if (gender !== undefined) req.user.gender = gender;
   if (profileImage !== undefined) req.user.profileImage = profileImage;
+  if (dateOfBirth !== undefined) req.user.dateOfBirth = dateOfBirth === null ? null : parsedDob;
   await req.user.save();
 
   const safeUser = req.user.toObject();

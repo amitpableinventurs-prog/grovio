@@ -100,7 +100,7 @@ paths['/auth/verify-otp'] = {
     summary: 'Verify OTP — logs in, or signs up on first verification',
     description:
       'Send `otp` (the field name the apps use; `code` is accepted as an alias). `role` is optional and defaults to `customer` — the Customer app never sends it; the Delivery app passes `role: "delivery"` explicitly. ' +
-      'Self-registration works for `customer`, `delivery` and `picker` alike. When registering as `delivery` for the first time, `vehicleType`, `vehicleNumber` and `licenseNumber` are required — a DeliveryProfile is created with `status: "pending"`. When registering as `picker` for the first time, `idProofType` and `idProofNumber` are required (`address`, `emergencyContactName`, `emergencyContactPhone` optional) — a PickerProfile is created with `status: "pending"`. Either way, the account cannot actually work (accept jobs / get pick-lists assigned) until an admin approves it — see PATCH /admin/delivery-partners/{id}/status and admin/pickers.controller.js#updatePicker; full KYC (ID-proof document upload, employee ID, shift, etc.) is still completed by an admin afterward. ' +
+      'Self-registration works for `customer`, `delivery` and `picker` alike. When registering as `delivery` for the first time, `vehicleType`, `vehicleNumber` and `licenseNumber` are required — a DeliveryProfile is created with `status: "pending"`. When registering as `picker` for the first time, a bare account + PickerProfile (`status: "pending"`) is created immediately — no KYC fields are required here. The app\'s onboarding flow collects those afterward in separate steps: PUT /auth/me for name/email/gender/dateOfBirth, then PATCH /picker/profile (multipart) for ID-proof type/number/document. `idProofType`/`idProofNumber`/`address`/`emergencyContactName`/`emergencyContactPhone` are still accepted here too, purely for a client that wants to submit everything in one call. Either way, the account cannot actually work (accept jobs / get pick-lists assigned) until an admin approves it — see PATCH /admin/delivery-partners/{id}/status and PATCH /admin/pickers/{id}/status. ' +
       'The response\'s `isNewUser` is the single source of truth for whether to route to a "create your profile" screen or straight to Home. ' +
       'On a wrong/expired/exhausted OTP this returns 400 with `errors: [{ reason, attemptsLeft }]` where `reason` is one of `invalid | expired | max_attempts | not_found`, so the UI can show a specific inline message.',
     requestBody: jsonBody({
@@ -111,8 +111,8 @@ paths['/auth/verify-otp'] = {
       vehicleType: { type: 'string', example: 'bike', description: 'Required when role=delivery on first-time signup' },
       vehicleNumber: { type: 'string', example: 'DL01AB1234', description: 'Required when role=delivery on first-time signup' },
       licenseNumber: { type: 'string', example: 'DL-0420110012345', description: 'Required when role=delivery on first-time signup' },
-      idProofType: { type: 'string', example: 'Aadhaar', description: 'Required when role=picker on first-time signup' },
-      idProofNumber: { type: 'string', example: '1234-5678-9012', description: 'Required when role=picker on first-time signup' },
+      idProofType: { type: 'string', example: 'Aadhaar', description: 'Optional, role=picker signup — can instead be filled in later via PATCH /picker/profile' },
+      idProofNumber: { type: 'string', example: '1234-5678-9012', description: 'Optional, role=picker signup — can instead be filled in later via PATCH /picker/profile' },
       address: { type: 'string', description: 'Optional, role=picker signup' },
       emergencyContactName: { type: 'string', description: 'Optional, role=picker signup' },
       emergencyContactPhone: { type: 'string', description: 'Optional, role=picker signup' },
@@ -129,7 +129,7 @@ paths['/auth/verify-otp'] = {
           user: ref('User'),
         },
       }, 'Login successful'),
-      400: errorResponse('Incorrect OTP, or missing vehicle/ID-proof details for a delivery/picker signup'),
+      400: errorResponse('Incorrect OTP, or missing vehicle details for a delivery signup'),
     },
   },
 };
@@ -168,8 +168,8 @@ paths['/auth/me'] = {
   },
   put: {
     tags: ['Auth'], summary: 'Update the current user\'s profile', ...bearer(),
-    requestBody: jsonBody({ name: { type: 'string' }, email: { type: 'string' }, gender: { type: 'string', enum: ['male', 'female', 'other'] }, profileImage: { type: 'string' } }),
-    responses: { 200: envelope(ref('User'), 'Profile updated'), 401: RESPONSES_401 },
+    requestBody: jsonBody({ name: { type: 'string' }, email: { type: 'string' }, gender: { type: 'string', enum: ['male', 'female', 'other'] }, profileImage: { type: 'string' }, dateOfBirth: { type: 'string', format: 'date', nullable: true } }),
+    responses: { 200: envelope(ref('User'), 'Profile updated'), 400: errorResponse('dateOfBirth must be a valid date'), 401: RESPONSES_401 },
   },
 };
 

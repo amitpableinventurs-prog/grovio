@@ -1,10 +1,12 @@
 const router = require('express').Router();
 const { authenticate, authorize } = require('../middleware/auth.middleware');
+const upload = require('../middleware/upload.middleware');
 const ctrl = require('../controllers/picker/picker.controller');
 
 router.use(authenticate, authorize('picker'));
 
 router.get('/profile', ctrl.getProfile);
+router.patch('/profile', upload.fields([{ name: 'idProofDocument', maxCount: 1 }]), ctrl.updateProfile);
 router.patch('/availability', ctrl.toggleAvailability);
 router.post('/location', ctrl.updateLocation);
 router.get('/location', ctrl.getLocation);

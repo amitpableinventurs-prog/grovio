@@ -1,7 +1,7 @@
 const {
   envelope, paginated, ref, errorResponse,
   RESPONSES_401, RESPONSES_404,
-  jsonBody, idParam, q, PAGE_QS, bearer,
+  jsonBody, formBody, idParam, q, PAGE_QS, bearer,
 } = require('../helpers');
 
 const paths = {};
@@ -9,6 +9,20 @@ const TAG = ['Picker'];
 
 paths['/picker/profile'] = {
   get: { tags: TAG, summary: 'Get my picker profile', ...bearer(), responses: { 200: envelope(ref('PickerProfile')), 401: RESPONSES_401, 404: RESPONSES_404 } },
+  patch: {
+    tags: TAG,
+    summary: 'Fill in KYC details after signup — ID proof type/number/document, address, emergency contact. Used by the onboarding flow\'s "Upload document" step, but any field can be updated any time.',
+    ...bearer(),
+    requestBody: formBody({
+      idProofType: { type: 'string', example: 'Aadhaar' },
+      idProofNumber: { type: 'string', example: '1234-5678-9012' },
+      idProofDocument: { type: 'string', format: 'binary', description: 'ID proof photo — jpg/png/webp, max 5MB' },
+      address: { type: 'string' },
+      emergencyContactName: { type: 'string' },
+      emergencyContactPhone: { type: 'string' },
+    }),
+    responses: { 200: envelope(ref('PickerProfile'), 'Profile updated'), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
 };
 paths['/picker/availability'] = {
   patch: { tags: TAG, summary: 'Toggle online/offline', ...bearer(), requestBody: jsonBody({ isAvailable: { type: 'boolean' } }, ['isAvailable']), responses: { 200: envelope(ref('PickerProfile'), 'Availability updated'), 401: RESPONSES_401 } },

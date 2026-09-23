@@ -21,6 +21,7 @@ const User = {
     phone: { type: 'string', nullable: true, example: '8880002222' },
     role: { type: 'string', enum: ['admin', 'vendor', 'customer', 'picker', 'delivery'] },
     gender: { type: 'string', enum: ['male', 'female', 'other'], nullable: true },
+    dateOfBirth: { type: 'string', format: 'date', nullable: true },
     permissions: { type: 'array', items: { type: 'string' }, example: [] },
     profileImage: { type: 'string', nullable: true },
     fcmToken: { type: 'string', nullable: true },
@@ -82,6 +83,15 @@ const PickerProfile = {
     store: { ...id, nullable: true },
     status: { type: 'string', enum: ['pending', 'approved', 'blocked'] },
     isAvailable: { type: 'boolean' },
+    employeeId: { type: 'string', nullable: true },
+    address: { type: 'string', nullable: true },
+    idProofType: { type: 'string', nullable: true, example: 'Aadhaar' },
+    idProofNumber: { type: 'string', nullable: true },
+    idProofDocument: { type: 'string', nullable: true, description: 'Server-relative path, e.g. /uploads/xyz.jpg — set via PATCH /picker/profile or admin' },
+    emergencyContactName: { type: 'string', nullable: true },
+    emergencyContactPhone: { type: 'string', nullable: true },
+    joiningDate: { ...dateTime, nullable: true },
+    shift: { type: 'string', nullable: true },
   },
 };
 

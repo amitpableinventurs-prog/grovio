@@ -22,6 +22,28 @@ const getProfile = catchAsync(async (req, res) => {
   new ApiResponse(200, profile).send(res);
 });
 
+// PATCH /picker/profile (multipart)  { idProofType?, idProofNumber?, address?, emergencyContactName?, emergencyContactPhone? } + idProofDocument file?
+// Fills in KYC details after self-registration (see auth.controller.js#verifyOtp) — the app's
+// onboarding flow collects these in a later step, separate from OTP signup: a "Register" screen
+// (name/email/gender/DOB, via PUT /auth/me) followed by an "Upload document" screen that calls
+// this. Still just captures enough for an admin to review — approval itself only happens via
+// PATCH /admin/pickers/:id/status.
+const updateProfile = catchAsync(async (req, res) => {
+  const profile = await PickerProfile.findOne({ user: req.user.id });
+  if (!profile) throw new ApiError(404, 'Picker profile not found');
+
+  const { idProofType, idProofNumber, address, emergencyContactName, emergencyContactPhone } = req.body;
+  if (idProofType !== undefined) profile.idProofType = idProofType;
+  if (idProofNumber !== undefined) profile.idProofNumber = idProofNumber;
+  if (address !== undefined) profile.address = address;
+  if (emergencyContactName !== undefined) profile.emergencyContactName = emergencyContactName;
+  if (emergencyContactPhone !== undefined) profile.emergencyContactPhone = emergencyContactPhone;
+  if (req.files?.idProofDocument?.[0]) profile.idProofDocument = `/uploads/${req.files.idProofDocument[0].filename}`;
+  await profile.save();
+
+  new ApiResponse(200, profile, 'Profile updated').send(res);
+});
+
 const toggleAvailability = catchAsync(async (req, res) => {
   const profile = await PickerProfile.findOne({ user: req.user.id });
   if (!profile) throw new ApiError(404, 'Picker profile not found');
@@ -279,6 +301,7 @@ const completeMyPicking = catchAsync(async (req, res) => {
 
 module.exports = {
   getProfile,
+  updateProfile,
   toggleAvailability,
   updateLocation,
   getLocation,
