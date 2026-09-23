@@ -5,8 +5,9 @@ const ApiResponse = require('../../utils/apiResponse');
 const { resolvePhone } = require('../../utils/phone');
 const { logAdminActivity } = require('../../services/audit.service');
 
-// POST /admin/pickers — Admin-only onboarding. Pickers never self-register; they log in
-// via OTP to the account created here (see auth.controller.js#verifyOtp).
+// POST /admin/pickers — Admin onboarding (created already approved). Pickers can also self-register
+// in the app (see pickerAuth.controller.js) and then wait for approval; either way they log in
+// via OTP (POST /auth/picker/send-otp + verify-otp).
 const createPicker = catchAsync(async (req, res) => {
   const {
     name,

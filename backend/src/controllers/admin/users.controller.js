@@ -5,6 +5,10 @@ const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const { notifyUser } = require('../../services/notification.service');
 const { logAdminActivity } = require('../../services/audit.service');
+const { pickerOnboarding } = require('../../utils/pickerOnboarding');
+
+// Search text goes into a RegExp — escape it so "+91" or "(" match literally instead of erroring.
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const PROFILE_MODEL = {
   picker: PickerProfile,
@@ -19,7 +23,8 @@ function listByRole(role) {
 
     const where = { role };
     if (search) {
-      where.$or = [{ name: new RegExp(search, 'i') }, { phone: new RegExp(search, 'i') }];
+      const pattern = new RegExp(escapeRegex(search), 'i');
+      where.$or = [{ name: pattern }, { phone: pattern }, { email: pattern }];
     }
 
     const ProfileModel = PROFILE_MODEL[role];
@@ -37,7 +42,13 @@ function listByRole(role) {
     if (ProfileModel) {
       const profiles = await ProfileModel.find({ user: { $in: rows.map((u) => u._id) } });
       const profileMap = new Map(profiles.map((p) => [p.user.toString(), p]));
-      items = rows.map((u) => ({ ...u.toObject(), [`${role}Profile`]: profileMap.get(u._id.toString()) || null }));
+      items = rows.map((u) => {
+        const profile = profileMap.get(u._id.toString()) || null;
+        const item = { ...u.toObject(), [`${role}Profile`]: profile };
+        // Lets the admin Pickers page show what a pending picker still has to submit.
+        if (role === 'picker') item.onboarding = pickerOnboarding(u, profile);
+        return item;
+      });
     }
 
     new ApiResponse(200, { items, meta: buildPageMeta({ page, limit, count }) }).send(res);
@@ -128,7 +139,8 @@ const getUserDetail = catchAsync(async (req, res) => {
     DeliveryProfile.findOne({ user: user._id }),
   ]);
 
-  new ApiResponse(200, { ...user.toObject(), pickerProfile, deliveryProfile }).send(res);
+  const onboarding = user.role === 'picker' ? pickerOnboarding(user, pickerProfile) : undefined;
+  new ApiResponse(200, { ...user.toObject(), pickerProfile, deliveryProfile, onboarding }).send(res);
 });
 
 module.exports = { listByRole, updateProfileStatus, assignPickerToStore, toggleActive, getUserDetail };

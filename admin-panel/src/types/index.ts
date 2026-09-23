@@ -26,6 +26,8 @@ export interface User {
   role: Role;
   permissions?: string[];
   profileImage?: string | null;
+  gender?: 'male' | 'female' | 'other' | null;
+  dateOfBirth?: string | null;
   isActive: boolean;
   isVerified: boolean;
   createdAt: string;
@@ -66,6 +68,26 @@ export interface PickerProfile {
   store?: string | Store | null;
   status: 'pending' | 'approved' | 'blocked';
   isAvailable: boolean;
+  onlineStatus?: 'online' | 'offline';
+  employeeId?: string | null;
+  address?: string | null;
+  idProofType?: string | null;
+  idProofNumber?: string | null;
+  idProofDocument?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  joiningDate?: string | null;
+  shift?: string | null;
+  createdAt?: string;
+}
+
+// Where a picker is in app onboarding — computed by the backend (utils/pickerOnboarding.js), the
+// same object the Picker app routes on.
+export interface PickerOnboarding {
+  status: 'pending' | 'approved' | 'blocked';
+  profileComplete: boolean;
+  kycComplete: boolean;
+  nextStep: 'profile' | 'kyc' | 'pending_approval' | 'home' | 'blocked';
 }
 
 export interface DeliveryProfile {
@@ -84,6 +106,7 @@ export interface UserWithProfile extends User {
   vendorProfile?: Vendor | null;
   pickerProfile?: PickerProfile | null;
   deliveryProfile?: DeliveryProfile | null;
+  onboarding?: PickerOnboarding;
 }
 
 export interface Category {

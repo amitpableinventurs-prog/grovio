@@ -31,16 +31,16 @@ function userListPath(role, description) {
   return {
     get: {
       tags: TAG_USERS, summary: `List ${role}s`, description, ...bearer(),
-      parameters: [...PAGE_QS, q('search', 'Search by name/phone'), statusParam],
+      parameters: [...PAGE_QS, q('search', 'Search by name, phone or email'), statusParam],
       responses: { 200: envelope(paginated(ref('UserWithProfile'))), 401: RESPONSES_401, 403: RESPONSES_403 },
     },
   };
 }
 paths['/admin/vendors'] = userListPath('vendor', 'Requires manage_vendors permission');
 paths['/admin/customers'] = userListPath('customer', 'Requires manage_orders or view_reports permission');
-paths['/admin/pickers'] = userListPath('picker', 'Requires manage_pickers permission');
+paths['/admin/pickers'] = userListPath('picker', 'Requires manage_pickers permission. Each item also carries `onboarding: { status, profileComplete, kycComplete, nextStep }` — the same object the Picker app gets — so a pending picker can be checked for a complete Register step and KYC upload before approval.');
 paths['/admin/pickers'].post = {
-  tags: TAG_USERS, summary: 'Onboard a picker directly (admin-only — pickers never self-register)', ...bearer(),
+  tags: TAG_USERS, summary: 'Onboard a picker directly (created already approved; pickers can also self-register in the app)', ...bearer(),
   requestBody: formBody({
     name: { type: 'string' }, phone: { type: 'string' }, email: { type: 'string' }, employeeId: { type: 'string' },
     address: { type: 'string' }, idProofType: { type: 'string' }, idProofNumber: { type: 'string' },

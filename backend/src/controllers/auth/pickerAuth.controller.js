@@ -14,6 +14,7 @@ const ApiResponse = require('../../utils/apiResponse');
 const otpService = require('../../services/otp.service');
 const tokenService = require('../../services/token.service');
 const { resolveMobile } = require('../../utils/phone');
+const { pickerOnboarding, PLACEHOLDER_NAME } = require('../../utils/pickerOnboarding');
 
 const OTP_ERROR_MESSAGES = {
   not_found: 'No OTP was found for this number. Please request a new one.',
@@ -21,32 +22,6 @@ const OTP_ERROR_MESSAGES = {
   max_attempts: 'Too many incorrect attempts. Please request a new OTP.',
   invalid: 'Incorrect OTP. Please try again.',
 };
-
-// Default name given to an account created by OTP signup before the picker fills in the profile
-// screen — same placeholder auth.controller.js#verifyOtp uses.
-const PLACEHOLDER_NAME = 'User';
-
-// Where the app should send the picker after login / on app launch:
-//   blocked          — admin blocked this picker; show a "contact support" screen
-//   home             — approved, can work
-//   profile          — fill in name/email/gender/DOB via POST /auth/picker/register
-//   kyc              — upload ID proof via PATCH /picker/kyc-upload
-//   pending_approval — everything submitted, waiting on PATCH /admin/pickers/:id/status
-// An approved picker always goes home, even if admin onboarding skipped a KYC document.
-function pickerOnboarding(user, profile) {
-  const profileComplete = !!user.name && user.name !== PLACEHOLDER_NAME
-    && !!user.email && !!user.gender && !!user.dateOfBirth;
-  const kycComplete = !!(profile?.idProofType && profile?.idProofNumber && profile?.idProofDocument);
-
-  let nextStep;
-  if (profile?.status === 'blocked') nextStep = 'blocked';
-  else if (profile?.status === 'approved') nextStep = 'home';
-  else if (!profileComplete) nextStep = 'profile';
-  else if (!kycComplete) nextStep = 'kyc';
-  else nextStep = 'pending_approval';
-
-  return { status: profile?.status || 'pending', profileComplete, kycComplete, nextStep };
-}
 
 // Rejects numbers that belong to a non-picker account or a disabled picker. Runs before an OTP
 // is sent (so no SMS is wasted) and again before one is verified (so it's never consumed).
@@ -216,4 +191,4 @@ const logoutAll = catchAsync(async (req, res) => {
   new ApiResponse(200, null, 'Logged out from all devices').send(res);
 });
 
-module.exports = { sendOtp, resendOtp, verifyOtp, me, register, logout, logoutAll, pickerOnboarding };
+module.exports = { sendOtp, resendOtp, verifyOtp, me, register, logout, logoutAll };
