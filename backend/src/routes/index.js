@@ -9,6 +9,7 @@ router.use('/picker', require('./picker.routes'));
 router.use('/delivery', require('./delivery.routes'));
 router.use('/common', require('./common.routes'));
 router.use('/hub-display', require('./hubDisplay.routes'));
+router.use('/ivr', require('./ivr.routes'));
 
 // Top-level aliases (some client conventions call these directly, not under /auth)
 router.get('/me', authenticate, authCtrl.me);

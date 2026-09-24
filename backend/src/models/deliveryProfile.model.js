@@ -9,7 +9,10 @@ const deliveryProfileSchema = new Schema({
   isAvailable: { type: Boolean, default: false },
   currentLat: { type: Number, default: null },
   currentLng: { type: Number, default: null },
-  // Set by scanning a Hub Center screen's rotating QR (POST /delivery/hub/checkin) — proof the
+  // When currentLat/currentLng were last reported — a stale fix isn't used for ETA/tracking
+  // (see services/tracking.service.js).
+  locationUpdatedAt: { type: Date, default: null },
+  // Set by scanning a Hub Center screen's check-in QR (POST /delivery/hub/checkin) — proof the
   // partner is physically at that hub, required to see/claim its ready orders under
   // /delivery/hub/*. Expires after HUB_CHECKIN_MINUTES; see services/hubDisplay.service.js.
   hubCheckin: {

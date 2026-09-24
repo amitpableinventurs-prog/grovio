@@ -77,22 +77,69 @@ Per-order room: `socket.emit('order:subscribe', orderId, ack)` joins it. Access 
 
 The admin panel and customer web both use this (`src/realtime/`): order queries refresh live, and admins get a new-order toast and a Live indicator in the header.
 
-Hub screens (below) connect with `auth: { hubDisplayKey }` instead of a token. They join only `hub:<storeId>` and receive `hub:order` `{ orderId, orderNumber, orderStatus }` for orders whose hub is that store, never the full summary.
+Live tracking adds `delivery:location { orderId, lat, lng, eta }` (customer + order room) and `rider:location` (admins). See Live Tracking below.
+
+Hub screens (below) connect with `auth: { hubDisplayKey }` instead of a token. They receive `hub:order` `{ orderId, orderNumber, orderStatus }` for orders whose hub is their store (never the full summary), and `hub:qr` when their check-in QR has been used.
 
 ## Hub Center Screen + Delivery Boy Check-in
 
-A TV/tablet at each Hub Center opens **`/hub-display`** (served by this backend, like `/partner-login`). It shows the hub's *Ready for pickup* and *Being packed* orders live, plus a **check-in QR that changes every 30 seconds**. No customer name, phone, address or amounts are shown.
+A TV/tablet at each Hub Center opens **`/hub-display`** (served by this backend, like `/partner-login`). It shows the hub's *Ready for pickup* and *Being packed* orders live, plus a **single-use check-in QR**: it has no timer and changes as soon as a delivery partner checks in with it. A **buzzer** sounds (and the card pulses) when an order becomes ready, i.e. its last picker presses *Ready for Pickup*. Browsers only play sound after one tap on the page, so the screen asks for a tap until then (the header button turns the buzzer off/on). No customer name, phone, address or amounts are shown.
 
 **Pairing a screen.** Admin panel → Stores → **Hub screens** → Add screen. This returns a one-time link `<PUBLIC_BASE_URL>/hub-display/#key=<deviceKey>`; open it on the screen (the key is kept in the browser and removed from the address bar). Only the key's SHA-256 hash is stored (`HubDisplay` model). **Revoke** stops the screen immediately, including its live connection. Store managers can manage their own store's screens.
 
 **Delivery Boy flow at the hub**
-1. Scan the screen's QR in the Delivery app → `POST /delivery/hub/checkin { code }` (the scanned URL or just its `t` token). The token is random, maps server-side to that screen's store, and works for 30s + 15s grace. The call is made with the rider's own access token, so role, approval and hub are all checked on the server. The check-in lasts `HUB_CHECKIN_MINUTES` (30) and marks arrival on the rider's assigned orders there.
+1. Scan the screen's QR in the Delivery app → `POST /delivery/hub/checkin { code }` (the scanned URL or just its `t` token). The token is random, maps server-side to that screen's store, and is used up by this check-in (the screen shows a new QR at once), so a photo of it stops working. If two riders scan the same QR at once, the second is asked to scan the new one. The call is made with the rider's own access token, so role, approval and hub are all checked on the server. The check-in lasts `HUB_CHECKIN_MINUTES` (30) and marks arrival on the rider's assigned orders there.
 2. `GET /delivery/hub/orders` → `mine` (assigned to me / picked up at this hub) and `available` (packed, no rider yet).
 3. Pick an order: `POST /delivery/hub/orders/:id/claim` assigns and accepts it in one step (`packed → assigned`). If two riders claim at once, one gets it and the other gets 409. Auto-assigned orders appear in `mine` and don't need claiming.
 4. Package scan `POST /delivery/jobs/:id/scan` **or** pickup OTP `POST /delivery/jobs/:id/otp/verify` → `picked_up` (unchanged).
 5. `POST /delivery/jobs/:id/out-for-delivery`. The order drops off the hub screen.
 
-Screen API (header `X-Hub-Display-Key`): `GET /hub-display/board`, `GET /hub-display/checkin-qr` (SVG + `refreshAt`). Env: `PUBLIC_BASE_URL` (set it in production; used in pairing links and the QR), `HUB_QR_ROTATE_SECONDS`, `HUB_QR_GRACE_SECONDS`, `HUB_CHECKIN_MINUTES`.
+Screen API (header `X-Hub-Display-Key`): `GET /hub-display/board`, `GET /hub-display/checkin-qr` (SVG). Env: `PUBLIC_BASE_URL` (set it in production; used in pairing links and the QR), `HUB_CHECKIN_MINUTES`.
+
+## Live Tracking
+
+`src/services/tracking.service.js`. The Delivery app sends its GPS position every few seconds while on a job, either with `POST /delivery/location { lat, lng }` or the `delivery:location` socket event (same handling). The server only uses positions from riders assigned to the order.
+
+- **Live position + ETA.** Each ping is pushed as `delivery:location { orderId, lat, lng, eta }` to the customer and to anyone watching the order, and as `rider:location` to admins (the **Live Map** page). `GET /customer/orders/:id/tracking` returns the hub, drop, rider and ETA; the customer's order page shows them on a map.
+- **ETA** is straight-line distance × 1.3 at the average speed setting, plus picking time and handover before pickup. No routing API is used. It is marked `approximate` when a location is missing.
+- **Geofences.** Within 100 m of the hub, arrival at pickup is recorded automatically. Within 1 km of the customer, they get an "almost there" alert, once. Within 100 m of the customer, arrival at the drop is recorded. The last two can also trigger IVR calls.
+- **Delivery area.** `Store.serviceRadiusKm` (Stores page), or the default radius setting. Checkout rejects an address farther away. `POST /customer/checkout/summary { addressId }` returns `serviceArea`. Addresses and stores without coordinates can't be checked and are allowed. The customer address form has a *Use my current location* button.
+- **Route optimisation.** `GET /delivery/route` orders a rider's stops so every hub pickup comes before its drops (nearest-neighbour, then 2-opt). It returns leg distances, arrival times and a Google Maps directions link.
+- Settings (Admin > Settings > Tracking & Delivery Area): average speed, picking time, default radius, geofence distances. Map tiles are OpenStreetMap (no key). For heavy production traffic, use a paid tile provider.
+
+## IVR (Exotel)
+
+`src/services/ivr.service.js`. Every call is logged in `IvrCall` (Admin > **Call Logs (IVR)**). With provider **None**, outbound calls are only recorded as `simulated`.
+
+| Feature | Trigger |
+|---|---|
+| Auto call notifications | Order events chosen in settings (default: out for delivery, delivery failed, rider arrived). One call per order per event. |
+| COD order confirmation | COD orders ≥ the configured amount (blank = off). 1 = confirm, 2 = cancel (only while still cancellable). The result shows on Live Orders and the order drawer. |
+| Delivery alerts | `rider_nearby` / `rider_arrived` from the tracking geofences. |
+| Missed call support | A missed call to your ExoPhone → SMS with the latest order status and, optionally, a call back that reads it out. |
+| Customer care IVR | Inbound menu: 1 = latest order status, 2 = connect to support, 3 = request a call back (creates a support ticket). |
+| Manual | Order drawer → *Call with status* / *Confirmation call* (`POST /admin/orders/:id/ivr-call`). |
+
+**Setup.**
+1. In Admin > Settings, set *Public server URL* (Exotel must reach it), then under IVR choose Exotel and enter the Account SID, API key/token, API host and ExoPhone.
+2. The IVR card lists the webhook URLs. They contain a secret token, because Exotel doesn't sign its requests.
+3. Build these flows in the Exotel App Bazaar:
+   - **Message flow**: Greeting (dynamic URL = *prompt*) → Hangup. Put its App ID in *Message flow App ID*.
+   - **Confirmation flow**: Greeting (*prompt*) → Gather (1 digit) → Passthru (*input*) → Greeting (*prompt?stage=result*) → Hangup. Put its App ID in *Confirmation flow App ID*.
+   - **Missed-call number**: Passthru (*missed-call*) → Hangup.
+   - **Customer care number**: Greeting (*care/prompt*) → Gather → Passthru (*care/input*). On success: Greeting (*care/result*) → Hangup. On failure (302): Connect to your support number.
+4. Outbound calls use Exotel `Calls/connect` with `StatusCallback` = the *status* URL. The call's id travels in `CustomField`.
+
+Calls are placed in the background and never block an order action. A failed call is logged with its error.
+
+## Payment Gateways (Razorpay, PhonePe, PayU)
+
+Checkout offers COD, Wallet, Razorpay, PhonePe and PayU. Each can be switched on or off in Admin > Settings > Checkout Payment Options, and PhonePe/PayU only appear once their keys are set. `POST /customer/checkout/summary` returns `paymentOptions`, and `POST /customer/orders` rejects a method that is switched off. An unpaid online order can't be accepted on Live Orders.
+
+- **PhonePe** (PG Standard Checkout v2, OAuth client credentials): place the order with `paymentMethod: 'PHONEPE'`, then call `POST /payments/phonepe/create`. It returns `redirectUrl`; the customer pays on PhonePe and comes back to `<customerWebUrl>/payment/return`. That page calls `POST /payments/phonepe/verify`, which asks PhonePe for the status (the redirect alone is not trusted). The webhook `POST /payments/phonepe/webhook` checks `Authorization` = SHA256(username:password).
+- **PayU**: `POST /payments/payu/create` returns the form fields with the request hash. The browser posts them to PayU. PayU posts the result to `/payments/payu/callback`, where the reverse hash and amount are checked, and the customer is redirected to `/payment/return`. `/payments/payu/webhook` handles the server-to-server copy.
+- A paid/failed result from any source (redirect, webhook, status check) is applied once. An amount mismatch is marked failed. Refunds on cancellation or return go to the Grovio wallet, the same as Razorpay.
+- Settings: *Customer website URL* (return page) and *Public server URL* (PayU callback), plus keys. Sandbox/test modes are the default.
 
 ## Endpoint Reference (all under `/api/v1`)
 
@@ -124,6 +171,7 @@ Screen API (header `X-Hub-Display-Key`): `GET /hub-display/board`, `GET /hub-dis
 - `POST/GET/PATCH/DELETE /admin/categories`
 - `GET /admin/products`, `POST /admin/products`, `PATCH /admin/products/:id` (full edit), `PATCH /admin/products/:id/status` (quick toggle), `DELETE /admin/products/:id` — admin can create/edit/delete a product under **any** store (support/onboarding use case; vendors otherwise manage their own via `/vendor/products`)
 - `GET /admin/orders`, `GET /admin/orders/:id`, `PATCH /admin/orders/:id/assign-picker|assign-delivery`
+- `GET /admin/tracking/riders` (live map), `GET /admin/orders/:id/tracking`, `POST /admin/orders/:id/ivr-call`, `GET /admin/ivr/calls`, `GET /admin/ivr/config`
 - `POST /admin/orders/:id/refund` — `{ amount, reason }` (manual/partial refund to customer wallet)
 - `POST/GET/PATCH/DELETE /admin/coupons`
 - `POST/GET/PATCH/DELETE /admin/banners`
@@ -181,7 +229,7 @@ Screen API (header `X-Hub-Display-Key`): `GET /hub-display/board`, `GET /hub-dis
 - `GET /picker/history`, `GET /picker/performance`
 
 ### /delivery (delivery role)
-- `PATCH /delivery/availability`, `POST /delivery/location`, `GET/PATCH /delivery/profile`
+- `PATCH /delivery/availability`, `POST /delivery/location` (drives live tracking, ETA and geofences), `GET /delivery/route` (optimised stops), `GET/PATCH /delivery/profile`
 - `GET /delivery/jobs`, `GET /delivery/jobs/:id`
 - `POST /delivery/jobs/:id/accept|reject`
 - `POST /delivery/jobs/:id/arrived-pickup`, `POST /delivery/jobs/:id/picked-up` (→ out_for_delivery)

@@ -49,12 +49,18 @@
   .qr-panel h2 { margin: 0; font-size: clamp(18px, 1.8vw, 26px); }
   .qr-panel p { margin: 0; color: var(--muted); font-size: clamp(13px, 1.1vw, 16px); line-height: 1.5; max-width: 32ch; }
   .qr-box { width: min(100%, 360px); aspect-ratio: 1; background: #fff; border-radius: 16px; padding: 12px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+  .qr-box #qr { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
   .qr-box svg { width: 100%; height: 100%; display: block; }
   .qr-box .placeholder { color: #6b7280; font-size: 14px; }
-  .countdown { width: min(100%, 360px); }
-  .bar { height: 6px; border-radius: 999px; background: var(--brand-100); overflow: hidden; }
-  .bar > span { display: block; height: 100%; width: 100%; background: var(--brand-500); transform-origin: left; }
-  .countdown small { display: block; margin-top: 6px; color: var(--muted); font-size: 13px; }
+  .qr-box { position: relative; }
+  .qr-box .scanned { position: absolute; inset: 0; border-radius: 16px; background: rgba(21,138,77,0.94); color: #fff; display: none; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; }
+  .qr-box.flash .scanned { display: flex; }
+  .qr-note { color: var(--muted); font-size: 13px; }
+
+  .sound-btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  .sound-btn.on { color: var(--brand-700); border-color: var(--brand-200); background: var(--brand-50); }
+  .unlock { display: none; background: var(--amber-bg); color: var(--amber); border-radius: 12px; padding: 10px 14px; font-weight: 600; font-size: 15px; text-align: center; cursor: pointer; }
+  .unlock.show { display: block; }
 
   .boards { display: grid; grid-template-rows: auto auto; gap: clamp(12px, 2vw, 24px); align-content: start; min-width: 0; }
   .section-title { display: flex; align-items: baseline; gap: 10px; margin: 0 0 14px; font-size: clamp(18px, 1.8vw, 26px); }
@@ -66,6 +72,10 @@
   .card.ready { border-left: 6px solid var(--brand-500); }
   .card.warn { border-left-color: var(--amber); }
   .card.late { border-left-color: var(--red); }
+  /* Just became ready (all pickers pressed Ready for Pickup) — pulses while the buzzer sounds. */
+  .card.new { animation: newReady 1s ease-in-out 8; }
+  @keyframes newReady { 50% { box-shadow: 0 0 0 6px var(--brand-200); } }
+  @media (prefers-reduced-motion: reduce) { .card.new { animation: none; outline: 3px solid var(--brand-500); } }
   /* Full number on one line; the last segment (what riders call out) large. */
   .order-no { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.1; }
   .order-no .prefix { font-size: clamp(14px, 1.1vw, 18px); color: var(--muted); font-weight: 700; }
@@ -98,18 +108,18 @@
         <div class="hub-sub" id="hub-sub"></div>
       </div>
       <div class="spacer"></div>
+      <button type="button" class="sound-btn" id="sound-btn" aria-pressed="true">Buzzer on</button>
       <div class="live" id="live"><span class="dot"></span><span id="live-label">Connecting</span></div>
       <div class="clock" id="clock"></div>
     </header>
 
+    <div class="unlock" id="unlock" role="button" tabindex="0">Tap anywhere to turn on the buzzer for ready orders</div>
+
     <main>
       <section class="panel qr-panel" aria-labelledby="qr-title">
         <h2 id="qr-title">Delivery partners: check in</h2>
-        <div class="qr-box" id="qr"><span class="placeholder">Loading QR…</span></div>
-        <div class="countdown">
-          <div class="bar"><span id="bar"></span></div>
-          <small id="countdown-label">&nbsp;</small>
-        </div>
+        <div class="qr-box" id="qr-box"><div id="qr"><span class="placeholder">Loading QR…</span></div><div class="scanned">✓ Scanned</div></div>
+        <div class="qr-note">A new code appears after every scan</div>
         <p>Scan with the Grovio Delivery app to see the orders ready at this hub.</p>
       </section>
 
@@ -155,11 +165,13 @@
       }
       let deviceKey = hashKey || storageGet();
 
-      let clockOffset = 0; // serverTime - local time, so countdowns match the server's rotation
+      const SOUND_KEY = 'grovio_hub_buzzer';
+      let clockOffset = 0; // serverTime - local time, for the waiting times
       let board = { ready: [], preparing: [] };
-      let qrRefreshAt = null;
-      let qrRotateMs = 30000;
+      let knownReady = null; // order ids already on the ready list (null until the first load)
+      const freshReady = new Set(); // ids to pulse — they just became ready
       let qrTimer = null;
+      let flashTimer = null;
       let boardTimer = null;
       let socket = null;
       let stopped = false;
@@ -198,23 +210,71 @@
           $('qr').innerHTML = data.qrSvg;
           const svg = $('qr').querySelector('svg');
           if (svg) { svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', 'Hub check-in QR code'); }
-          qrRefreshAt = new Date(data.refreshAt).getTime();
-          qrRotateMs = (data.rotateSeconds || 30) * 1000;
-          qrTimer = setTimeout(loadQr, Math.max(qrRefreshAt - now(), 1000) + 250);
         } catch (err) {
           if (stopped) return;
           $('qr').innerHTML = '<span class="placeholder">QR unavailable — retrying…</span>';
-          qrRefreshAt = null;
           qrTimer = setTimeout(loadQr, 5000);
         }
       }
 
-      function tickCountdown() {
-        if (!qrRefreshAt) { $('bar').style.transform = 'scaleX(0)'; $('countdown-label').innerHTML = '&nbsp;'; return; }
-        const left = Math.max(qrRefreshAt - now(), 0);
-        $('bar').style.transform = 'scaleX(' + Math.min(left / qrRotateMs, 1) + ')';
-        $('countdown-label').textContent = 'New code in ' + Math.ceil(left / 1000) + 's';
+      // A delivery partner just checked in with the QR on screen — it's used up; show the new one.
+      function onQrUsed() {
+        $('qr-box').classList.add('flash');
+        clearTimeout(flashTimer);
+        flashTimer = setTimeout(() => $('qr-box').classList.remove('flash'), 1500);
+        loadQr();
       }
+
+      // ---- Buzzer ---------------------------------------------------------------------------
+      // Sounds when an order moves onto the ready list, i.e. its last picker pressed "Ready for
+      // Pickup". Web Audio, no sound file. Browsers block audio until someone has tapped the page
+      // once, so until then a banner asks for a tap.
+      let soundOn = true;
+      try { soundOn = localStorage.getItem(SOUND_KEY) !== 'off'; } catch (_) {}
+      let audioCtx = null;
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {}
+
+      function renderSound() {
+        $('sound-btn').textContent = soundOn ? 'Buzzer on' : 'Buzzer off';
+        $('sound-btn').classList.toggle('on', soundOn);
+        $('sound-btn').setAttribute('aria-pressed', String(soundOn));
+        $('unlock').classList.toggle('show', !!audioCtx && soundOn && audioCtx.state !== 'running');
+      }
+
+      function unlockAudio() {
+        if (!audioCtx || audioCtx.state === 'running') return;
+        audioCtx.resume().then(renderSound, renderSound);
+      }
+
+      function buzz() {
+        if (!soundOn || !audioCtx || audioCtx.state !== 'running') return;
+        const start = audioCtx.currentTime;
+        // Three short square-wave pulses — a counter buzzer, loud enough for a busy hub.
+        for (let i = 0; i < 3; i++) {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'square';
+          osc.frequency.value = 740;
+          const t = start + i * 0.3;
+          gain.gain.setValueAtTime(0.0001, t);
+          gain.gain.exponentialRampToValueAtTime(0.35, t + 0.01);
+          gain.gain.setValueAtTime(0.35, t + 0.18);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+          osc.connect(gain).connect(audioCtx.destination);
+          osc.start(t);
+          osc.stop(t + 0.25);
+        }
+      }
+
+      $('sound-btn').addEventListener('click', () => {
+        soundOn = !soundOn;
+        try { localStorage.setItem(SOUND_KEY, soundOn ? 'on' : 'off'); } catch (_) {}
+        unlockAudio();
+        renderSound();
+        if (soundOn) setTimeout(buzz, 100);
+      });
+      ['pointerdown', 'keydown'].forEach((ev) => document.addEventListener(ev, unlockAudio));
+      if (audioCtx) audioCtx.addEventListener('statechange', renderSound);
 
       // ---- Board ----------------------------------------------------------------------------
       function minutesSince(iso) {
@@ -241,7 +301,7 @@
         const tone = waited >= LATE_MIN ? ' late' : waited >= WARN_MIN ? ' warn' : '';
         let rider = '<div class="rider none">Any delivery partner can take this</div>';
         if (o.rider) rider = '<div class="rider">' + esc(o.rider.name || 'Rider') + (o.rider.arrived ? ' · at hub' : ' · on the way') + '</div>';
-        return '<article class="card ready' + tone + '">'
+        return '<article class="card ready' + tone + (freshReady.has(o.orderId) ? ' new' : '') + '">'
           + orderNo(o.orderNumber)
           + '<div class="meta"><span>' + plural(o.itemCount, 'item') + '</span><span class="wait">' + (waited < 1 ? 'Just ready' : 'Waiting ' + fmtMinutes(waited)) + '</span></div>'
           + rider + '</article>';
@@ -267,6 +327,16 @@
         try {
           const data = await api('/board');
           board = { ready: data.ready || [], preparing: data.preparing || [] };
+          const readyIds = board.ready.map((o) => o.orderId);
+          if (knownReady) {
+            const fresh = readyIds.filter((id) => !knownReady.has(id));
+            if (fresh.length) {
+              fresh.forEach((id) => freshReady.add(id));
+              setTimeout(() => fresh.forEach((id) => freshReady.delete(id)), 8000);
+              buzz();
+            }
+          }
+          knownReady = new Set(readyIds);
           $('hub-name').textContent = data.hub.name;
           $('hub-sub').textContent = [data.display.name, data.hub.address].filter(Boolean).join(' · ');
           document.title = data.hub.name + ' · Grovio Hub';
@@ -289,7 +359,7 @@
       function connect() {
         if (typeof io !== 'function') { setLive(false, 'Offline'); return; }
         socket = io({ auth: { hubDisplayKey: deviceKey } });
-        socket.on('connect', () => { setLive(true, 'Live'); loadBoard(); });
+        socket.on('connect', () => { setLive(true, 'Live'); loadBoard(); loadQr(); });
         socket.on('disconnect', (reason) => {
           setLive(false, 'Reconnecting');
           // The server only drops a screen itself when it's revoked — confirm and stop.
@@ -300,6 +370,7 @@
           if (/invalid or revoked/i.test(err.message)) loadBoard();
         });
         socket.on('hub:order', scheduleBoard);
+        socket.on('hub:qr', onQrUsed);
       }
 
       function tickClock() {
@@ -313,9 +384,10 @@
 
       tickClock();
       setInterval(tickClock, 10000);
-      setInterval(tickCountdown, 250);
       setInterval(renderBoard, 30000); // keep the waiting times current
       setInterval(loadBoard, 60000);   // safety net if a socket event is missed
+      setInterval(loadQr, 60000);      // same, for a used-up QR
+      renderSound();
       loadBoard();
       loadQr();
       connect();

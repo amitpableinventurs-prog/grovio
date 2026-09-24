@@ -6,6 +6,7 @@ import { formatPrice } from '../utils/format';
 import OrderStatusBadge from '../components/OrderStatusBadge';
 import BillBreakdown from '../components/BillBreakdown';
 import Loader from '../components/Loader';
+import LiveTrackingCard from '../components/LiveTrackingCard';
 import { useState } from 'react';
 
 const CANCELLABLE = ['placed', 'accepted', 'picking'];
@@ -52,6 +53,8 @@ export default function OrderDetailPage() {
             Waiting for the store to confirm your order. This page updates on its own as soon as they do.
           </div>
         )}
+
+        <LiveTrackingCard order={order} />
 
         <section className="rounded-xl border border-gray-200 bg-white p-5">
           <h2 className="font-semibold text-gray-900 mb-3">Order Status</h2>

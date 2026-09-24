@@ -59,6 +59,8 @@ export interface Store {
   closeTime?: string | null;
   isOpen: boolean;
   status: 'active' | 'inactive';
+  // Delivery radius in km; null = the defaultServiceRadiusKm setting.
+  serviceRadiusKm?: number | null;
   createdAt: string;
 }
 
@@ -219,6 +221,8 @@ export interface ScannerLog {
   createdAt: string;
 }
 
+export type PaymentMethod = 'COD' | 'RAZORPAY' | 'WALLET' | 'PAYU' | 'PHONEPE';
+
 export interface Order {
   _id: string;
   orderNumber: string;
@@ -241,9 +245,11 @@ export interface Order {
   tax: number;
   grandTotal: number;
   couponCode?: string | null;
-  paymentMethod: 'COD' | 'RAZORPAY' | 'WALLET';
+  paymentMethod: PaymentMethod;
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   orderStatus: OrderStatus;
+  // COD confirmation call outcome (IVR) — null when no call was made.
+  ivrConfirmation?: 'pending' | 'confirmed' | 'declined' | 'no_answer' | null;
   cancelReason?: string | null;
   placedAt: string;
   deliveredAt?: string | null;
@@ -292,7 +298,7 @@ export interface Payment {
   order: string | Order;
   user: string | User;
   amount: number;
-  method: 'COD' | 'RAZORPAY' | 'WALLET';
+  method: PaymentMethod;
   collectionMethod?: 'cash' | 'upi' | null;
   instrument?: 'card' | 'upi' | 'netbanking' | 'wallet' | 'emi' | null;
   gatewayOrderId?: string | null;
@@ -339,11 +345,45 @@ export interface AdminActivityLog {
   createdAt: string;
 }
 
+export type DashboardRange = 'today' | '7d' | '30d' | '90d';
+
+export interface DashboardPeriod {
+  orders: number;
+  gmv: number;
+  averageOrderValue: number;
+  delivered: number;
+  cancelled: number;
+  cancellationRate: number;
+  newCustomers: number;
+}
+
+// GET /admin/dashboard?range= — see backend controllers/admin/dashboard.controller.js
 export interface DashboardStats {
+  range: DashboardRange;
+  from: string;
+  to: string;
+  timezone: string;
+  granularity: 'hour' | 'day';
+  current: DashboardPeriod;
+  previous: DashboardPeriod;
+  trend: { bucket: string; orders: number; gmv: number }[];
+  ordersByHour: { hour: number; orders: number }[];
+  paymentMix: { method: string; orders: number; amount: number }[];
+  topProducts: { productId: string; name: string; qty: number; revenue: number }[];
+  topStores: { storeId: string; name: string; orders: number; gmv: number }[];
+  pipeline: { key: string; label: string; count: number }[];
+  operations: {
+    activeStores: number;
+    activePickers: number;
+    activeDeliveryPartners: number;
+    totalCustomers: number;
+    totalProducts: number;
+    lowStock: number;
+    lowStockAt: number;
+  };
+  // All-time
   totalOrders: number;
   totalCustomers: number;
-  totalVendors: number;
-  pendingVendors: number;
   activeStores: number;
   activePickers: number;
   activeDeliveryPartners: number;
@@ -366,4 +406,77 @@ export interface ChargeConfig {
   handling: ChargeRule;
   packing: ChargeRule;
   surcharge: ChargeRule & { label: string };
+}
+
+// ---- Live tracking (backend services/tracking.service.js) ----
+export interface Eta {
+  etaMinutes: number;
+  etaAt: string;
+  remainingKm: number | null;
+  approximate: boolean;
+}
+
+export interface LatLng {
+  lat: number;
+  lng: number;
+}
+
+export interface OrderTracking {
+  orderNumber: string;
+  orderStatus: OrderStatus;
+  deliveryPartner?: { _id: string; name: string; phone?: string } | null;
+  hub: (LatLng & { name: string }) | null;
+  drop: LatLng | null;
+  rider: (LatLng & { updatedAt: string }) | null;
+  eta: Eta | null;
+  arrivedAtPickupAt?: string | null;
+  arrivedAtDropAt?: string | null;
+  nearbyAlertAt?: string | null;
+}
+
+export interface LiveRider {
+  riderId: string;
+  name: string;
+  phone?: string;
+  isAvailable: boolean;
+  lat: number | null;
+  lng: number | null;
+  updatedAt: string | null;
+  stale: boolean;
+  orders: { orderId: string; orderNumber: string; orderStatus: OrderStatus; hub?: string }[];
+}
+
+export interface LiveMapData {
+  riders: LiveRider[];
+  stores: { _id: string; name: string; lat: number | null; lng: number | null; serviceRadiusKm?: number | null }[];
+  staleAfterMinutes: number;
+}
+
+// ---- IVR (backend services/ivr.service.js) ----
+export type IvrCallType = 'order_confirmation' | 'status_update' | 'delivery_alert' | 'missed_call' | 'missed_call_callback' | 'customer_care';
+
+export interface IvrCall {
+  _id: string;
+  type: IvrCallType;
+  direction: 'outbound' | 'inbound';
+  order?: { _id: string; orderNumber: string; orderStatus: OrderStatus } | null;
+  user?: { _id: string; name: string; phone?: string } | null;
+  phone: string;
+  event?: string | null;
+  message?: string | null;
+  provider: 'exotel' | 'simulated';
+  status: 'queued' | 'ringing' | 'in-progress' | 'completed' | 'failed' | 'busy' | 'no-answer' | 'simulated';
+  dtmf?: string | null;
+  outcome?: string | null;
+  durationSec?: number | null;
+  error?: string | null;
+  createdAt: string;
+}
+
+export interface IvrConfig {
+  provider: string;
+  publicBaseUrlSet: boolean;
+  autoCallEvents: string[];
+  availableEvents: string[];
+  webhooks: Record<'prompt' | 'input' | 'status' | 'missedCall' | 'carePrompt' | 'careInput' | 'careResult', string>;
 }

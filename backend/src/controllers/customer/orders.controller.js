@@ -9,6 +9,14 @@ const { splitOrderAcrossPickers } = require('../../services/assignment.service')
 const { debitWallet, creditWallet } = require('../../services/payment.service');
 const { notifyUser } = require('../../services/notification.service');
 const { getChargeConfig, computeCharges, round2 } = require('../../services/charges.service');
+const { trackingSnapshot, checkServiceArea } = require('../../services/tracking.service');
+const { requestOrderConfirmation } = require('../../services/ivr.service');
+const { enabledPaymentOptions } = require('../../services/gateways');
+
+function serviceAreaError(check) {
+  const s = check.outside[0];
+  return new ApiError(400, `This address is outside ${s.storeName}'s delivery area (${s.distanceKm} km away, delivers up to ${s.radiusKm} km). Choose a closer address or remove its items.`);
+}
 
 async function getSetting(key, fallback) {
   const row = await Setting.findOne({ key });
@@ -112,10 +120,17 @@ async function loadAndPriceCart(userId, couponCodeOverride) {
   return { cart, storeGroups, itemTotal, charges, discount, coupon, tax, grandTotal };
 }
 
-// POST /customer/checkout/summary  { couponCode? }  -> recalculate totals without placing the order
+// POST /customer/checkout/summary  { couponCode?, addressId? }  -> recalculate totals without
+// placing the order. With addressId it also says whether every store can deliver there.
 const checkoutSummary = catchAsync(async (req, res) => {
-  const { couponCode } = req.body;
+  const { couponCode, addressId } = req.body;
   const { itemTotal, charges, discount, tax, grandTotal, coupon, storeGroups } = await loadAndPriceCart(req.user.id, couponCode);
+
+  let serviceArea = null;
+  if (addressId) {
+    const address = await Address.findOne({ _id: addressId, user: req.user.id });
+    if (address) serviceArea = await checkServiceArea(storeGroups.map((g) => g.store), address);
+  }
 
   // Included so the client can show/enable "Pay with Wallet" (and how much is available) at
   // checkout without a separate GET /customer/wallet call — placeOrder still re-checks the
@@ -145,6 +160,8 @@ const checkoutSummary = catchAsync(async (req, res) => {
     couponCode: coupon ? coupon.code : null,
     walletBalance,
     walletSufficient: walletBalance >= grandTotal,
+    serviceArea,
+    paymentOptions: await enabledPaymentOptions(),
   }).send(res);
 });
 
@@ -165,6 +182,13 @@ const placeOrder = catchAsync(async (req, res) => {
   if (!address) throw new ApiError(404, 'Address not found');
 
   const { cart, storeGroups, itemTotal, charges, discount, coupon, tax, grandTotal } = await loadAndPriceCart(req.user.id);
+
+  const serviceArea = await checkServiceArea(storeGroups.map((g) => g.store), address);
+  if (!serviceArea.serviceable) throw serviceAreaError(serviceArea);
+
+  if (!(await enabledPaymentOptions()).some((o) => o.method === paymentMethod)) {
+    throw new ApiError(400, `Payment method ${paymentMethod} is not available`);
+  }
 
   if (paymentMethod === 'WALLET') {
     await debitWallet({ userId: req.user.id, amount: grandTotal, reason: 'Order payment' });
@@ -229,6 +253,9 @@ const placeOrder = catchAsync(async (req, res) => {
   cart.couponCode = null;
   await cart.save();
 
+  // COD confirmation call, when switched on (services/ivr.service.js). Never blocks checkout.
+  requestOrderConfirmation(order).catch((err) => console.error(`Confirmation call for ${order.orderNumber} failed:`, err.message));
+
   // By default the order waits at 'placed' until an admin/store manager accepts it on the admin
   // panel's Live Orders board (PATCH /admin/orders/:id/accept, which then splits it to pickers);
   // the board hears about it through the order:created socket event. With the `autoAcceptOrders`
@@ -280,19 +307,26 @@ const getOrderDetail = catchAsync(async (req, res) => {
   new ApiResponse(200, order).send(res);
 });
 
-// GET /customer/orders/:id/tracking  -> lightweight status-timeline view for a tracking screen
+// GET /customer/orders/:id/tracking -> status timeline plus live tracking: hub and drop
+// locations, the delivery partner's last GPS fix (while they're on the job) and an ETA. Live
+// updates after this arrive as 'delivery:location' socket events { orderId, lat, lng, eta }.
 const getTracking = catchAsync(async (req, res) => {
   const order = await Order.findOne({ _id: req.params.id, customer: req.user.id })
-    .select('orderNumber orderStatus statusLogs deliveredAt delivery')
-    .populate('delivery', 'name phone');
+    .select('orderNumber orderStatus statusLogs deliveredAt delivery store address placedAt createdAt arrivedAtPickupAt arrivedAtDropAt')
+    .populate('delivery', 'name phone')
+    .populate('store', 'name lat lng')
+    .populate('address', 'lat lng');
   if (!order) throw new ApiError(404, 'Order not found');
 
+  const snapshot = await trackingSnapshot(order);
   new ApiResponse(200, {
     orderNumber: order.orderNumber,
     orderStatus: order.orderStatus,
     statusLogs: order.statusLogs,
     deliveredAt: order.deliveredAt,
     deliveryPartner: order.delivery,
+    arrivedAtDropAt: order.arrivedAtDropAt,
+    ...snapshot,
   }).send(res);
 });
 

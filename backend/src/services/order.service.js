@@ -177,6 +177,11 @@ async function transitionOrder({ order, toStatus, changedBy, note }) {
     });
   }
 
+  // Auto IVR call for this status, if switched on (services/ivr.service.js). Fire and forget —
+  // a telephony problem must never fail the status change itself. Required lazily (cycle).
+  require('./ivr.service').triggerOrderEvent(order, toStatus)
+    .catch((err) => console.error(`IVR call for ${order.orderNumber} (${toStatus}) failed:`, err.message));
+
   // Only the hub picker(s) — the ones working order.store — ever meet the delivery partner, so
   // only they need the handover code.
   if (handoverOtp && order.pickTasks?.length) {

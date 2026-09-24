@@ -5,12 +5,12 @@ const ApiResponse = require('../../utils/apiResponse');
 const { transitionOrder } = require('../../services/order.service');
 const {
   extractCheckinToken,
-  findDisplayByCheckinToken,
+  consumeCheckinToken,
   checkinExpiry,
   activeCheckinStoreId,
 } = require('../../services/hubDisplay.service');
 
-// Delivery Boy at a Hub Center: scan the hub screen's rotating QR to check in, see the hub's ready
+// Delivery Boy at a Hub Center: scan the hub screen's QR to check in, see the hub's ready
 // orders, pick one, then finish the pickup with the existing handover endpoints —
 // POST /delivery/jobs/:id/scan (picker's package QR) or .../otp/verify, then .../out-for-delivery.
 // See services/hubDisplay.service.js for how the check-in QR works.
@@ -73,15 +73,17 @@ function checkinPayload(profile, store, orders) {
 
 // POST /delivery/hub/checkin { code } -> `code` is what the app read from the hub screen's QR
 // (the full URL or just its `t` token). Checks the partner in at that hub for HUB_CHECKIN_MINUTES
-// and records arrival on their assigned orders there.
+// and records arrival on their assigned orders there. The QR is single-use: this check-in replaces
+// it on the screen, so the next partner scans a fresh one.
 const checkIn = catchAsync(async (req, res) => {
   const profile = await getApprovedProfile(req.user.id);
 
   const token = extractCheckinToken(req.body.code);
   if (!token) throw new ApiError(400, 'code is required');
 
-  const display = await findDisplayByCheckinToken(token);
-  if (!display) throw new ApiError(400, 'This hub QR has expired or is not valid. Scan the QR currently showing on the hub screen.');
+  // Only after the approval check above, so a rejected scan doesn't use up the QR on the screen.
+  const display = await consumeCheckinToken(token);
+  if (!display) throw new ApiError(400, 'This hub QR was already used or is not valid. Scan the QR currently showing on the hub screen.');
   const store = display.store;
   if (!store || store.status !== 'active') throw new ApiError(400, 'This hub is not active');
 

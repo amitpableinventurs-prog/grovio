@@ -69,7 +69,7 @@ const acceptOrder = catchAsync(async (req, res) => {
 
   // An online order is placed first and paid right after (see payments.controller.js) — don't
   // start picking for something that may never be paid.
-  if (order.paymentMethod === 'RAZORPAY' && order.paymentStatus !== 'paid') {
+  if (['RAZORPAY', 'PAYU', 'PHONEPE'].includes(order.paymentMethod) && order.paymentStatus !== 'paid') {
     throw new ApiError(400, 'This order is waiting for online payment — accept it once it shows as paid.');
   }
 

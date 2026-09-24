@@ -73,6 +73,9 @@ const orderSchema = new Schema({
   pickerHandoverAt: { type: Date, default: null },
   arrivedAtPickupAt: { type: Date, default: null },
   arrivedAtDropAt: { type: Date, default: null },
+  // Set the first time the delivery partner comes within TRACKING_NEARBY_KM of the drop address
+  // (geofence in services/tracking.service.js) — the customer's "almost there" alert fires once.
+  nearbyAlertAt: { type: Date, default: null },
   failureReason: { type: String, default: null },
   items: { type: [orderItemSchema], default: [] },
   statusLogs: { type: [statusLogSchema], default: [] },
@@ -92,7 +95,7 @@ const orderSchema = new Schema({
   tax: { type: Number, default: 0 },
   grandTotal: { type: Number, required: true },
   couponCode: { type: String, default: null },
-  paymentMethod: { type: String, enum: ['COD', 'RAZORPAY', 'WALLET'], default: 'COD' },
+  paymentMethod: { type: String, enum: ['COD', 'RAZORPAY', 'WALLET', 'PAYU', 'PHONEPE'], default: 'COD' },
   paymentStatus: { type: String, enum: ['pending', 'paid', 'failed', 'refunded'], default: 'pending' },
   // Only set for paymentMethod === 'COD', by the delivery partner at hand-off (see
   // delivery.controller.js#completeJob): whether the customer paid in physical cash (which the
@@ -105,6 +108,8 @@ const orderSchema = new Schema({
     default: 'placed',
   },
   cancelReason: { type: String, default: null },
+  // COD confirmation call (services/ivr.service.js#requestOrderConfirmation): null = no call made.
+  ivrConfirmation: { type: String, enum: [null, 'pending', 'confirmed', 'declined', 'no_answer'], default: null },
   placedAt: { type: Date, default: Date.now },
   deliveredAt: { type: Date, default: null },
   settled: { type: Boolean, default: false },

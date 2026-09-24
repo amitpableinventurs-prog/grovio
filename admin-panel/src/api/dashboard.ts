@@ -1,6 +1,6 @@
 import { apiClient, unwrap } from './client';
-import type { DashboardStats } from '../types';
+import type { DashboardRange, DashboardStats } from '../types';
 
-export function fetchDashboardStats() {
-  return unwrap<DashboardStats>(apiClient.get('/admin/dashboard'));
+export function fetchDashboardStats(range: DashboardRange = '30d') {
+  return unwrap<DashboardStats>(apiClient.get('/admin/dashboard', { params: { range } }));
 }

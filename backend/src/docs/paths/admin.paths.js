@@ -23,7 +23,31 @@ const statusParam = { name: 'status', in: 'query', schema: { type: 'string' }, d
 
 // ---------- Dashboard ----------
 paths['/admin/dashboard'] = {
-  get: { tags: TAG_DASH, summary: 'Platform KPIs: GMV, AOV, orders, active stores/pickers/delivery partners', ...bearer(), responses: { 200: envelope(ref('DashboardStats')), 401: RESPONSES_401 } },
+  get: {
+    tags: TAG_DASH,
+    summary: 'Dashboard: KPIs for a range vs the previous period (same elapsed time), GMV trend, orders by hour, payment mix, top products/stores, live pipeline, operations. Store managers see their store only. Days are counted in DASHBOARD_TZ (default Asia/Kolkata).',
+    ...bearer(),
+    parameters: [q('range', 'today | 7d | 30d | 90d (default 30d)')],
+    responses: {
+      200: envelope({
+        allOf: [ref('DashboardStats')],
+        type: 'object',
+        properties: {
+          range: { type: 'string' }, granularity: { type: 'string', enum: ['hour', 'day'] },
+          current: { type: 'object', description: 'orders, gmv, averageOrderValue, delivered, cancelled, cancellationRate, newCustomers' },
+          previous: { type: 'object', description: 'Same fields for the previous period' },
+          trend: { type: 'array', items: { type: 'object', properties: { bucket: { type: 'string' }, orders: { type: 'integer' }, gmv: { type: 'number' } } } },
+          ordersByHour: { type: 'array', items: { type: 'object', properties: { hour: { type: 'integer' }, orders: { type: 'integer' } } } },
+          paymentMix: { type: 'array', items: { type: 'object' } },
+          topProducts: { type: 'array', items: { type: 'object' } },
+          topStores: { type: 'array', items: { type: 'object' } },
+          pipeline: { type: 'array', items: { type: 'object', properties: { key: { type: 'string' }, label: { type: 'string' }, count: { type: 'integer' } } } },
+          operations: { type: 'object' },
+        },
+      }),
+      401: RESPONSES_401,
+    },
+  },
 };
 
 // ---------- Users by role ----------
@@ -506,7 +530,7 @@ paths['/admin/inventory/import'] = {
 
 // ---------- Payments / Refunds ----------
 paths['/admin/payments'] = {
-  get: { tags: TAG_PAYMENTS, summary: 'List all payment records', ...bearer(), parameters: [...PAGE_QS, statusParam, q('method'), q('instrument', 'card | upi | netbanking | wallet | emi — only meaningful for method=RAZORPAY'), q('purpose', 'order | wallet_topup')], responses: { 200: envelope(paginated(ref('Payment'))), 401: RESPONSES_401 } },
+  get: { tags: TAG_PAYMENTS, summary: 'List all payment records', ...bearer(), parameters: [...PAGE_QS, statusParam, q('method'), q('instrument', 'card | upi | netbanking | wallet | emi — online gateways only'), q('purpose', 'order | wallet_topup')], responses: { 200: envelope(paginated(ref('Payment'))), 401: RESPONSES_401 } },
 };
 paths['/admin/payments/cod-reconciliation'] = {
   get: {

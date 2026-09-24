@@ -20,7 +20,7 @@ function PaymentsTab() {
         { title: 'Order', render: (_, r) => (r.order && typeof r.order === 'object' ? (r.order as Order).orderNumber : r.order || '—') },
         { title: 'User', render: (_, r) => (r.user && typeof r.user === 'object' ? (r.user as User).name : r.user) },
         { title: 'Amount', render: (_, r) => formatCurrency(r.amount) },
-        { title: 'Method', render: (_, r) => r.method === 'RAZORPAY' && r.instrument ? `${r.method} (${r.instrument})` : r.method },
+        { title: 'Method', render: (_, r) => r.instrument ? `${r.method} (${r.instrument})` : r.method },
         { title: 'Status', render: (_, r) => <StatusTag status={r.status} /> },
         { title: 'Failure Reason', render: (_, r) => r.failureReason || '—' },
         { title: 'Date', render: (_, r) => formatDateTime(r.createdAt) },

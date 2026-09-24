@@ -18,7 +18,32 @@ export default function AddressForm({ initial, onSubmit, onCancel, submitLabel =
     state: initial?.state || '',
     pincode: initial?.pincode || '',
     isDefault: initial?.isDefault ?? false,
+    lat: initial?.lat ?? null,
+    lng: initial?.lng ?? null,
   });
+  const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
+  // The address's map position — used for the delivery-area check, ETAs and live tracking.
+  function fillCurrentLocation() {
+    if (!navigator.geolocation) {
+      setLocationError('Your browser cannot share its location.');
+      return;
+    }
+    setLocating(true);
+    setLocationError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setForm((f) => ({ ...f, lat: Number(pos.coords.latitude.toFixed(6)), lng: Number(pos.coords.longitude.toFixed(6)) }));
+        setLocating(false);
+      },
+      (err) => {
+        setLocationError(err.code === err.PERMISSION_DENIED ? 'Location permission was denied.' : 'Could not get your location. Try again.');
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000 },
+    );
+  }
 
   function set<K extends keyof AddressInput>(key: K, value: AddressInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -80,6 +105,23 @@ export default function AddressForm({ initial, onSubmit, onCancel, submitLabel =
         placeholder="Pincode"
         className="rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-brand-500"
       />
+
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <button
+          type="button"
+          onClick={fillCurrentLocation}
+          disabled={locating}
+          className="rounded-lg border border-brand-600 px-3 py-1.5 font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-60"
+        >
+          {locating ? 'Locating…' : form.lat != null ? 'Update location' : 'Use my current location'}
+        </button>
+        {form.lat != null && form.lng != null ? (
+          <span className="text-xs text-brand-700">Location saved ({form.lat.toFixed(4)}, {form.lng.toFixed(4)})</span>
+        ) : (
+          <span className="text-xs text-gray-500">Stand at the delivery address — used for live tracking and ETA</span>
+        )}
+        {locationError && <span className="w-full text-xs text-red-600">{locationError}</span>}
+      </div>
 
       <label className="flex items-center gap-2 text-sm text-gray-600">
         <input type="checkbox" checked={!!form.isDefault} onChange={(e) => set('isDefault', e.target.checked)} />

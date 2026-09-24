@@ -37,13 +37,12 @@ paths['/hub-display/board'] = {
 };
 paths['/hub-display/checkin-qr'] = {
   get: {
-    tags: TAG, summary: 'Current Delivery Boy check-in QR (SVG markup), rotated every HUB_QR_ROTATE_SECONDS — fetch again at refreshAt', ...security,
+    tags: TAG, summary: 'Current Delivery Boy check-in QR (SVG markup). It changes only when a check-in uses it — the screen then gets a hub:qr socket event and fetches it again', ...security,
     responses: {
       200: envelope({
         type: 'object',
         properties: {
-          qrSvg: { type: 'string' }, refreshAt: { type: 'string', format: 'date-time' },
-          rotateSeconds: { type: 'integer', example: 30 }, serverTime: { type: 'string', format: 'date-time' },
+          qrSvg: { type: 'string' }, serverTime: { type: 'string', format: 'date-time' },
         },
       }),
       401: UNAUTH,

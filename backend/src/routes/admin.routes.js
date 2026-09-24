@@ -25,6 +25,8 @@ const deliveryPartnersCtrl = require('../controllers/admin/deliveryPartners.cont
 const scannerLogsCtrl = require('../controllers/admin/scannerLogs.controller');
 const contentPagesCtrl = require('../controllers/admin/contentPages.controller');
 const hubDisplaysCtrl = require('../controllers/admin/hubDisplays.controller');
+const trackingCtrl = require('../controllers/admin/tracking.controller');
+const ivrCtrl = require('../controllers/admin/ivr.controller');
 
 router.use(authenticate, authorize('admin'));
 
@@ -118,6 +120,14 @@ router.patch('/orders/:id/cancel', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANA
 router.patch('/orders/:id/mark-returned', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.markReturned);
 router.patch('/orders/:id/assign-picker', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.assignPicker);
 router.patch('/orders/:id/assign-delivery', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.assignDelivery);
+
+// Live tracking: rider map + one order's rider position / ETA (store managers: own hub only)
+router.get('/tracking/riders', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), trackingCtrl.listRiders);
+// IVR: call log, Exotel webhook URLs, and calling a customer about an order on demand
+router.get('/ivr/calls', p(PERMISSIONS.MANAGE_ORDERS), ivrCtrl.listCalls);
+router.get('/ivr/config', p(PERMISSIONS.MANAGE_SETTINGS), ivrCtrl.getConfig);
+router.post('/orders/:id/ivr-call', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ivrCtrl.callCustomer);
+router.get('/orders/:id/tracking', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), trackingCtrl.getOrderTracking);
 router.post('/orders/:id/refund', p(PERMISSIONS.MANAGE_PAYMENTS), paymentsCtrl.issueRefund);
 
 // Scanner logs — every Picker/Delivery handover QR scan attempt, success or failure (section 18

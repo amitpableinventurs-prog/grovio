@@ -1,22 +1,24 @@
 const crypto = require('crypto');
 const QRCode = require('qrcode');
 const { HubDisplay, Order } = require('../models');
+const { getSetting } = require('./settings.service');
 
 // Hub Center screens (models/hubDisplay.model.js) and the Delivery Boy check-in they enable.
 //
 //   Screen at /hub-display  --(X-Hub-Display-Key)-->  GET /hub-display/checkin-qr
-//     shows a QR of  <PUBLIC_BASE_URL>/hub-checkin/?t=<checkinToken>, re-fetched every rotation
+//     shows a QR of  <PUBLIC_BASE_URL>/hub-checkin/?t=<checkinToken>
 //   Delivery app scans it  -->  POST /delivery/hub/checkin { code }
 //     token -> screen -> store (the hub); the partner's DeliveryProfile.hubCheckin is set for
 //     HUB_CHECKIN_MINUTES, which is what /delivery/hub/orders and .../claim require.
+//
+// The token is single-use: it has no timer, but the first successful check-in consumes it and
+// swaps in a new one, and the screen is told over its socket ('hub:qr') to show the new QR. So a
+// photo of the QR stops working as soon as anyone has scanned it.
 //
 // The QR is only proof of presence, never an authorization by itself: the scan is made with the
 // partner's own access token, and everything it unlocks is checked server-side against their role
 // and the hub the token maps to.
 
-const QR_ROTATE_SECONDS = Number(process.env.HUB_QR_ROTATE_SECONDS || 30);
-// Extra validity past the rotation, so a scan started just before the screen changed still works.
-const QR_GRACE_SECONDS = Number(process.env.HUB_QR_GRACE_SECONDS || 15);
 const CHECKIN_MINUTES = Number(process.env.HUB_CHECKIN_MINUTES || 30);
 
 // Orders a hub screen lists: still being picked/packed, or packed and waiting for a rider.
@@ -35,10 +37,10 @@ function generateCheckinToken() {
   return crypto.randomBytes(18).toString('base64url');
 }
 
-// Origin used in pairing links and QR URLs. Set PUBLIC_BASE_URL in production (behind a proxy the
-// request's own protocol/host may be the internal one).
-function publicBaseUrl(req) {
-  const configured = (process.env.PUBLIC_BASE_URL || '').replace(/\/+$/, '');
+// Origin used in pairing links and QR URLs: the "Public server URL" setting / PUBLIC_BASE_URL
+// (set it in production — behind a proxy the request's own protocol/host may be the internal one).
+async function publicBaseUrl(req) {
+  const configured = ((await getSetting('publicBaseUrl', 'PUBLIC_BASE_URL')) || '').replace(/\/+$/, '');
   return configured || `${req.protocol}://${req.get('host')}`;
 }
 
@@ -48,43 +50,20 @@ async function findDisplayByKey(key) {
   return HubDisplay.findOne({ keyHash: hashKey(key), revokedAt: null }).populate('store', 'name address status');
 }
 
-// Returns the screen's live check-in token, rotating it once the current one is older than
-// QR_ROTATE_SECONDS. Every screen (and every open tab on it) shares one current token, so
-// re-fetching early doesn't churn it. `refreshAt` is when the screen should fetch again.
-async function getOrRotateCheckinToken(displayId) {
-  const TOKEN_FIELDS = '+checkinToken +checkinTokenIssuedAt +checkinTokenExpiresAt +prevCheckinToken +prevCheckinTokenExpiresAt';
-  const toResult = (d) => ({
-    token: d.checkinToken,
-    refreshAt: new Date(d.checkinTokenIssuedAt.getTime() + QR_ROTATE_SECONDS * 1000),
-  });
-
-  const display = await HubDisplay.findById(displayId).select(TOKEN_FIELDS);
+// Returns the screen's current check-in token, issuing the first one if it has none yet. It only
+// changes when a check-in consumes it (consumeCheckinToken below).
+async function getCheckinToken(displayId) {
+  const display = await HubDisplay.findById(displayId).select('+checkinToken');
   if (!display || display.revokedAt) return null;
+  if (display.checkinToken) return display.checkinToken;
 
-  const now = Date.now();
-  const age = display.checkinTokenIssuedAt ? now - display.checkinTokenIssuedAt.getTime() : Infinity;
-  if (display.checkinToken && age < QR_ROTATE_SECONDS * 1000) return toResult(display);
-
-  // Conditional on the token we just read, so two tabs rotating at once can't both win and leave
-  // one of them showing a token that was overwritten before anyone could scan it.
-  const rotated = await HubDisplay.findOneAndUpdate(
-    { _id: displayId, revokedAt: null, checkinTokenIssuedAt: display.checkinTokenIssuedAt },
-    {
-      $set: {
-        prevCheckinToken: display.checkinToken,
-        prevCheckinTokenExpiresAt: display.checkinTokenExpiresAt,
-        checkinToken: generateCheckinToken(),
-        checkinTokenIssuedAt: new Date(now),
-        checkinTokenExpiresAt: new Date(now + (QR_ROTATE_SECONDS + QR_GRACE_SECONDS) * 1000),
-      },
-    },
-    { new: true },
-  ).select(TOKEN_FIELDS);
-  if (rotated) return toResult(rotated);
-
-  // Lost the race — someone else rotated it; use theirs.
-  const current = await HubDisplay.findById(displayId).select(TOKEN_FIELDS);
-  return current && !current.revokedAt && current.checkinToken ? toResult(current) : null;
+  // Only set it if still empty, so two tabs loading at once end up showing the same token.
+  await HubDisplay.updateOne(
+    { _id: displayId, revokedAt: null, checkinToken: null },
+    { $set: { checkinToken: generateCheckinToken(), checkinTokenIssuedAt: new Date() } },
+  );
+  const current = await HubDisplay.findById(displayId).select('+checkinToken');
+  return current && !current.revokedAt ? current.checkinToken : null;
 }
 
 function checkinUrl(baseUrl, token) {
@@ -109,17 +88,20 @@ function extractCheckinToken(code) {
   return raw;
 }
 
-// Resolves a scanned check-in token to its (non-revoked) screen, or null if it's unknown/expired.
-async function findDisplayByCheckinToken(token) {
+// Uses up a scanned check-in token: swaps in a new one and tells the screen to show it. Returns the
+// (non-revoked) screen it belonged to, store populated — or null if the token is unknown or was
+// already used. Atomic, so when two partners scan the same QR at once only the first gets in.
+async function consumeCheckinToken(token) {
   if (!token) return null;
-  const now = new Date();
-  return HubDisplay.findOne({
-    revokedAt: null,
-    $or: [
-      { checkinToken: token, checkinTokenExpiresAt: { $gt: now } },
-      { prevCheckinToken: token, prevCheckinTokenExpiresAt: { $gt: now } },
-    ],
-  }).populate('store', 'name address lat lng status');
+  const display = await HubDisplay.findOneAndUpdate(
+    { revokedAt: null, checkinToken: token },
+    { $set: { checkinToken: generateCheckinToken(), checkinTokenIssuedAt: new Date() } },
+  ).populate('store', 'name address lat lng status');
+  if (!display) return null;
+
+  const { emitToRooms, ROOMS } = require('../sockets');
+  emitToRooms([ROOMS.display(display.id)], 'hub:qr', { reason: 'scanned' });
+  return display;
 }
 
 function checkinExpiry() {
@@ -168,17 +150,16 @@ async function buildBoard(storeId) {
 }
 
 module.exports = {
-  QR_ROTATE_SECONDS,
   CHECKIN_MINUTES,
   hashKey,
   generateDisplayKey,
   publicBaseUrl,
   findDisplayByKey,
-  getOrRotateCheckinToken,
+  getCheckinToken,
   checkinUrl,
   qrSvg,
   extractCheckinToken,
-  findDisplayByCheckinToken,
+  consumeCheckinToken,
   checkinExpiry,
   activeCheckinStoreId,
   buildBoard,

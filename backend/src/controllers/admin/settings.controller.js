@@ -8,7 +8,10 @@ const { invalidateSettingsCache } = require('../../services/settings.service');
 // PUT silently ignores a blank/unchanged submission for these so the Settings page can leave them
 // empty ("leave blank to keep existing") instead of round-tripping the masked placeholder back
 // into the real value.
-const SECRET_KEYS = ['razorpayKeySecret', 'razorpayWebhookSecret', 'smsApiKey', 'smsApiSecret', 'googleMapsApiKey'];
+const SECRET_KEYS = [
+  'razorpayKeySecret', 'razorpayWebhookSecret', 'smsApiKey', 'smsApiSecret', 'googleMapsApiKey',
+  'payuSalt', 'phonepeClientSecret', 'phonepeWebhookPassword', 'exotelApiKey', 'exotelApiToken', 'ivrWebhookToken',
+];
 
 function maskSecret(value) {
   if (!value) return null;

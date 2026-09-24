@@ -13,6 +13,8 @@ import CategoriesPage from './pages/CategoriesPage';
 import ProductsPage from './pages/ProductsPage';
 import OrdersPage from './pages/OrdersPage';
 import LiveOrdersPage from './pages/LiveOrdersPage';
+import LiveMapPage from './pages/LiveMapPage';
+import IvrCallsPage from './pages/IvrCallsPage';
 import ChargesPage from './pages/ChargesPage';
 import InventoryPage from './pages/InventoryPage';
 import CouponsPage from './pages/CouponsPage';
@@ -94,6 +96,22 @@ export default function App() {
             element={
               <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY]}>
                 <LiveOrdersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/live-map"
+            element={
+              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY]}>
+                <LiveMapPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ivr-calls"
+            element={
+              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_ORDERS]}>
+                <IvrCallsPage />
               </ProtectedRoute>
             }
           />

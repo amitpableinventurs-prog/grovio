@@ -5,8 +5,8 @@ import { fetchHubDisplays, createHubDisplay, revokeHubDisplay } from '../api/hub
 import type { HubDisplay, Store } from '../types';
 import { formatDateTime } from '../utils/format';
 
-// A screen fetches a new check-in QR every 30s, and its last-seen time is written at most once a
-// minute — so anything seen within 3 minutes is treated as online.
+// A screen checks in with the API at least every minute (and its last-seen time is written at most
+// once a minute) — so anything seen within 3 minutes is treated as online.
 const ONLINE_WINDOW_MS = 3 * 60 * 1000;
 
 function screenState(d: HubDisplay) {
@@ -17,7 +17,7 @@ function screenState(d: HubDisplay) {
 }
 
 // Stores page -> "Hub screens": the TVs/tablets at this store that show /hub-display (live pickup
-// board + rotating check-in QR for delivery partners).
+// board + single-use check-in QR for delivery partners).
 export default function HubScreensModal({ store, onClose }: { store: Store | null; onClose: () => void }) {
   const [name, setName] = useState('');
   const [pairing, setPairing] = useState<{ name: string; url: string } | null>(null);
@@ -58,8 +58,8 @@ export default function HubScreensModal({ store, onClose }: { store: Store | nul
   return (
     <Modal title={store ? `Hub screens · ${store.name}` : 'Hub screens'} open={!!store} onCancel={close} footer={null} width={760} destroyOnHidden>
       <Typography.Paragraph type="secondary">
-        A hub screen shows the orders ready for pickup at this store and a QR code that changes every 30 seconds. Delivery
-        partners scan it from the Delivery app to check in and pick an order.
+        A hub screen shows the orders ready for pickup at this store, buzzes when an order becomes ready, and shows a QR
+        code that delivery partners scan from the Delivery app to check in and pick an order. The QR changes after every scan.
       </Typography.Paragraph>
 
       {pairing && (

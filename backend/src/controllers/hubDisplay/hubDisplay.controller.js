@@ -2,8 +2,7 @@ const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const {
-  QR_ROTATE_SECONDS,
-  getOrRotateCheckinToken,
+  getCheckinToken,
   publicBaseUrl,
   checkinUrl,
   qrSvg,
@@ -26,19 +25,15 @@ const getBoard = catchAsync(async (req, res) => {
   }).send(res);
 });
 
-// GET /hub-display/checkin-qr -> the current check-in QR (as SVG markup) and when to fetch the
-// next one. Delivery partners scan it from the delivery app — POST /delivery/hub/checkin.
+// GET /hub-display/checkin-qr -> the current check-in QR (as SVG markup). Delivery partners scan it
+// from the delivery app (POST /delivery/hub/checkin), which uses it up; the screen gets a 'hub:qr'
+// socket event and calls this again for the new one.
 const getCheckinQr = catchAsync(async (req, res) => {
-  const current = await getOrRotateCheckinToken(req.hubDisplay._id);
-  if (!current) throw new ApiError(401, 'Hub screen key is invalid or has been revoked');
+  const token = await getCheckinToken(req.hubDisplay._id);
+  if (!token) throw new ApiError(401, 'Hub screen key is invalid or has been revoked');
 
-  const url = checkinUrl(publicBaseUrl(req), current.token);
-  new ApiResponse(200, {
-    qrSvg: await qrSvg(url),
-    refreshAt: current.refreshAt,
-    rotateSeconds: QR_ROTATE_SECONDS,
-    serverTime: new Date(),
-  }).send(res);
+  const url = checkinUrl(await publicBaseUrl(req), token);
+  new ApiResponse(200, { qrSvg: await qrSvg(url), serverTime: new Date() }).send(res);
 });
 
 module.exports = { getBoard, getCheckinQr };

@@ -7,6 +7,7 @@ router.use(authenticate, authorize('delivery'));
 
 router.patch('/availability', ctrl.toggleAvailability);
 router.post('/location', ctrl.updateLocation);
+router.get('/route', ctrl.getRoute);
 router.get('/profile', ctrl.getProfile);
 router.patch('/profile', ctrl.updateProfile);
 

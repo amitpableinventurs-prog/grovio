@@ -9,12 +9,17 @@ import { CART_QUERY_KEY } from '../hooks/useCart';
 import { formatPrice } from '../utils/format';
 import BillBreakdown from '../components/BillBreakdown';
 import { loadRazorpayScript, openRazorpayCheckout } from '../utils/razorpay';
+import { redirectToGateway } from '../utils/gatewayRedirect';
 import { useAuthStore } from '../store/authStore';
 import AddressForm from '../components/AddressForm';
 import Loader from '../components/Loader';
-import type { Order } from '../types';
+import type { Order, PaymentMethod } from '../types';
 
-type PaymentMethod = 'COD' | 'WALLET' | 'RAZORPAY';
+// Shown until the summary (which carries the admin-enabled list) has loaded.
+const FALLBACK_OPTIONS: { method: PaymentMethod; label: string; description: string }[] = [
+  { method: 'COD', label: 'Cash on Delivery', description: 'Pay when you receive your order' },
+  { method: 'WALLET', label: 'Wallet', description: 'Pay using your Grovio wallet balance' },
+];
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -30,12 +35,19 @@ export default function CheckoutPage() {
     queryFn: addressApi.listAddresses,
   });
 
+  const activeAddressId = selectedAddressId || addresses?.find((a) => a.isDefault)?._id || addresses?.[0]?._id || null;
+
+  // Re-priced per address so the delivery-area check reflects the address picked.
   const { data: summary, isLoading: summaryLoading } = useQuery({
-    queryKey: ['checkout-summary'],
-    queryFn: () => ordersApi.checkoutSummary(),
+    queryKey: ['checkout-summary', activeAddressId],
+    queryFn: () => ordersApi.checkoutSummary(undefined, activeAddressId),
+    enabled: !addressesLoading,
+    placeholderData: (prev) => prev,
   });
 
-  const activeAddressId = selectedAddressId || addresses?.find((a) => a.isDefault)?._id || addresses?.[0]?._id || null;
+  const paymentOptions = summary?.paymentOptions?.length ? summary.paymentOptions : FALLBACK_OPTIONS;
+  const effectiveMethod: PaymentMethod = paymentOptions.some((o) => o.method === paymentMethod) ? paymentMethod : paymentOptions[0].method;
+  const outsideArea = summary?.serviceArea && !summary.serviceArea.serviceable ? summary.serviceArea.outside[0] : null;
 
   const createAddressMutation = useMutation({
     mutationFn: addressApi.createAddress,
@@ -101,10 +113,23 @@ export default function CheckoutPage() {
   };
 
   const placeOrderMutation = useMutation({
-    mutationFn: () => ordersApi.placeOrder(activeAddressId as string, paymentMethod),
+    mutationFn: () => ordersApi.placeOrder(activeAddressId as string, effectiveMethod),
     onSuccess: async (order) => {
-      if (paymentMethod === 'RAZORPAY') {
+      if (effectiveMethod === 'RAZORPAY') {
         await startRazorpayCheckout(order);
+        return;
+      }
+      if (effectiveMethod === 'PAYU' || effectiveMethod === 'PHONEPE') {
+        // The order exists (payment pending); the gateway brings the customer back to
+        // /payment/return, which confirms the payment. The cart is already emptied server-side.
+        setPayingViaGateway(true);
+        queryClient.invalidateQueries({ queryKey: CART_QUERY_KEY });
+        try {
+          await redirectToGateway(effectiveMethod, order._id);
+        } catch (err) {
+          setPayingViaGateway(false);
+          setError(apiErrorMessage(err, 'Could not open the payment page. You can retry the payment from "My Orders".'));
+        }
         return;
       }
       queryClient.invalidateQueries({ queryKey: CART_QUERY_KEY });
@@ -167,21 +192,19 @@ export default function CheckoutPage() {
         <section className="rounded-xl border border-gray-200 bg-white p-5">
           <h2 className="font-semibold text-gray-900 mb-3">Payment Method</h2>
           <div className="flex flex-col gap-2">
-            {([
-              { value: 'COD', label: 'Cash on Delivery', hint: 'Pay when you receive your order' },
-              { value: 'WALLET', label: 'Wallet', hint: 'Pay using your Grovio wallet balance' },
-              { value: 'RAZORPAY', label: 'UPI / Card / Netbanking', hint: 'Pay online via UPI, debit/credit card or netbanking' },
-            ] as const).map((opt) => (
+            {paymentOptions.map((opt) => (
               <label
-                key={opt.value}
+                key={opt.method}
                 className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer ${
-                  paymentMethod === opt.value ? 'border-brand-600 bg-brand-50' : 'border-gray-200'
+                  effectiveMethod === opt.method ? 'border-brand-600 bg-brand-50' : 'border-gray-200'
                 }`}
               >
-                <input type="radio" name="payment" checked={paymentMethod === opt.value} onChange={() => setPaymentMethod(opt.value)} />
+                <input type="radio" name="payment" checked={effectiveMethod === opt.method} onChange={() => setPaymentMethod(opt.method)} />
                 <div>
                   <p className="text-sm font-semibold text-gray-900">{opt.label}</p>
-                  <p className="text-xs text-gray-500">{opt.hint}</p>
+                  <p className="text-xs text-gray-500">
+                    {opt.method === 'WALLET' && summary ? `${opt.description} · Balance ${formatPrice(summary.walletBalance)}` : opt.description}
+                  </p>
                 </div>
               </label>
             ))}
@@ -211,6 +234,11 @@ export default function CheckoutPage() {
           </div>
         )}
 
+        {outsideArea && (
+          <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {outsideArea.storeName} doesn't deliver to this address ({outsideArea.distanceKm} km away, delivers up to {outsideArea.radiusKm} km). Pick another address.
+          </p>
+        )}
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
         {!activeAddressId && !error && (
           <p className="mt-3 text-sm text-amber-700">Add a delivery address above to continue.</p>
@@ -218,7 +246,7 @@ export default function CheckoutPage() {
 
         <button
           onClick={() => placeOrderMutation.mutate()}
-          disabled={!activeAddressId || placeOrderMutation.isPending || payingViaGateway}
+          disabled={!activeAddressId || !!outsideArea || placeOrderMutation.isPending || payingViaGateway}
           className="mt-5 w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {payingViaGateway

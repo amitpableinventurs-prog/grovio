@@ -5,6 +5,7 @@ const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const { transitionOrder, verifyHandoverOtp, verifyHandoverQr } = require('../../services/order.service');
 const { creditWallet } = require('../../services/payment.service');
+const { handleRiderLocation, planRiderRoute } = require('../../services/tracking.service');
 
 const COD_COLLECTION_METHODS = ['cash', 'upi'];
 
@@ -37,17 +38,26 @@ const toggleAvailability = catchAsync(async (req, res) => {
   new ApiResponse(200, profile, 'Availability updated').send(res);
 });
 
-// POST /delivery/location  { lat, lng }
+// POST /delivery/location  { lat, lng } -> stores the position and, for this partner's active
+// orders, pushes it + a fresh ETA to the customer and admins and runs the pickup/drop geofences
+// (see services/tracking.service.js). The app should send this every few seconds while on a job
+// (or use the 'delivery:location' socket event, which does the same).
 const updateLocation = catchAsync(async (req, res) => {
   const { lat, lng } = req.body;
-  const profile = await DeliveryProfile.findOne({ user: req.user.id });
-  if (!profile) throw new ApiError(404, 'Delivery profile not found');
+  const exists = await DeliveryProfile.exists({ user: req.user.id });
+  if (!exists) throw new ApiError(404, 'Delivery profile not found');
 
-  profile.currentLat = lat;
-  profile.currentLng = lng;
-  await profile.save();
+  const profile = await handleRiderLocation(req.user.id, lat, lng);
+  if (!profile) throw new ApiError(400, 'lat and lng must be valid coordinates');
 
   new ApiResponse(200, profile, 'Location updated').send(res);
+});
+
+// GET /delivery/route?lat=&lng= -> my active orders as an optimised list of stops (hub pickups
+// before their drops), with leg distances, arrival estimates and a Google Maps directions link.
+// lat/lng override my last reported position.
+const getRoute = catchAsync(async (req, res) => {
+  new ApiResponse(200, await planRiderRoute(req.user.id, req.query)).send(res);
 });
 
 // GET /delivery/jobs?status=  -> defaults to active jobs; pass status=available to see none
@@ -289,6 +299,7 @@ module.exports = {
   updateProfile,
   toggleAvailability,
   updateLocation,
+  getRoute,
   listJobs,
   listHistory,
   getJobDetail,

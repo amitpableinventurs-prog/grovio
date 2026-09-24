@@ -24,6 +24,8 @@ import {
   PercentageOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  EnvironmentOutlined,
+  PhoneOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -53,6 +55,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'categories', path: '/categories', label: 'Categories', icon: <AppstoreOutlined />, permissions: [PERMISSIONS.MANAGE_CATALOG] },
   { key: 'products', path: '/products', label: 'Products', icon: <AppstoreOutlined />, permissions: [PERMISSIONS.MANAGE_CATALOG, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
   { key: 'live-orders', path: '/live-orders', label: 'Live Orders', icon: <ThunderboltOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
+  { key: 'live-map', path: '/live-map', label: 'Live Map', icon: <EnvironmentOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
   { key: 'orders', path: '/orders', label: 'Orders', icon: <ShoppingCartOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
   { key: 'inventory', path: '/inventory', label: 'Inventory', icon: <DatabaseOutlined />, permissions: [PERMISSIONS.MANAGE_INVENTORY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
   { key: 'coupons', path: '/coupons', label: 'Coupons', icon: <TagsOutlined />, permissions: [PERMISSIONS.MANAGE_PROMOTIONS] },
@@ -60,6 +63,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'payments', path: '/payments', label: 'Payments & Refunds', icon: <CreditCardOutlined />, permissions: [PERMISSIONS.MANAGE_PAYMENTS] },
   { key: 'settlements', path: '/settlements', label: 'Settlements', icon: <WalletOutlined />, permissions: [PERMISSIONS.MANAGE_SETTLEMENTS] },
   { key: 'reports', path: '/reports', label: 'Reports', icon: <BarChartOutlined />, permissions: [PERMISSIONS.VIEW_REPORTS] },
+  { key: 'ivr-calls', path: '/ivr-calls', label: 'Call Logs (IVR)', icon: <PhoneOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS] },
   { key: 'support', path: '/support-tickets', label: 'Support Tickets', icon: <CustomerServiceOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS] },
   { key: 'charges', path: '/charges', label: 'Charges', icon: <PercentageOutlined />, permissions: [PERMISSIONS.MANAGE_SETTINGS] },
   { key: 'settings', path: '/settings', label: 'Settings', icon: <SettingOutlined />, permissions: [PERMISSIONS.MANAGE_SETTINGS] },

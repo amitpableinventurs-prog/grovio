@@ -21,6 +21,7 @@ import ReturnsRefundsPage from './pages/ReturnsRefundsPage';
 import TermsPage from './pages/TermsPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import NotFoundPage from './pages/NotFoundPage';
+import PaymentReturnPage from './pages/PaymentReturnPage';
 
 export default function App() {
   return (
@@ -115,6 +116,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/payment/return"
+            element={
+              <ProtectedRoute>
+                <PaymentReturnPage />
               </ProtectedRoute>
             }
           />

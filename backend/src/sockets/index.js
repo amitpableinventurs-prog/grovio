@@ -13,7 +13,8 @@ let io = null;
 //   order:<id>     — opt-in via 'order:subscribe', for live location pings on one order
 //   hub:<storeId>  — Hub Center screens (models/hubDisplay.model.js) for that store; they get a
 //                    minimal 'hub:order' ping (see orderEvents.js), never the full summary
-//   display:<id>   — one hub screen, so revoking it can disconnect it
+//   display:<id>   — one hub screen: 'hub:qr' when its check-in QR was used, and revoking it
+//                    disconnects it
 const ROOMS = {
   user: (id) => `user:${id}`,
   role: (role) => `role:${role}`,
@@ -115,11 +116,14 @@ function initSocket(server) {
       else if (socket.user.assignedStore) socket.join(ROOMS.store(socket.user.assignedStore));
     }
 
+    // Rider GPS ping { lat, lng } (an orderId in the payload is ignored). Goes through the same
+    // path as POST /delivery/location: stored, geofenced, and pushed with an ETA only to the
+    // orders this rider is actually assigned to — see services/tracking.service.js.
     socket.on('delivery:location', (payload) => {
       if (role !== 'delivery') return;
-      const { orderId, lat, lng } = payload || {};
-      if (!orderId) return;
-      io.to(ROOMS.order(orderId)).emit('delivery:location', { orderId, lat, lng });
+      const { lat, lng } = payload || {};
+      require('../services/tracking.service').handleRiderLocation(id, lat, lng)
+        .catch((err) => console.error('delivery:location failed:', err.message));
     });
 
     // Live picker GPS ping, relayed to anyone watching this order (e.g. admin's

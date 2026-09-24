@@ -92,9 +92,9 @@ const HUB_CHECKIN = {
 };
 paths['/delivery/hub/checkin'] = {
   post: {
-    tags: TAG, summary: 'Check in at a Hub Center by scanning its screen\'s rotating QR (valid 30s + grace)', ...bearer(),
+    tags: TAG, summary: 'Check in at a Hub Center by scanning its screen\'s QR — single-use: the check-in replaces it with a new one', ...bearer(),
     requestBody: jsonBody({ code: { type: 'string', description: 'The scanned QR content — the full URL (…/hub-checkin/?t=…) or just the token' } }, ['code']),
-    responses: { 200: envelope(HUB_CHECKIN, 'Checked in at <hub>'), 400: errorResponse('Expired/invalid hub QR, or inactive hub'), 401: RESPONSES_401, 403: errorResponse('Account not approved') },
+    responses: { 200: envelope(HUB_CHECKIN, 'Checked in at <hub>'), 400: errorResponse('Hub QR already used or invalid, or inactive hub'), 401: RESPONSES_401, 403: errorResponse('Account not approved') },
   },
 };
 paths['/delivery/hub/orders'] = {

@@ -35,7 +35,7 @@ const getStore = catchAsync(async (req, res) => {
 
 // POST /admin/stores  { name, address, lat, lng, description, zoneId, openTime, closeTime }
 const createStore = catchAsync(async (req, res) => {
-  const { name, address, lat, lng, description, zoneId, openTime, closeTime } = req.body;
+  const { name, address, lat, lng, description, zoneId, openTime, closeTime, serviceRadiusKm } = req.body;
   if (!name) throw new ApiError(400, 'name is required');
 
   const store = await Store.create({
@@ -47,6 +47,7 @@ const createStore = catchAsync(async (req, res) => {
     zoneId,
     openTime,
     closeTime,
+    serviceRadiusKm: serviceRadiusKm === undefined || serviceRadiusKm === '' ? null : serviceRadiusKm,
     logo: req.files?.logo?.[0] ? `/uploads/${req.files.logo[0].filename}` : null,
     banner: req.files?.banner?.[0] ? `/uploads/${req.files.banner[0].filename}` : null,
   });
@@ -61,10 +62,12 @@ const updateStore = catchAsync(async (req, res) => {
   const store = await Store.findById(req.params.id);
   if (!store) throw new ApiError(404, 'Store not found');
 
-  const fields = ['name', 'address', 'lat', 'lng', 'description', 'zoneId', 'status', 'openTime', 'closeTime', 'isOpen'];
+  const fields = ['name', 'address', 'lat', 'lng', 'description', 'zoneId', 'status', 'openTime', 'closeTime', 'isOpen', 'serviceRadiusKm'];
   fields.forEach((f) => {
     if (req.body[f] !== undefined) store[f] = req.body[f];
   });
+  // Blank from a form means "no store-specific limit" (falls back to defaultServiceRadiusKm).
+  if (req.body.serviceRadiusKm === '') store.serviceRadiusKm = null;
   if (req.files?.logo?.[0]) store.logo = `/uploads/${req.files.logo[0].filename}`;
   if (req.files?.banner?.[0]) store.banner = `/uploads/${req.files.banner[0].filename}`;
   await store.save();

@@ -11,6 +11,9 @@ const storeSchema = new Schema({
   lat: { type: Number, default: null },
   lng: { type: Number, default: null },
   zoneId: { type: String, default: null },
+  // Delivery area: addresses farther than this (straight-line km) from the store can't order from
+  // it. null = use the defaultServiceRadiusKm setting (blank = no limit). See tracking.service.js.
+  serviceRadiusKm: { type: Number, default: null, min: 0 },
   openTime: { type: String, default: null },
   closeTime: { type: String, default: null },
   isOpen: { type: Boolean, default: true },

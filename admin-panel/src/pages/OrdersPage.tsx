@@ -20,6 +20,7 @@ import { fetchUsersByRole } from '../api/users';
 import type { Order, User, Store } from '../types';
 import { usePageState } from '../hooks/usePageState';
 import StatusTag from '../components/StatusTag';
+import OrderLiveTracking from '../components/OrderLiveTracking';
 import { formatCurrency, formatDateTime, titleCase } from '../utils/format';
 
 const ORDER_STATUSES = [
@@ -261,6 +262,8 @@ export default function OrdersPage() {
                 Mark as Returned
               </Button>
             </Space>
+
+            <OrderLiveTracking order={order} />
 
             <Typography.Title level={5}>Status Timeline</Typography.Title>
             <Timeline

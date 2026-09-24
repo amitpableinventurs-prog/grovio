@@ -1,13 +1,18 @@
 import { Button, Card, Form, Input, Select, Typography, App as AntApp, Spin, Space, Divider } from 'antd';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { fetchSettings, updateSettings } from '../api/settings';
+import { IvrCard, PaymentOptionsCard, PayuCard, PhonepeCard, TrackingCard } from '../components/settings/IntegrationCards';
+import { INTEGRATION_DEFAULTS } from '../components/settings/defaults';
 
 // Fields whose fetched value is a masked placeholder (e.g. "••••1234"), never the real secret —
 // see SECRET_KEYS in backend/src/controllers/admin/settings.controller.js. These must NOT be
 // pre-filled into the form (submitting the mask back would overwrite the real value with it); the
 // masked value is shown as a separate "Current: ••••1234" hint instead, and the input starts empty.
-const SECRET_KEYS = ['razorpayKeySecret', 'razorpayWebhookSecret', 'smsApiKey', 'smsApiSecret', 'googleMapsApiKey'];
+const SECRET_KEYS = [
+  'razorpayKeySecret', 'razorpayWebhookSecret', 'smsApiKey', 'smsApiSecret', 'googleMapsApiKey',
+  'payuSalt', 'phonepeClientSecret', 'phonepeWebhookPassword', 'exotelApiKey', 'exotelApiToken', 'ivrWebhookToken',
+];
 
 function secretHint(value?: string | null) {
   return value ? `Current: ${value}` : 'Not configured';
@@ -16,7 +21,9 @@ function secretHint(value?: string | null) {
 export default function SettingsPage() {
   const [form] = Form.useForm();
   const { message } = AntApp.useApp();
+  const queryClient = useQueryClient();
   const smsProvider = Form.useWatch('smsProvider', form);
+  const ivrProvider = Form.useWatch('ivrProvider', form);
 
   const { data, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -25,7 +32,10 @@ export default function SettingsPage() {
 
   const mutation = useMutation({
     mutationFn: updateSettings,
-    onSuccess: () => message.success('Settings saved'),
+    onSuccess: () => {
+      message.success('Settings saved');
+      queryClient.invalidateQueries({ queryKey: ['ivr-config'] });
+    },
     onError: (err: any) => message.error(err?.response?.data?.message || 'Could not save settings'),
   });
 
@@ -38,7 +48,7 @@ export default function SettingsPage() {
   }
 
   const initialValues = data
-    ? Object.fromEntries(Object.entries(data).filter(([key]) => !SECRET_KEYS.includes(key)))
+    ? { ...INTEGRATION_DEFAULTS, ...Object.fromEntries(Object.entries(data).filter(([key]) => !SECRET_KEYS.includes(key))) }
     : undefined;
 
   return (
@@ -60,7 +70,15 @@ export default function SettingsPage() {
             <Form.Item name="appVersion" label="App Version">
               <Input />
             </Form.Item>
+            <Form.Item name="publicBaseUrl" label="Public server URL" extra="Where this API is reachable from the internet, e.g. https://api.grovio.in — used by payment callbacks, IVR webhooks and hub screen links">
+              <Input placeholder="https://api.example.com" />
+            </Form.Item>
+            <Form.Item name="customerWebUrl" label="Customer website URL" extra="Customers return here after paying with PayU / PhonePe">
+              <Input placeholder="https://grovio.in" />
+            </Form.Item>
           </Card>
+
+          <PaymentOptionsCard />
 
           <Card title="Payment Gateway — Razorpay" style={{ maxWidth: 640 }}>
             <Typography.Paragraph type="secondary">
@@ -76,6 +94,9 @@ export default function SettingsPage() {
               <Input.Password placeholder="Leave blank to keep existing" autoComplete="new-password" />
             </Form.Item>
           </Card>
+
+          <PhonepeCard data={data} />
+          <PayuCard data={data} />
 
           <Card title="SMS Gateway" style={{ maxWidth: 640 }}>
             <Typography.Paragraph type="secondary">
@@ -119,6 +140,9 @@ export default function SettingsPage() {
               </>
             )}
           </Card>
+
+          <IvrCard data={data} provider={ivrProvider} />
+          <TrackingCard />
 
           <Card title="Google Maps" style={{ maxWidth: 640 }}>
             <Typography.Paragraph type="secondary">

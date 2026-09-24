@@ -28,4 +28,5 @@ module.exports = {
   RefreshToken: require('./refreshToken.model'),
   UserDevice: require('./userDevice.model'),
   HubDisplay: require('./hubDisplay.model'),
+  IvrCall: require('./ivrCall.model'),
 };

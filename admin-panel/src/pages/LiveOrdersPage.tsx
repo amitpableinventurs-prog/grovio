@@ -26,6 +26,7 @@ import { useAuthStore } from '../store/authStore';
 import { hasPermission, PERMISSIONS } from '../utils/permissions';
 import { formatCurrency } from '../utils/format';
 import type { Order, Store, User } from '../types';
+import { ConfirmationTag } from '../components/OrderLiveTracking';
 
 // How long an order can wait before its card is flagged — amber, then red.
 const WAIT_WARN_MS = 3 * 60_000;
@@ -57,7 +58,8 @@ function paymentTag(order: Order) {
   return <Tag color="gold">Awaiting payment</Tag>;
 }
 
-const awaitingOnlinePayment = (order: Order) => order.paymentMethod === 'RAZORPAY' && order.paymentStatus !== 'paid';
+const ONLINE_METHODS = ['RAZORPAY', 'PAYU', 'PHONEPE'];
+const awaitingOnlinePayment = (order: Order) => ONLINE_METHODS.includes(order.paymentMethod) && order.paymentStatus !== 'paid';
 
 function BillLine({ label, value, negative }: { label: string; value?: number; negative?: boolean }) {
   if (!value) return null;
@@ -100,6 +102,7 @@ function OrderCard({
         <Space size={8} wrap>
           <Typography.Text strong>{order.orderNumber}</Typography.Text>
           {paymentTag(order)}
+          <ConfirmationTag value={order.ivrConfirmation} />
         </Space>
       }
       extra={

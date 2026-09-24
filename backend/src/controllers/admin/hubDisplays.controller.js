@@ -37,7 +37,7 @@ const createHubDisplay = catchAsync(async (req, res) => {
   await logAdminActivity({ adminId: req.user.id, action: 'hub_display.create', entityType: 'HubDisplay', entityId: display._id, metadata: { store: store._id, name } });
 
   // Key in the URL fragment, so it never reaches server/proxy access logs.
-  const pairingUrl = `${publicBaseUrl(req)}/hub-display/#key=${key}`;
+  const pairingUrl = `${await publicBaseUrl(req)}/hub-display/#key=${key}`;
   new ApiResponse(201, { display, pairingUrl }, 'Hub screen created').send(res);
 });
 

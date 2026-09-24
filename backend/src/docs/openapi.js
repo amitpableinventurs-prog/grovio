@@ -50,6 +50,7 @@ const spec = {
     { name: 'Picker' },
     { name: 'Delivery' },
     { name: 'Hub Screen' },
+    { name: 'IVR (Exotel webhooks)' },
   ],
   paths: {
     ...require('./paths/core.paths'),
@@ -58,6 +59,7 @@ const spec = {
     ...require('./paths/picker.paths'),
     ...require('./paths/delivery.paths'),
     ...require('./paths/hubDisplay.paths'),
+    ...require('./paths/features.paths'),
   },
 };
 
