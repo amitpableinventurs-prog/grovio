@@ -77,6 +77,23 @@ Per-order room: `socket.emit('order:subscribe', orderId, ack)` joins it. Access 
 
 The admin panel and customer web both use this (`src/realtime/`): order queries refresh live, and admins get a new-order toast and a Live indicator in the header.
 
+Hub screens (below) connect with `auth: { hubDisplayKey }` instead of a token. They join only `hub:<storeId>` and receive `hub:order` `{ orderId, orderNumber, orderStatus }` for orders whose hub is that store, never the full summary.
+
+## Hub Center Screen + Delivery Boy Check-in
+
+A TV/tablet at each Hub Center opens **`/hub-display`** (served by this backend, like `/partner-login`). It shows the hub's *Ready for pickup* and *Being packed* orders live, plus a **check-in QR that changes every 30 seconds**. No customer name, phone, address or amounts are shown.
+
+**Pairing a screen.** Admin panel → Stores → **Hub screens** → Add screen. This returns a one-time link `<PUBLIC_BASE_URL>/hub-display/#key=<deviceKey>`; open it on the screen (the key is kept in the browser and removed from the address bar). Only the key's SHA-256 hash is stored (`HubDisplay` model). **Revoke** stops the screen immediately, including its live connection. Store managers can manage their own store's screens.
+
+**Delivery Boy flow at the hub**
+1. Scan the screen's QR in the Delivery app → `POST /delivery/hub/checkin { code }` (the scanned URL or just its `t` token). The token is random, maps server-side to that screen's store, and works for 30s + 15s grace. The call is made with the rider's own access token, so role, approval and hub are all checked on the server. The check-in lasts `HUB_CHECKIN_MINUTES` (30) and marks arrival on the rider's assigned orders there.
+2. `GET /delivery/hub/orders` → `mine` (assigned to me / picked up at this hub) and `available` (packed, no rider yet).
+3. Pick an order: `POST /delivery/hub/orders/:id/claim` assigns and accepts it in one step (`packed → assigned`). If two riders claim at once, one gets it and the other gets 409. Auto-assigned orders appear in `mine` and don't need claiming.
+4. Package scan `POST /delivery/jobs/:id/scan` **or** pickup OTP `POST /delivery/jobs/:id/otp/verify` → `picked_up` (unchanged).
+5. `POST /delivery/jobs/:id/out-for-delivery`. The order drops off the hub screen.
+
+Screen API (header `X-Hub-Display-Key`): `GET /hub-display/board`, `GET /hub-display/checkin-qr` (SVG + `refreshAt`). Env: `PUBLIC_BASE_URL` (set it in production; used in pairing links and the QR), `HUB_QR_ROTATE_SECONDS`, `HUB_QR_GRACE_SECONDS`, `HUB_CHECKIN_MINUTES`.
+
 ## Endpoint Reference (all under `/api/v1`)
 
 ### /auth
@@ -103,6 +120,7 @@ The admin panel and customer web both use this (`src/realtime/`): order queries 
 - `PATCH /admin/pickers/:id/assign-store` — `{ storeId }`
 - `PATCH /admin/users/:id/active` — `{ isActive }`
 - `GET /admin/stores`, `GET /admin/stores/:id`, `PATCH /admin/stores/:id` — zones/timings/status
+- `GET/POST /admin/stores/:id/hub-displays` — list / add a hub screen (`{ name }` → `{ display, pairingUrl }`), `DELETE /admin/hub-displays/:id` — revoke
 - `POST/GET/PATCH/DELETE /admin/categories`
 - `GET /admin/products`, `POST /admin/products`, `PATCH /admin/products/:id` (full edit), `PATCH /admin/products/:id/status` (quick toggle), `DELETE /admin/products/:id` — admin can create/edit/delete a product under **any** store (support/onboarding use case; vendors otherwise manage their own via `/vendor/products`)
 - `GET /admin/orders`, `GET /admin/orders/:id`, `PATCH /admin/orders/:id/assign-picker|assign-delivery`
@@ -170,6 +188,7 @@ The admin panel and customer web both use this (`src/realtime/`): order queries 
 - `POST /delivery/jobs/:id/arrived-drop`
 - `POST /delivery/jobs/:id/complete` — `{ pin }` (must match the customer's delivery PIN)
 - `POST /delivery/jobs/:id/failed` — `{ reason }`
+- `POST /delivery/hub/checkin` — `{ code }` from the hub screen QR; `GET /delivery/hub/orders`; `POST /delivery/hub/orders/:id/claim`; `POST /delivery/hub/checkout`
 - `GET /delivery/history`, `GET /delivery/earnings`
 
 ### /common (any authenticated user, banners are public)

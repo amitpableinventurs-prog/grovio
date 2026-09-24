@@ -38,6 +38,10 @@ app.use('/vendor-signup', express.static(path.join(__dirname, '../vendor-signup'
 app.use('/picker-signup', express.static(path.join(__dirname, '../picker-signup')));
 app.use('/delivery-signup', express.static(path.join(__dirname, '../delivery-signup')));
 app.use('/partner-login', express.static(path.join(__dirname, '../partner-login')));
+// Hub Center screen (live pickup board + rotating check-in QR, authenticated by a device key from
+// its pairing link) and the page a plain camera lands on if it scans that QR.
+app.use('/hub-display', express.static(path.join(__dirname, '../hub-display')));
+app.use('/hub-checkin', express.static(path.join(__dirname, '../hub-checkin')));
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/', (req, res) => {

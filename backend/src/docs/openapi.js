@@ -18,6 +18,8 @@ const spec = {
   components: {
     securitySchemes: {
       bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      // Hub Center screens — the key from the pairing link (see POST /admin/stores/{id}/hub-displays).
+      hubDisplayKey: { type: 'apiKey', in: 'header', name: 'X-Hub-Display-Key' },
     },
     schemas,
   },
@@ -47,6 +49,7 @@ const spec = {
     { name: 'Customer - Support' },
     { name: 'Picker' },
     { name: 'Delivery' },
+    { name: 'Hub Screen' },
   ],
   paths: {
     ...require('./paths/core.paths'),
@@ -54,6 +57,7 @@ const spec = {
     ...require('./paths/customer.paths'),
     ...require('./paths/picker.paths'),
     ...require('./paths/delivery.paths'),
+    ...require('./paths/hubDisplay.paths'),
   },
 };
 

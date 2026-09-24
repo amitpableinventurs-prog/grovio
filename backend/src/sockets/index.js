@@ -11,12 +11,17 @@ let io = null;
 //   store:<id>     — a restricted store-manager admin, for orders their store is the hub of or
 //                    contributes items to (same visibility as admin/orders.controller.js#listOrders)
 //   order:<id>     — opt-in via 'order:subscribe', for live location pings on one order
+//   hub:<storeId>  — Hub Center screens (models/hubDisplay.model.js) for that store; they get a
+//                    minimal 'hub:order' ping (see orderEvents.js), never the full summary
+//   display:<id>   — one hub screen, so revoking it can disconnect it
 const ROOMS = {
   user: (id) => `user:${id}`,
   role: (role) => `role:${role}`,
   store: (id) => `store:${id}`,
   order: (id) => `order:${id}`,
   allOrders: 'orders:all',
+  hub: (storeId) => `hub:${storeId}`,
+  display: (id) => `display:${id}`,
 };
 
 const idOf = (v) => (v && v._id ? v._id : v)?.toString();
@@ -55,6 +60,20 @@ function initSocket(server) {
   // Same checks as middleware/auth.middleware.js#authenticate: a valid JWT alone isn't enough,
   // the user must still exist and be active.
   io.use(async (socket, next) => {
+    // Hub Center screens connect with their device key instead of a user JWT.
+    const hubDisplayKey = socket.handshake.auth?.hubDisplayKey;
+    if (hubDisplayKey) {
+      try {
+        const { findDisplayByKey } = require('../services/hubDisplay.service');
+        const display = await findDisplayByKey(hubDisplayKey);
+        if (!display) return next(new Error('Hub screen key is invalid or revoked'));
+        socket.hubDisplay = { id: display.id, store: display.store._id.toString() };
+        return next();
+      } catch (err) {
+        return next(new Error('Authentication failed'));
+      }
+    }
+
     let decoded;
     try {
       const token = socket.handshake.auth?.token || socket.handshake.query?.token;
@@ -81,6 +100,12 @@ function initSocket(server) {
   });
 
   io.on('connection', (socket) => {
+    if (socket.hubDisplay) {
+      socket.join(ROOMS.hub(socket.hubDisplay.store));
+      socket.join(ROOMS.display(socket.hubDisplay.id));
+      return;
+    }
+
     const { id, role } = socket.user;
     socket.join(ROOMS.user(id));
     socket.join(ROOMS.role(role));
@@ -147,4 +172,10 @@ function emitToRooms(rooms, event, payload) {
   io.to(rooms).emit(event, payload);
 }
 
-module.exports = { initSocket, getIO, emitOrderEvent, emitToRooms, ROOMS, canViewOrder };
+// Force-disconnects every socket in a room (e.g. a revoked hub screen).
+function disconnectRoom(room) {
+  if (!io) return;
+  io.in(room).disconnectSockets(true);
+}
+
+module.exports = { initSocket, getIO, emitOrderEvent, emitToRooms, disconnectRoom, ROOMS, canViewOrder };

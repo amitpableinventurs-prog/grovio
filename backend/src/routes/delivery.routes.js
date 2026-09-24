@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { authenticate, authorize } = require('../middleware/auth.middleware');
 const ctrl = require('../controllers/delivery/delivery.controller');
+const hubCtrl = require('../controllers/delivery/hub.controller');
 
 router.use(authenticate, authorize('delivery'));
 
@@ -22,6 +23,12 @@ router.post('/jobs/:id/arrived-drop', ctrl.markArrivedAtDrop);
 router.post('/jobs/:id/complete', ctrl.completeJob);
 router.post('/jobs/:id/failed', ctrl.markFailed);
 router.post('/jobs/:id/return', ctrl.markReturned);
+
+// At a Hub Center: check in by scanning the hub screen's QR, then pick an order to collect.
+router.post('/hub/checkin', hubCtrl.checkIn);
+router.get('/hub/orders', hubCtrl.listHubOrders);
+router.post('/hub/orders/:id/claim', hubCtrl.claimOrder);
+router.post('/hub/checkout', hubCtrl.checkOut);
 
 router.get('/history', ctrl.listHistory);
 router.get('/earnings', ctrl.getEarnings);

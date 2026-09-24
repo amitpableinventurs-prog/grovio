@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex" />
+<title>Grovio Hub Screen</title>
+<style>
+  :root {
+    --brand-50: #eefdf3; --brand-100: #d6f7e0; --brand-200: #b0edc6; --brand-500: #22ab61;
+    --brand-600: #158a4d; --brand-700: #126e40; --brand-800: #125736;
+    --bg: #f6f8f7; --surface: #ffffff; --text: #1f2937; --muted: #6b7280; --border: #e5e7eb;
+    --amber-bg: #fffbeb; --amber: #b45309; --red-bg: #fef2f2; --red: #dc2626;
+    --shadow: 0 1px 2px rgba(16,72,46,0.05), 0 12px 28px -14px rgba(16,72,46,0.22);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --brand-50: #0f2a1c; --brand-100: #133523; --brand-200: #1d4d33; --brand-500: #3ccf80;
+      --brand-600: #3ccf80; --brand-700: #7be3a8; --brand-800: #a6efc6;
+      --bg: #0c1210; --surface: #151d1a; --text: #e8eeeb; --muted: #95a39c; --border: #26322d;
+      --amber-bg: #2d2210; --amber: #f5b453; --red-bg: #2e1414; --red: #f47a7a;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  .app { min-height: 100%; display: flex; flex-direction: column; padding: clamp(12px, 2vw, 28px); gap: clamp(12px, 2vw, 24px); }
+
+  header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; color: var(--brand-700); font-size: clamp(16px, 1.6vw, 22px); }
+  .hub-name { font-size: clamp(18px, 2vw, 28px); font-weight: 700; }
+  .hub-sub { color: var(--muted); font-size: clamp(12px, 1vw, 15px); }
+  header .spacer { flex: 1; }
+  .live { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--muted); }
+  .live .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--amber); }
+  .live.on .dot { background: var(--brand-500); box-shadow: 0 0 0 4px var(--brand-100); }
+  .clock { font-size: clamp(18px, 2vw, 28px); font-weight: 700; }
+
+  main { flex: 1; display: grid; grid-template-columns: minmax(260px, 30%) 1fr; gap: clamp(12px, 2vw, 24px); min-height: 0; }
+  @media (max-width: 820px) { main { grid-template-columns: 1fr; align-content: start; } }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow); padding: clamp(16px, 2vw, 28px); min-width: 0; }
+  .qr-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; }
+  .qr-panel h2 { margin: 0; font-size: clamp(18px, 1.8vw, 26px); }
+  .qr-panel p { margin: 0; color: var(--muted); font-size: clamp(13px, 1.1vw, 16px); line-height: 1.5; max-width: 32ch; }
+  .qr-box { width: min(100%, 360px); aspect-ratio: 1; background: #fff; border-radius: 16px; padding: 12px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+  .qr-box svg { width: 100%; height: 100%; display: block; }
+  .qr-box .placeholder { color: #6b7280; font-size: 14px; }
+  .countdown { width: min(100%, 360px); }
+  .bar { height: 6px; border-radius: 999px; background: var(--brand-100); overflow: hidden; }
+  .bar > span { display: block; height: 100%; width: 100%; background: var(--brand-500); transform-origin: left; }
+  .countdown small { display: block; margin-top: 6px; color: var(--muted); font-size: 13px; }
+
+  .boards { display: grid; grid-template-rows: auto auto; gap: clamp(12px, 2vw, 24px); align-content: start; min-width: 0; }
+  .section-title { display: flex; align-items: baseline; gap: 10px; margin: 0 0 14px; font-size: clamp(18px, 1.8vw, 26px); }
+  .count { font-size: 0.8em; font-weight: 700; color: var(--brand-700); background: var(--brand-50); border-radius: 999px; padding: 2px 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+  .empty { color: var(--muted); font-size: 15px; padding: 18px 0; }
+
+  .card { border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; background: var(--surface); }
+  .card.ready { border-left: 6px solid var(--brand-500); }
+  .card.warn { border-left-color: var(--amber); }
+  .card.late { border-left-color: var(--red); }
+  /* Full number on one line; the last segment (what riders call out) large. */
+  .order-no { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.1; }
+  .order-no .prefix { font-size: clamp(14px, 1.1vw, 18px); color: var(--muted); font-weight: 700; }
+  .order-no .tail { font-size: clamp(26px, 2.4vw, 38px); letter-spacing: 0.02em; }
+  .meta { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 14px; flex-wrap: wrap; }
+  .wait { font-weight: 700; color: var(--text); }
+  .card.warn .wait { color: var(--amber); }
+  .card.late .wait { color: var(--red); }
+  .rider { font-size: 14px; font-weight: 600; border-radius: 8px; padding: 6px 10px; background: var(--brand-50); color: var(--brand-800); }
+  .rider.none { background: var(--amber-bg); color: var(--amber); }
+  .progress { font-size: 14px; color: var(--muted); }
+  .card.compact .order-no .tail { font-size: clamp(20px, 1.7vw, 26px); }
+
+  .overlay { position: fixed; inset: 0; background: var(--bg); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+  .overlay.show { display: flex; }
+  .notice { max-width: 460px; text-align: center; }
+  .notice h2 { margin: 0 0 8px; }
+  .notice p { color: var(--muted); line-height: 1.6; margin: 0; }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        Grovio Hub
+      </div>
+      <div>
+        <div class="hub-name" id="hub-name">Loading…</div>
+        <div class="hub-sub" id="hub-sub"></div>
+      </div>
+      <div class="spacer"></div>
+      <div class="live" id="live"><span class="dot"></span><span id="live-label">Connecting</span></div>
+      <div class="clock" id="clock"></div>
+    </header>
+
+    <main>
+      <section class="panel qr-panel" aria-labelledby="qr-title">
+        <h2 id="qr-title">Delivery partners: check in</h2>
+        <div class="qr-box" id="qr"><span class="placeholder">Loading QR…</span></div>
+        <div class="countdown">
+          <div class="bar"><span id="bar"></span></div>
+          <small id="countdown-label">&nbsp;</small>
+        </div>
+        <p>Scan with the Grovio Delivery app to see the orders ready at this hub.</p>
+      </section>
+
+      <div class="boards">
+        <section class="panel" aria-labelledby="ready-title">
+          <h2 class="section-title" id="ready-title">Ready for pickup <span class="count" id="ready-count">0</span></h2>
+          <div class="grid" id="ready"></div>
+        </section>
+        <section class="panel" aria-labelledby="prep-title">
+          <h2 class="section-title" id="prep-title">Being packed <span class="count" id="prep-count">0</span></h2>
+          <div class="grid" id="preparing"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="notice">
+      <h2 id="overlay-title">This screen isn't paired</h2>
+      <p id="overlay-text">In the admin panel, open Stores → Hub screens, add a screen and open its pairing link on this device.</p>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    (function () {
+      const API = '/api/v1/hub-display';
+      const STORAGE_KEY = 'grovio_hub_display_key';
+      const WARN_MIN = 10;
+      const LATE_MIN = 20;
+
+      const $ = (id) => document.getElementById(id);
+      const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+      function storageGet() { try { return localStorage.getItem(STORAGE_KEY); } catch (_) { return null; } }
+      function storageSet(v) { try { v ? localStorage.setItem(STORAGE_KEY, v) : localStorage.removeItem(STORAGE_KEY); } catch (_) {} }
+
+      // Pairing link is /hub-display/#key=<deviceKey>: keep the key, then drop it from the URL.
+      const hashKey = new URLSearchParams(location.hash.slice(1)).get('key');
+      if (hashKey) {
+        storageSet(hashKey);
+        history.replaceState(null, '', location.pathname + location.search);
+      }
+      let deviceKey = hashKey || storageGet();
+
+      let clockOffset = 0; // serverTime - local time, so countdowns match the server's rotation
+      let board = { ready: [], preparing: [] };
+      let qrRefreshAt = null;
+      let qrRotateMs = 30000;
+      let qrTimer = null;
+      let boardTimer = null;
+      let socket = null;
+      let stopped = false;
+
+      const now = () => Date.now() + clockOffset;
+
+      function unpaired(title, text) {
+        stopped = true;
+        storageSet(null);
+        deviceKey = null;
+        clearTimeout(qrTimer);
+        if (socket) socket.close();
+        $('overlay-title').textContent = title;
+        $('overlay-text').textContent = text;
+        $('overlay').classList.add('show');
+      }
+
+      async function api(path) {
+        const res = await fetch(API + path, { headers: { 'X-Hub-Display-Key': deviceKey }, cache: 'no-store' });
+        if (res.status === 401) {
+          unpaired('This screen was disconnected', 'Its access was revoked or the link is no longer valid. Add the screen again from Stores → Hub screens in the admin panel.');
+          throw new Error('unauthorized');
+        }
+        const body = await res.json();
+        if (!res.ok || !body.success) throw new Error(body.message || 'Request failed');
+        if (body.data && body.data.serverTime) clockOffset = new Date(body.data.serverTime).getTime() - Date.now();
+        return body.data;
+      }
+
+      // ---- QR -------------------------------------------------------------------------------
+      async function loadQr() {
+        if (stopped) return;
+        clearTimeout(qrTimer);
+        try {
+          const data = await api('/checkin-qr');
+          $('qr').innerHTML = data.qrSvg;
+          const svg = $('qr').querySelector('svg');
+          if (svg) { svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', 'Hub check-in QR code'); }
+          qrRefreshAt = new Date(data.refreshAt).getTime();
+          qrRotateMs = (data.rotateSeconds || 30) * 1000;
+          qrTimer = setTimeout(loadQr, Math.max(qrRefreshAt - now(), 1000) + 250);
+        } catch (err) {
+          if (stopped) return;
+          $('qr').innerHTML = '<span class="placeholder">QR unavailable — retrying…</span>';
+          qrRefreshAt = null;
+          qrTimer = setTimeout(loadQr, 5000);
+        }
+      }
+
+      function tickCountdown() {
+        if (!qrRefreshAt) { $('bar').style.transform = 'scaleX(0)'; $('countdown-label').innerHTML = '&nbsp;'; return; }
+        const left = Math.max(qrRefreshAt - now(), 0);
+        $('bar').style.transform = 'scaleX(' + Math.min(left / qrRotateMs, 1) + ')';
+        $('countdown-label').textContent = 'New code in ' + Math.ceil(left / 1000) + 's';
+      }
+
+      // ---- Board ----------------------------------------------------------------------------
+      function minutesSince(iso) {
+        if (!iso) return null;
+        return Math.max(Math.floor((now() - new Date(iso).getTime()) / 60000), 0);
+      }
+      function fmtMinutes(m) {
+        if (m == null) return '';
+        if (m < 1) return 'just now';
+        if (m < 60) return m + ' min';
+        return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+      }
+      const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
+
+      // GRV-MFX1AB2C-4821 -> small 'GRV-MFX1AB2C-' + large '4821'
+      function orderNo(n) {
+        const s = String(n || '');
+        const cut = s.lastIndexOf('-') + 1;
+        return '<div class="order-no" title="' + esc(s) + '"><span class="prefix">' + esc(s.slice(0, cut)) + '</span><span class="tail">' + esc(s.slice(cut)) + '</span></div>';
+      }
+
+      function readyCard(o) {
+        const waited = minutesSince(o.readySince);
+        const tone = waited >= LATE_MIN ? ' late' : waited >= WARN_MIN ? ' warn' : '';
+        let rider = '<div class="rider none">Any delivery partner can take this</div>';
+        if (o.rider) rider = '<div class="rider">' + esc(o.rider.name || 'Rider') + (o.rider.arrived ? ' · at hub' : ' · on the way') + '</div>';
+        return '<article class="card ready' + tone + '">'
+          + orderNo(o.orderNumber)
+          + '<div class="meta"><span>' + plural(o.itemCount, 'item') + '</span><span class="wait">' + (waited < 1 ? 'Just ready' : 'Waiting ' + fmtMinutes(waited)) + '</span></div>'
+          + rider + '</article>';
+      }
+
+      function prepCard(o) {
+        const status = o.pickers.total ? o.pickers.done + ' of ' + plural(o.pickers.total, 'picker') + ' done' : 'Waiting for a picker';
+        return '<article class="card compact">'
+          + orderNo(o.orderNumber)
+          + '<div class="meta"><span>' + plural(o.itemCount, 'item') + '</span><span>' + fmtMinutes(minutesSince(o.placedAt)) + '</span></div>'
+          + '<div class="progress">' + status + '</div></article>';
+      }
+
+      function renderBoard() {
+        $('ready-count').textContent = board.ready.length;
+        $('prep-count').textContent = board.preparing.length;
+        $('ready').innerHTML = board.ready.length ? board.ready.map(readyCard).join('') : '<div class="empty">No orders waiting for pickup.</div>';
+        $('preparing').innerHTML = board.preparing.length ? board.preparing.map(prepCard).join('') : '<div class="empty">Nothing being packed right now.</div>';
+      }
+
+      async function loadBoard() {
+        if (stopped) return;
+        try {
+          const data = await api('/board');
+          board = { ready: data.ready || [], preparing: data.preparing || [] };
+          $('hub-name').textContent = data.hub.name;
+          $('hub-sub').textContent = [data.display.name, data.hub.address].filter(Boolean).join(' · ');
+          document.title = data.hub.name + ' · Grovio Hub';
+          renderBoard();
+        } catch (_) { /* socket reconnect / periodic refresh will retry */ }
+      }
+
+      // Several order saves often arrive together — refetch once.
+      function scheduleBoard() {
+        clearTimeout(boardTimer);
+        boardTimer = setTimeout(loadBoard, 300);
+      }
+
+      // ---- Live connection ------------------------------------------------------------------
+      function setLive(on, label) {
+        $('live').classList.toggle('on', on);
+        $('live-label').textContent = label;
+      }
+
+      function connect() {
+        if (typeof io !== 'function') { setLive(false, 'Offline'); return; }
+        socket = io({ auth: { hubDisplayKey: deviceKey } });
+        socket.on('connect', () => { setLive(true, 'Live'); loadBoard(); });
+        socket.on('disconnect', (reason) => {
+          setLive(false, 'Reconnecting');
+          // The server only drops a screen itself when it's revoked — confirm and stop.
+          if (reason === 'io server disconnect') loadBoard();
+        });
+        socket.on('connect_error', (err) => {
+          setLive(false, 'Reconnecting');
+          if (/invalid or revoked/i.test(err.message)) loadBoard();
+        });
+        socket.on('hub:order', scheduleBoard);
+      }
+
+      function tickClock() {
+        $('clock').textContent = new Date(now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+
+      if (!deviceKey) {
+        $('overlay').classList.add('show');
+        return;
+      }
+
+      tickClock();
+      setInterval(tickClock, 10000);
+      setInterval(tickCountdown, 250);
+      setInterval(renderBoard, 30000); // keep the waiting times current
+      setInterval(loadBoard, 60000);   // safety net if a socket event is missed
+      loadBoard();
+      loadQr();
+      connect();
+    })();
+  </script>
+</body>
+</html>

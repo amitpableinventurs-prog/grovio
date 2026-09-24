@@ -5,10 +5,12 @@ import { fetchStores, updateStore } from '../api/stores';
 import type { Store, Vendor } from '../types';
 import { usePageState } from '../hooks/usePageState';
 import StatusTag from '../components/StatusTag';
+import HubScreensModal from '../components/HubScreensModal';
 
 export default function StoresPage() {
   const { page, pageSize, onChange } = usePageState();
   const [editing, setEditing] = useState<Store | null>(null);
+  const [screensFor, setScreensFor] = useState<Store | null>(null);
   const [form] = Form.useForm();
   const { message } = AntApp.useApp();
   const queryClient = useQueryClient();
@@ -60,6 +62,9 @@ export default function StoresPage() {
                 >
                   Edit
                 </Button>
+                <Button size="small" onClick={() => setScreensFor(r)}>
+                  Hub screens
+                </Button>
                 <Popconfirm
                   title={r.status === 'active' ? 'Deactivate this store?' : 'Activate this store?'}
                   description={r.status === 'active' ? 'Customers will no longer see this store.' : undefined}
@@ -108,6 +113,8 @@ export default function StoresPage() {
           </Form.Item>
         </Form>
       </Modal>
+
+      <HubScreensModal store={screensFor} onClose={() => setScreensFor(null)} />
     </div>
   );
 }

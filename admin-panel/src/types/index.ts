@@ -62,6 +62,17 @@ export interface Store {
   createdAt: string;
 }
 
+// A Hub Center screen showing /hub-display — see backend models/hubDisplay.model.js.
+export interface HubDisplay {
+  _id: string;
+  store: string;
+  name: string;
+  createdBy?: { _id: string; name: string } | string | null;
+  lastSeenAt?: string | null;
+  revokedAt?: string | null;
+  createdAt: string;
+}
+
 export interface PickerProfile {
   _id: string;
   user: string | User;

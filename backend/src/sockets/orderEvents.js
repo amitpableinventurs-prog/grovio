@@ -8,6 +8,7 @@ const { emitToRooms, ROOMS } = require('./index');
 // Events (to every party allowed to see the order — see ROOMS in ./index.js):
 //   order:created  { ...summary }  — first save of a new order
 //   order:updated  { ...summary }  — any later save
+//   hub:order      { orderId, orderNumber, orderStatus } — to the hub:<order.store> room only
 // The payload is a lightweight summary, not the full order: clients use it to update lists in
 // place or refetch the detail over HTTP (which applies the normal per-role response shaping).
 
@@ -53,6 +54,15 @@ function flush(orderId) {
   // job (order.delivery -> null) still hears about it.
   const rooms = [...new Set([...previousRooms, ...roomsFor(order)])];
   emitToRooms(rooms, created ? 'order:created' : 'order:updated', summarize(order));
+  // Hub screens only get enough to know their board changed — they refetch it over HTTP
+  // (GET /hub-display/board), which leaves out customer details and amounts.
+  if (order.store) {
+    emitToRooms([ROOMS.hub(idOf(order.store))], 'hub:order', {
+      orderId,
+      orderNumber: order.orderNumber,
+      orderStatus: order.orderStatus,
+    });
+  }
 }
 
 function publishOrderChange(order, { created = false, previousRooms = [] } = {}) {

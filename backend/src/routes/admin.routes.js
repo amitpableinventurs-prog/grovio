@@ -24,6 +24,7 @@ const pickersCtrl = require('../controllers/admin/pickers.controller');
 const deliveryPartnersCtrl = require('../controllers/admin/deliveryPartners.controller');
 const scannerLogsCtrl = require('../controllers/admin/scannerLogs.controller');
 const contentPagesCtrl = require('../controllers/admin/contentPages.controller');
+const hubDisplaysCtrl = require('../controllers/admin/hubDisplays.controller');
 
 router.use(authenticate, authorize('admin'));
 
@@ -71,6 +72,11 @@ router.patch(
   upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'banner', maxCount: 1 }]),
   storesCtrl.updateStore
 );
+
+// Hub Center screens (/hub-display) — store managers manage their own store's screens only.
+router.get('/stores/:id/hub-displays', p(PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), hubDisplaysCtrl.listHubDisplays);
+router.post('/stores/:id/hub-displays', p(PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), hubDisplaysCtrl.createHubDisplay);
+router.delete('/hub-displays/:id', p(PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), hubDisplaysCtrl.revokeHubDisplay);
 
 // Catalog (categories stay full-admin-only; products/inventory also allow the
 // store-scoped MANAGE_OWN_STORE_INVENTORY sub-role — see catalog.controller.js for the scoping)

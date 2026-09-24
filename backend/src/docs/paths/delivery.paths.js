@@ -71,6 +71,44 @@ paths['/delivery/jobs/{id}/return'] = {
 paths['/delivery/history'] = {
   get: { tags: TAG, summary: 'Completed/failed/cancelled deliveries history', ...bearer(), parameters: PAGE_QS, responses: { 200: envelope(paginated(ref('Order'))), 401: RESPONSES_401 } },
 };
+const HUB_ORDER = {
+  type: 'object',
+  properties: {
+    _id: { type: 'string' }, orderNumber: { type: 'string' }, orderStatus: { type: 'string' }, itemCount: { type: 'integer' },
+    paymentMethod: { type: 'string' }, paymentStatus: { type: 'string' }, grandTotal: { type: 'number' },
+    readySince: { type: 'string', format: 'date-time', nullable: true }, deliveryAcceptedAt: { type: 'string', format: 'date-time', nullable: true },
+    dropArea: { type: 'object', nullable: true, properties: { city: { type: 'string' }, pincode: { type: 'string' }, landmark: { type: 'string' }, lat: { type: 'number' }, lng: { type: 'number' } } },
+  },
+};
+const HUB_CHECKIN = {
+  type: 'object',
+  properties: {
+    hub: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, address: { type: 'string' }, lat: { type: 'number' }, lng: { type: 'number' } } },
+    checkedInAt: { type: 'string', format: 'date-time' },
+    expiresAt: { type: 'string', format: 'date-time' },
+    mine: { type: 'array', items: HUB_ORDER, description: 'Assigned to me / picked up at this hub' },
+    available: { type: 'array', items: HUB_ORDER, description: 'Packed, no delivery partner yet — claimable' },
+  },
+};
+paths['/delivery/hub/checkin'] = {
+  post: {
+    tags: TAG, summary: 'Check in at a Hub Center by scanning its screen\'s rotating QR (valid 30s + grace)', ...bearer(),
+    requestBody: jsonBody({ code: { type: 'string', description: 'The scanned QR content — the full URL (…/hub-checkin/?t=…) or just the token' } }, ['code']),
+    responses: { 200: envelope(HUB_CHECKIN, 'Checked in at <hub>'), 400: errorResponse('Expired/invalid hub QR, or inactive hub'), 401: RESPONSES_401, 403: errorResponse('Account not approved') },
+  },
+};
+paths['/delivery/hub/orders'] = {
+  get: { tags: TAG, summary: 'Orders at the hub I\'m checked in at (mine + available to claim)', ...bearer(), responses: { 200: envelope(HUB_CHECKIN), 401: RESPONSES_401, 403: errorResponse('Not checked in at a hub') } },
+};
+paths['/delivery/hub/orders/{id}/claim'] = {
+  post: {
+    tags: TAG, summary: 'Take a packed, unassigned order at my checked-in hub (assigns + accepts it: packed -> assigned)', ...bearer(), parameters: [idParam()],
+    responses: { 200: envelope(ref('Order'), 'Order assigned to you'), 400: errorResponse('Not ready, or already yours'), 401: RESPONSES_401, 403: errorResponse('Not checked in at a hub'), 404: RESPONSES_404, 409: errorResponse('Another delivery partner already took it') },
+  },
+};
+paths['/delivery/hub/checkout'] = {
+  post: { tags: TAG, summary: 'End the hub check-in early', ...bearer(), responses: { 200: envelope({ type: 'object', nullable: true }, 'Checked out of the hub'), 401: RESPONSES_401 } },
+};
 paths['/delivery/earnings'] = {
   get: { tags: TAG, summary: 'Wallet balance + transaction history', ...bearer(), responses: { 200: envelope({ type: 'object', properties: { balance: { type: 'number' }, transactions: { type: 'array', items: ref('WalletTransaction') } } }), 401: RESPONSES_401 } },
 };

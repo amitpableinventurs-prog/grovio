@@ -147,6 +147,34 @@ paths['/admin/stores/{id}'] = {
   },
 };
 
+const HUB_DISPLAY = {
+  type: 'object',
+  properties: {
+    _id: { type: 'string' }, store: { type: 'string' }, name: { type: 'string', example: 'Pickup counter TV' },
+    lastSeenAt: { type: 'string', format: 'date-time', nullable: true }, revokedAt: { type: 'string', format: 'date-time', nullable: true },
+    createdAt: { type: 'string', format: 'date-time' },
+  },
+};
+paths['/admin/stores/{id}/hub-displays'] = {
+  get: {
+    tags: TAG_STORES, summary: 'List this store\'s hub screens (/hub-display), revoked ones included', ...bearer(), parameters: [idParam()],
+    responses: { 200: envelope({ type: 'array', items: HUB_DISPLAY }), 401: RESPONSES_401, 403: RESPONSES_403 },
+  },
+  post: {
+    tags: TAG_STORES,
+    summary: 'Add a hub screen — returns its one-time pairing link (<PUBLIC_BASE_URL>/hub-display/#key=...); the key is never shown again',
+    ...bearer(), parameters: [idParam()],
+    requestBody: jsonBody({ name: { type: 'string', example: 'Pickup counter TV' } }, ['name']),
+    responses: { 201: envelope({ type: 'object', properties: { display: HUB_DISPLAY, pairingUrl: { type: 'string' } } }, 'Hub screen created'), 400: errorResponse('name is required'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
+  },
+};
+paths['/admin/hub-displays/{id}'] = {
+  delete: {
+    tags: TAG_STORES, summary: 'Revoke a hub screen — its key and QR stop working and its live connection is dropped', ...bearer(), parameters: [idParam()],
+    responses: { 200: envelope(HUB_DISPLAY, 'Hub screen revoked'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
+  },
+};
+
 // ---------- Catalog ----------
 paths['/admin/categories'] = {
   post: {

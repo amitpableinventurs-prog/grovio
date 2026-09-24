@@ -27,4 +27,5 @@ module.exports = {
   AdminActivityLog: require('./adminActivityLog.model'),
   RefreshToken: require('./refreshToken.model'),
   UserDevice: require('./userDevice.model'),
+  HubDisplay: require('./hubDisplay.model'),
 };
