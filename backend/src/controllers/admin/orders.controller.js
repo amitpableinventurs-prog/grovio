@@ -5,12 +5,11 @@ const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const { transitionOrder } = require('../../services/order.service');
 const { notifyUser } = require('../../services/notification.service');
-const { splitOrderAcrossPickers } = require('../../services/assignment.service');
 const { creditWallet } = require('../../services/payment.service');
 const { resolveStoreScope, hasFullAccess } = require('../../utils/storeScope');
 const { PERMISSIONS } = require('../../utils/permissions');
 
-// GET /admin/orders?storeId=&status=
+// GET /admin/orders?storeId=&status=   (status may be comma-separated, e.g. placed,accepted)
 // A full MANAGE_ORDERS admin sees everything (optionally filtered by storeId). A restricted
 // store-manager (MANAGE_OWN_STORE_INVENTORY + assignedStore) only ever sees orders their own
 // store is involved in — as the hub (order.store) OR as a contributing store on a multi-store
@@ -23,7 +22,7 @@ const listOrders = catchAsync(async (req, res) => {
   const scopedStoreId = resolveStoreScope(req.user, req.query.storeId, PERMISSIONS.MANAGE_ORDERS);
 
   const where = {};
-  if (status) where.orderStatus = status;
+  if (status) where.orderStatus = { $in: String(status).split(',') };
   if (scopedStoreId) where.$or = [{ store: scopedStoreId }, { 'items.pickupStore': scopedStoreId }];
 
   const [rows, count] = await Promise.all([
@@ -60,64 +59,9 @@ const getOrderDetail = catchAsync(async (req, res) => {
   new ApiResponse(200, order).send(res);
 });
 
-// PATCH /admin/orders/:id/accept — accepts an incoming ('placed') order from the Live Orders board.
-// Open to full MANAGE_ORDERS admins and to the store-manager who owns this order's store.
-const acceptOrder = catchAsync(async (req, res) => {
-  const order = await Order.findById(req.params.id);
-  if (!order) throw new ApiError(404, 'Order not found');
-  resolveStoreScope(req.user, order.store, PERMISSIONS.MANAGE_ORDERS);
-
-  // An online order is placed first and paid right after (see payments.controller.js) — don't
-  // start picking for something that may never be paid.
-  if (['RAZORPAY', 'PAYU', 'PHONEPE'].includes(order.paymentMethod) && order.paymentStatus !== 'paid') {
-    throw new ApiError(400, 'This order is waiting for online payment — accept it once it shows as paid.');
-  }
-
-  await transitionOrder({ order, toStatus: 'accepted', changedBy: req.user.id, note: 'Accepted by store' });
-
-  // Best-effort split across up to 3 available pickers at the fulfilling store — see
-  // assignment.service.js#splitOrderAcrossPickers. (Orders only skip this path when the
-  // `autoAcceptOrders` setting is on — see customer/orders.controller.js#placeOrder.)
-  const pickerIds = await splitOrderAcrossPickers(order);
-  if (pickerIds.length) {
-    await order.save();
-    await transitionOrder({ order, toStatus: 'picking', changedBy: req.user.id, note: `Split across ${pickerIds.length} picker(s)` });
-    await Promise.all(pickerIds.map((pickerId) => notifyUser(pickerId, {
-      title: 'New pick-list assigned',
-      body: `Order ${order.orderNumber} is ready to be picked.`,
-      type: 'picker_assignment',
-      data: { orderId: order._id },
-    })));
-  }
-
-  new ApiResponse(200, order, 'Order accepted').send(res);
-});
-
-// PATCH /admin/orders/:id/reject { reason }
-// Refunds to the customer's wallet if the order was already paid (wallet orders are paid at
-// placement; online orders may be paid before the admin gets to them).
-const rejectOrder = catchAsync(async (req, res) => {
-  const order = await Order.findById(req.params.id);
-  if (!order) throw new ApiError(404, 'Order not found');
-  resolveStoreScope(req.user, order.store, PERMISSIONS.MANAGE_ORDERS);
-
-  order.cancelReason = req.body.reason || 'Rejected by store';
-  await order.save();
-  await transitionOrder({ order, toStatus: 'rejected', changedBy: req.user.id, note: order.cancelReason });
-
-  if (order.paymentStatus === 'paid') {
-    await creditWallet({ userId: order.customer, amount: order.grandTotal, reason: 'Order rejected - refund', refOrderId: order._id });
-    await Refund.create({ order: order._id, amount: order.grandTotal, reason: order.cancelReason, initiatedBy: req.user.id });
-    order.paymentStatus = 'refunded';
-    await order.save();
-  }
-
-  new ApiResponse(200, order, 'Order rejected').send(res);
-});
-
 // PATCH /admin/orders/:id/assign-picker { itemId, pickerId }
-// Reassigns ONE item to a (possibly new) picker. The automatic 3-way split at order acceptance
-// (see assignment.service.js#splitOrderAcrossPickers) is the default path — this is for manually
+// Reassigns ONE item to a (possibly new) picker. The automatic 3-way split when the order is placed
+// (see order.service.js#dispatchToPickers) is the default path — this is for manually
 // rebalancing afterward, e.g. a picker goes offline mid-order. Creates a pickTask for the target
 // picker if they weren't already working this order.
 const assignPicker = catchAsync(async (req, res) => {
@@ -140,6 +84,10 @@ const assignPicker = catchAsync(async (req, res) => {
     order.pickTasks.push({ picker: pickerId, store: item.pickupStore, status: 'assigned' });
   }
   await order.save();
+  // No picker was free when the order came in, so it was left at 'accepted' — it's picking now.
+  if (order.orderStatus === 'accepted') {
+    await transitionOrder({ order, toStatus: 'picking', changedBy: req.user.id, note: 'Picker assigned by admin' });
+  }
 
   await notifyUser(pickerId, {
     title: 'New pick-list item assigned',
@@ -175,8 +123,7 @@ const assignDelivery = catchAsync(async (req, res) => {
 });
 
 // PATCH /admin/orders/:id/cancel { reason } — admin/store-manager cancels an in-flight order
-// (there was previously no way to cancel one past 'placed'; rejectOrder above only covers that
-// initial state). Refunds to the customer's wallet if the order was already paid, same as the
+// (any pre-delivery state). Refunds to the customer's wallet if the order was already paid, same as the
 // customer's own self-cancel path.
 const cancelOrder = catchAsync(async (req, res) => {
   const order = await Order.findById(req.params.id);
@@ -223,4 +170,4 @@ const markReturned = catchAsync(async (req, res) => {
   new ApiResponse(200, order, 'Order marked as returned').send(res);
 });
 
-module.exports = { listOrders, getOrderDetail, acceptOrder, rejectOrder, assignPicker, assignDelivery, cancelOrder, markReturned };
+module.exports = { listOrders, getOrderDetail, assignPicker, assignDelivery, cancelOrder, markReturned };

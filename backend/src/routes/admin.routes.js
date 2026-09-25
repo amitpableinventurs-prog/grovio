@@ -111,11 +111,9 @@ router.delete(
 );
 
 // Orders (store-manager sub-role — MANAGE_OWN_STORE_INVENTORY + assignedStore — can view and
-// accept/reject orders for just their own store; picker/delivery assignment stays admin-only)
+// cancel orders for just their own store; picker/delivery assignment stays admin-only)
 router.get('/orders', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.listOrders);
 router.get('/orders/:id', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.getOrderDetail);
-router.patch('/orders/:id/accept', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.acceptOrder);
-router.patch('/orders/:id/reject', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.rejectOrder);
 router.patch('/orders/:id/cancel', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.cancelOrder);
 router.patch('/orders/:id/mark-returned', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.markReturned);
 router.patch('/orders/:id/assign-picker', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.assignPicker);
@@ -154,10 +152,6 @@ router.put('/settings', p(PERMISSIONS.MANAGE_SETTINGS), settingsCtrl.updateSetti
 // Order charges (delivery / handling / packing / surcharge) — see services/charges.service.js
 router.get('/charges', p(PERMISSIONS.MANAGE_SETTINGS), orderSettingsCtrl.getCharges);
 router.put('/charges', p(PERMISSIONS.MANAGE_SETTINGS), orderSettingsCtrl.updateCharges);
-
-// Live Orders board: store managers can read the auto-accept state; only order managers flip it.
-router.get('/order-settings', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), orderSettingsCtrl.getOrderSettings);
-router.put('/order-settings', p(PERMISSIONS.MANAGE_ORDERS), orderSettingsCtrl.updateOrderSettings);
 
 // Content Pages (About Us, Privacy Policy, Terms & Conditions — served publicly via
 // GET /common/content/:slug)

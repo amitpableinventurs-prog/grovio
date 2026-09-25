@@ -216,8 +216,46 @@ async function advancePickingStatus({ order, changedBy }) {
   }
 }
 
+const ONLINE_PAYMENT_METHODS = ['RAZORPAY', 'PAYU', 'PHONEPE'];
+
+// Sends a 'placed' order straight to the pickers — there is no manual accept step. Accepts it,
+// splits it across up to 3 available pickers per store (assignment.service.js#splitOrderAcrossPickers)
+// and moves it to 'picking'. Called when a COD/Wallet order is placed, and for an online order only
+// once it's paid (see payments). No-op for anything not at 'placed' or still awaiting online
+// payment, so calling it twice (e.g. callback + webhook for the same payment) is safe. If no picker
+// is available the order stays 'accepted' with no pickTasks — it shows on the admin Live Orders
+// board as waiting for a picker, to be assigned from the order page.
+async function dispatchToPickers({ order, changedBy }) {
+  if (order.orderStatus !== 'placed') return order;
+  if (ONLINE_PAYMENT_METHODS.includes(order.paymentMethod) && order.paymentStatus !== 'paid') return order;
+
+  // Required lazily, same as ivr.service above.
+  const { splitOrderAcrossPickers } = require('./assignment.service');
+  const { Store } = require('../models');
+
+  await transitionOrder({ order, toStatus: 'accepted', changedBy, note: 'Auto-accepted' });
+
+  const pickerIds = await splitOrderAcrossPickers(order);
+  if (!pickerIds.length) return order;
+
+  await order.save();
+  await transitionOrder({ order, toStatus: 'picking', changedBy, note: `Split across ${pickerIds.length} picker(s)` });
+
+  const stores = await Store.find({ _id: { $in: order.pickTasks.map((t) => t.store) } }, 'name');
+  const storeNameById = new Map(stores.map((s) => [s.id, s.name]));
+  await Promise.all(order.pickTasks.map((task) => notifyUser(task.picker, {
+    title: 'New order assigned',
+    body: `Order ${order.orderNumber} is ready to be picked at ${storeNameById.get(task.store.toString()) || 'your store'}.`,
+    type: 'new_order',
+    data: { orderId: order._id },
+  })));
+  return order;
+}
+
 module.exports = {
   transitionOrder,
+  dispatchToPickers,
+  ONLINE_PAYMENT_METHODS,
   TRANSITIONS,
   ensureHandoverOtp,
   verifyHandoverOtp,

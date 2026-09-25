@@ -166,7 +166,7 @@ export default function DashboardPage() {
             <ChartCard
               title="Orders in progress"
               subtitle={`Right now · ${fmtCount(pipelineTotal)} active`}
-              extra={<Link to="/live-orders" style={{ fontSize: 13, marginRight: 4 }}>Live Orders</Link>}
+              extra={<Link to="/orders" style={{ fontSize: 13, marginRight: 4 }}>Orders</Link>}
               table={{
                 columns: [{ title: 'Stage', dataIndex: 'label' }, { title: 'Orders', dataIndex: 'count', align: 'right' }],
                 rows: data.pipeline.map((s) => ({ label: s.label, count: s.count })),

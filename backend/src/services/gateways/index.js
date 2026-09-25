@@ -1,6 +1,7 @@
 const { Order } = require('../../models');
 const { getSetting } = require('../settings.service');
 const { notifyUser } = require('../notification.service');
+const { dispatchToPickers } = require('../order.service');
 
 // Shared bits for the payment gateways (Razorpay lives in ../payment.service.js; PayU and PhonePe
 // in this folder): which payment options checkout offers, and marking a gateway payment paid or
@@ -64,6 +65,8 @@ async function markPaid(payment, { gatewayPaymentId, instrument, amount, raw }) 
   if (order && order.paymentStatus !== 'paid') {
     order.paymentStatus = 'paid';
     await order.save();
+    // Paid — now it can go to the pickers (see order.service.js#dispatchToPickers).
+    await dispatchToPickers({ order, changedBy: order.customer });
     await notifyUser(order.customer, {
       title: 'Payment received',
       body: `Payment for order ${order.orderNumber} was successful.`,

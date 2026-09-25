@@ -1,13 +1,11 @@
-const { Cart, Order, Product, Store, Address, Coupon, CouponUsage, Setting, Refund, Wallet } = require('../../models');
+const { Cart, Order, Product, Store, Address, Coupon, CouponUsage, Refund, Wallet } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const generateOrderNumber = require('../../utils/orderNumber');
-const { transitionOrder } = require('../../services/order.service');
-const { splitOrderAcrossPickers } = require('../../services/assignment.service');
+const { transitionOrder, dispatchToPickers } = require('../../services/order.service');
 const { debitWallet, creditWallet } = require('../../services/payment.service');
-const { notifyUser } = require('../../services/notification.service');
 const { getChargeConfig, computeCharges, round2 } = require('../../services/charges.service');
 const { trackingSnapshot, checkServiceArea } = require('../../services/tracking.service');
 const { requestOrderConfirmation } = require('../../services/ivr.service');
@@ -16,11 +14,6 @@ const { enabledPaymentOptions } = require('../../services/gateways');
 function serviceAreaError(check) {
   const s = check.outside[0];
   return new ApiError(400, `This address is outside ${s.storeName}'s delivery area (${s.distanceKm} km away, delivers up to ${s.radiusKm} km). Choose a closer address or remove its items.`);
-}
-
-async function getSetting(key, fallback) {
-  const row = await Setting.findOne({ key });
-  return row ? row.value : fallback;
 }
 
 async function resolveCoupon(code, itemTotal, userId) {
@@ -195,7 +188,6 @@ const placeOrder = catchAsync(async (req, res) => {
   }
 
   const hubGroup = storeGroups.reduce((max, g) => (g.items.length > max.items.length ? g : max), storeGroups[0]);
-  const storeNameById = new Map(storeGroups.map((g) => [g.store._id.toString(), g.store.name]));
 
   const items = storeGroups.flatMap((group) =>
     group.items.map((item) => {
@@ -256,30 +248,10 @@ const placeOrder = catchAsync(async (req, res) => {
   // COD confirmation call, when switched on (services/ivr.service.js). Never blocks checkout.
   requestOrderConfirmation(order).catch((err) => console.error(`Confirmation call for ${order.orderNumber} failed:`, err.message));
 
-  // By default the order waits at 'placed' until an admin/store manager accepts it on the admin
-  // panel's Live Orders board (PATCH /admin/orders/:id/accept, which then splits it to pickers);
-  // the board hears about it through the order:created socket event. With the `autoAcceptOrders`
-  // setting on, it's accepted right here instead and split across up to 3 pickers per store —
-  // see assignment.service.js#splitOrderAcrossPickers. Read uncached so flipping the switch on
-  // the board applies to the very next order.
-  const autoAccept = (await getSetting('autoAcceptOrders', 'false')) === 'true';
-  if (!autoAccept) {
-    return new ApiResponse(201, order, 'Order placed successfully').send(res);
-  }
-
-  await transitionOrder({ order, toStatus: 'accepted', changedBy: req.user.id, note: 'Auto-accepted' });
-
-  const pickerIds = await splitOrderAcrossPickers(order);
-  if (pickerIds.length) {
-    await order.save();
-    await transitionOrder({ order, toStatus: 'picking', changedBy: req.user.id, note: `Split across ${pickerIds.length} picker(s)` });
-    await Promise.all(order.pickTasks.map((task) => notifyUser(task.picker, {
-      title: 'New order assigned',
-      body: `Order ${order.orderNumber} is ready to be picked at ${storeNameById.get(task.store.toString())}.`,
-      type: 'new_order',
-      data: { orderId: order._id },
-    })));
-  }
+  // No manual accept step: COD/Wallet orders go straight to the pickers here. An online order
+  // waits at 'placed' until it's paid, then the payment handlers dispatch it — see
+  // order.service.js#dispatchToPickers.
+  await dispatchToPickers({ order, changedBy: req.user.id });
 
   new ApiResponse(201, order, 'Order placed successfully').send(res);
 });

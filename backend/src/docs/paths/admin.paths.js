@@ -350,20 +350,6 @@ paths['/admin/banners/{id}'] = {
 };
 
 // ---------- Settings ----------
-paths['/admin/orders/{id}/accept'] = {
-  patch: {
-    tags: TAG_ORDERS, summary: 'Accept an incoming (placed) order — used by the Live Orders board; splits it to pickers', ...bearer(), parameters: [idParam()],
-    responses: { 200: envelope(ref('Order'), 'Order accepted'), 400: errorResponse('Not in placed state, or an online order still waiting for payment'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
-  },
-};
-paths['/admin/orders/{id}/reject'] = {
-  patch: {
-    tags: TAG_ORDERS, summary: 'Reject an incoming (placed) order — refunds to the customer wallet if already paid', ...bearer(), parameters: [idParam()],
-    requestBody: jsonBody({ reason: { type: 'string', example: 'Store closing early' } }),
-    responses: { 200: envelope(ref('Order'), 'Order rejected'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
-  },
-};
-
 const ChargeConfig = {
   type: 'object',
   properties: {
@@ -408,18 +394,6 @@ paths['/admin/charges'] = {
     responses: { 200: envelope(ChargeConfig, 'Charges saved'), 401: RESPONSES_401, 403: RESPONSES_403, 422: RESPONSES_422 },
   },
 };
-paths['/admin/order-settings'] = {
-  get: {
-    tags: TAG_ORDERS, summary: 'Live Orders board settings', ...bearer(),
-    responses: { 200: envelope({ type: 'object', properties: { autoAcceptOrders: { type: 'boolean' } } }), 401: RESPONSES_401, 403: RESPONSES_403 },
-  },
-  put: {
-    tags: TAG_ORDERS, summary: 'Turn auto-accept on/off (off = orders wait on the Live Orders board)', ...bearer(),
-    requestBody: jsonBody({ autoAcceptOrders: { type: 'boolean' } }, ['autoAcceptOrders']),
-    responses: { 200: envelope({ type: 'object', properties: { autoAcceptOrders: { type: 'boolean' } } }), 401: RESPONSES_401, 403: RESPONSES_403, 422: RESPONSES_422 },
-  },
-};
-
 paths['/admin/settings'] = {
   get: {
     tags: TAG_SETTINGS,

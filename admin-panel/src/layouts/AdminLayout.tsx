@@ -20,7 +20,6 @@ import {
   SafetyCertificateOutlined,
   FileSearchOutlined,
   LogoutOutlined,
-  ThunderboltOutlined,
   PercentageOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -33,7 +32,6 @@ import { hasPermission, PERMISSIONS } from '../utils/permissions';
 import { logout as logoutApi } from '../api/auth';
 import { useOrderRealtime } from '../realtime/useOrderRealtime';
 import { useSocketConnected } from '../realtime/socket';
-import { useIncomingOrders } from '../hooks/useIncomingOrders';
 
 const { Header, Sider, Content } = Layout;
 
@@ -54,7 +52,6 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'delivery', path: '/delivery-partners', label: 'Delivery Partners', icon: <CarOutlined />, permissions: [PERMISSIONS.MANAGE_DELIVERY] },
   { key: 'categories', path: '/categories', label: 'Categories', icon: <AppstoreOutlined />, permissions: [PERMISSIONS.MANAGE_CATALOG] },
   { key: 'products', path: '/products', label: 'Products', icon: <AppstoreOutlined />, permissions: [PERMISSIONS.MANAGE_CATALOG, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
-  { key: 'live-orders', path: '/live-orders', label: 'Live Orders', icon: <ThunderboltOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
   { key: 'live-map', path: '/live-map', label: 'Live Map', icon: <EnvironmentOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
   { key: 'orders', path: '/orders', label: 'Orders', icon: <ShoppingCartOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
   { key: 'inventory', path: '/inventory', label: 'Inventory', icon: <DatabaseOutlined />, permissions: [PERMISSIONS.MANAGE_INVENTORY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
@@ -92,9 +89,6 @@ export default function AdminLayout() {
   const location = useLocation();
   const live = useSocketConnected();
   useOrderRealtime();
-  const canSeeOrders = hasPermission(user?.permissions, PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY);
-  const { data: incoming } = useIncomingOrders(canSeeOrders);
-  const waitingCount = incoming?.length ?? 0;
   const brandLabel = isStoreManager(user?.permissions) ? 'Grovio Vendor' : 'Grovio Admin';
 
   const visibleItems = useMemo(
@@ -138,16 +132,7 @@ export default function AdminLayout() {
           items={visibleItems.map((item) => ({
             key: item.key,
             icon: item.icon,
-            // Orders waiting to be accepted — a count badge so they're noticed from any page.
-            label:
-              item.key === 'live-orders' && waitingCount > 0 ? (
-                <Space>
-                  {item.label}
-                  <Badge count={waitingCount} size="small" />
-                </Space>
-              ) : (
-                item.label
-              ),
+            label: item.label,
           }))}
           onClick={({ key }) => {
             const item = visibleItems.find((i) => i.key === key);

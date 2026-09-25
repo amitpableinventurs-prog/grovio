@@ -12,7 +12,6 @@ import DeliveryPartnersPage from './pages/DeliveryPartnersPage';
 import CategoriesPage from './pages/CategoriesPage';
 import ProductsPage from './pages/ProductsPage';
 import OrdersPage from './pages/OrdersPage';
-import LiveOrdersPage from './pages/LiveOrdersPage';
 import LiveMapPage from './pages/LiveMapPage';
 import IvrCallsPage from './pages/IvrCallsPage';
 import ChargesPage from './pages/ChargesPage';
@@ -88,14 +87,6 @@ export default function App() {
             element={
               <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_CATALOG, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY]}>
                 <ProductsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/live-orders"
-            element={
-              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY]}>
-                <LiveOrdersPage />
               </ProtectedRoute>
             }
           />
