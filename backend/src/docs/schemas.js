@@ -128,6 +128,33 @@ const DeliveryProfile = {
     isAvailable: { type: 'boolean' },
     currentLat: { type: 'number', nullable: true },
     currentLng: { type: 'number', nullable: true },
+    kyc: {
+      type: 'object',
+      properties: {
+        idType: { type: 'string', enum: ['pan', 'aadhaar'], nullable: true },
+        idNumber: { type: 'string', nullable: true, description: 'Aadhaar is masked: XXXX XXXX 9012' },
+        fullName: { type: 'string', nullable: true },
+        gender: { type: 'string', enum: ['male', 'female', 'other'], nullable: true },
+        fatherName: { type: 'string', nullable: true },
+        dateOfBirth: { type: 'string', format: 'date-time', nullable: true },
+        document: { type: 'string', nullable: true, example: '/uploads/1727250000000-123.jpg' },
+        submittedAt: { type: 'string', format: 'date-time', nullable: true },
+      },
+    },
+    addressProof: { type: 'object', properties: { frontImage: { type: 'string', nullable: true }, backImage: { type: 'string', nullable: true }, submittedAt: { type: 'string', format: 'date-time', nullable: true } } },
+    selfie: { type: 'object', properties: { image: { type: 'string', nullable: true }, submittedAt: { type: 'string', format: 'date-time', nullable: true } } },
+    bankDetails: {
+      type: 'object',
+      properties: {
+        accountHolderName: { type: 'string', nullable: true },
+        accountNumber: { type: 'string', nullable: true },
+        ifsc: { type: 'string', nullable: true },
+        bankName: { type: 'string', nullable: true },
+        document: { type: 'string', nullable: true, description: 'Cancelled cheque / passbook photo' },
+        submittedAt: { type: 'string', format: 'date-time', nullable: true },
+      },
+    },
+    onboardingCompletedAt: { type: 'string', format: 'date-time', nullable: true },
   },
 };
 

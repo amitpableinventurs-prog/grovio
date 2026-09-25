@@ -2,8 +2,24 @@ const router = require('express').Router();
 const { authenticate, authorize } = require('../middleware/auth.middleware');
 const ctrl = require('../controllers/delivery/delivery.controller');
 const hubCtrl = require('../controllers/delivery/hub.controller');
+const onboardingCtrl = require('../controllers/delivery/onboarding.controller');
+const upload = require('../middleware/upload.middleware');
+const validate = require('../middleware/validate.middleware');
+const { vehicleRules, identityRules, bankRules } = require('../validators/delivery.validator');
 
 router.use(authenticate, authorize('delivery'));
+
+// Onboarding after OTP signup — one endpoint per app screen (see onboarding.controller.js).
+router.get('/onboarding', onboardingCtrl.getOnboarding);
+router.put('/onboarding/vehicle', vehicleRules, validate, onboardingCtrl.saveVehicle);
+router.post('/onboarding/identity', upload.single('document'), identityRules, validate, onboardingCtrl.saveIdentity);
+router.post(
+  '/onboarding/address-proof',
+  upload.fields([{ name: 'frontImage', maxCount: 1 }, { name: 'backImage', maxCount: 1 }]),
+  onboardingCtrl.saveAddressProof
+);
+router.post('/onboarding/selfie', upload.single('selfie'), onboardingCtrl.saveSelfie);
+router.post('/onboarding/bank', upload.single('document'), bankRules(), validate, onboardingCtrl.saveBankDetails);
 
 router.patch('/availability', ctrl.toggleAvailability);
 router.post('/location', ctrl.updateLocation);

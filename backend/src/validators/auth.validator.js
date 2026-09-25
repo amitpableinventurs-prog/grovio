@@ -29,14 +29,14 @@ const verifyOtpRules = [
   body('code').optional().isString(),
   body('deviceId').optional().isString(),
   body('role').optional().isIn(['customer', 'picker', 'delivery']),
-  // Required only when role === 'delivery' on first-time signup — enforced in the controller
-  // (where the specific "which field is missing" message is clearer than a generic 422).
+  // Optional legacy fields for role 'delivery' — the Delivery app now uses /auth/delivery/* and
+  // collects the vehicle during onboarding instead.
   body('vehicleType').optional().isString(),
   body('vehicleNumber').optional().isString(),
   body('licenseNumber').optional().isString(),
 ];
 
-// POST /auth/picker/verify-otp — role is implied, so no role/vehicle fields.
+// POST /auth/picker/verify-otp and /auth/delivery/verify-otp — role is implied, so no role/vehicle fields.
 const pickerVerifyOtpRules = [
   ...sendOtpRules,
   body('otp').notEmpty().withMessage('otp is required').isString(),
@@ -59,4 +59,18 @@ const pickerLogoutRules = [
   body('refreshToken').notEmpty().withMessage('refreshToken is required').isString(),
 ];
 
-module.exports = { registerVendorRules, loginRules, sendOtpRules, verifyOtpRules, pickerVerifyOtpRules, pickerRegisterRules, pickerLogoutRules };
+// The Delivery app's OTP login takes exactly the same fields as the Picker app's.
+const deliveryVerifyOtpRules = pickerVerifyOtpRules;
+const deliveryLogoutRules = pickerLogoutRules;
+
+module.exports = {
+  registerVendorRules,
+  loginRules,
+  sendOtpRules,
+  verifyOtpRules,
+  pickerVerifyOtpRules,
+  pickerRegisterRules,
+  pickerLogoutRules,
+  deliveryVerifyOtpRules,
+  deliveryLogoutRules,
+};

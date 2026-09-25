@@ -93,13 +93,14 @@ paths['/admin/delivery-partners'].post = {
   requestBody: jsonBody({
     name: { type: 'string' }, phone: { type: 'string' }, email: { type: 'string' },
     vehicleType: { type: 'string' }, vehicleNumber: { type: 'string' }, licenseNumber: { type: 'string' },
+    bankDetails: { type: 'object', properties: { accountHolderName: { type: 'string', example: 'Ravi Kumar' }, accountNumber: { type: 'string', example: '123456789012', description: '9–18 digits' }, ifsc: { type: 'string', example: 'SBIN0001234' }, bankName: { type: 'string', example: 'State Bank of India' } } },
   }, ['name', 'phone']),
   responses: { 201: envelope({ type: 'object', properties: { user: ref('User'), deliveryProfile: ref('DeliveryProfile') } }, 'Delivery partner created'), 409: errorResponse('A user with this mobile number already exists'), 401: RESPONSES_401 },
 };
 paths['/admin/delivery-partners/{id}'] = {
   put: {
     tags: TAG_USERS, summary: 'Full edit of a delivery partner', ...bearer(), parameters: [idParam('id', 'Delivery USER ID')],
-    requestBody: jsonBody({ name: { type: 'string' }, email: { type: 'string' }, vehicleType: { type: 'string' }, vehicleNumber: { type: 'string' }, licenseNumber: { type: 'string' } }),
+    requestBody: jsonBody({ name: { type: 'string' }, email: { type: 'string' }, vehicleType: { type: 'string' }, vehicleNumber: { type: 'string' }, licenseNumber: { type: 'string' }, bankDetails: { type: 'object', properties: { accountHolderName: { type: 'string', example: 'Ravi Kumar' }, accountNumber: { type: 'string', example: '123456789012', description: '9–18 digits' }, ifsc: { type: 'string', example: 'SBIN0001234' }, bankName: { type: 'string', example: 'State Bank of India' } } } }),
     responses: { 200: envelope({ type: 'object', properties: { user: ref('User'), deliveryProfile: ref('DeliveryProfile') } }, 'Delivery partner updated'), 401: RESPONSES_401, 404: RESPONSES_404 },
   },
   delete: {

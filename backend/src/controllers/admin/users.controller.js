@@ -6,6 +6,7 @@ const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const { notifyUser } = require('../../services/notification.service');
 const { logAdminActivity } = require('../../services/audit.service');
 const { pickerOnboarding } = require('../../utils/pickerOnboarding');
+const { deliveryOnboarding } = require('../../utils/deliveryOnboarding');
 
 // Search text goes into a RegExp — escape it so "+91" or "(" match literally instead of erroring.
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -45,8 +46,9 @@ function listByRole(role) {
       items = rows.map((u) => {
         const profile = profileMap.get(u._id.toString()) || null;
         const item = { ...u.toObject(), [`${role}Profile`]: profile };
-        // Lets the admin Pickers page show what a pending picker still has to submit.
+        // Lets the admin Pickers / Delivery Partners pages show what a pending one still has to submit.
         if (role === 'picker') item.onboarding = pickerOnboarding(u, profile);
+        if (role === 'delivery') item.onboarding = deliveryOnboarding(profile);
         return item;
       });
     }
@@ -139,7 +141,9 @@ const getUserDetail = catchAsync(async (req, res) => {
     DeliveryProfile.findOne({ user: user._id }),
   ]);
 
-  const onboarding = user.role === 'picker' ? pickerOnboarding(user, pickerProfile) : undefined;
+  const onboarding = user.role === 'picker' ? pickerOnboarding(user, pickerProfile)
+    : user.role === 'delivery' ? deliveryOnboarding(deliveryProfile)
+    : undefined;
   new ApiResponse(200, { ...user.toObject(), pickerProfile, deliveryProfile, onboarding }).send(res);
 });
 

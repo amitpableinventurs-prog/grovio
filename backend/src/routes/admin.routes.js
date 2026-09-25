@@ -3,7 +3,12 @@ const { authenticate, authorize } = require('../middleware/auth.middleware');
 const { requirePermission } = require('../middleware/permission.middleware');
 const upload = require('../middleware/upload.middleware');
 const csvUpload = require('../middleware/csvUpload.middleware');
+const validate = require('../middleware/validate.middleware');
+const { bankRules } = require('../validators/delivery.validator');
 const { PERMISSIONS } = require('../utils/permissions');
+
+// Delivery partner create/edit: the payout bank section is optional, but checked when filled in.
+const adminBankRules = bankRules('bankDetails.', { optional: true });
 
 const dashboardCtrl = require('../controllers/admin/dashboard.controller');
 const usersCtrl = require('../controllers/admin/users.controller');
@@ -50,8 +55,8 @@ router.put(
   pickersCtrl.updatePicker
 );
 router.get('/delivery-partners', p(PERMISSIONS.MANAGE_DELIVERY), usersCtrl.listByRole('delivery'));
-router.post('/delivery-partners', p(PERMISSIONS.MANAGE_DELIVERY), deliveryPartnersCtrl.createDeliveryPartner);
-router.put('/delivery-partners/:id', p(PERMISSIONS.MANAGE_DELIVERY), deliveryPartnersCtrl.updateDeliveryPartner);
+router.post('/delivery-partners', p(PERMISSIONS.MANAGE_DELIVERY), adminBankRules, validate, deliveryPartnersCtrl.createDeliveryPartner);
+router.put('/delivery-partners/:id', p(PERMISSIONS.MANAGE_DELIVERY), adminBankRules, validate, deliveryPartnersCtrl.updateDeliveryPartner);
 router.delete('/delivery-partners/:id', p(PERMISSIONS.MANAGE_DELIVERY), deliveryPartnersCtrl.deleteDeliveryPartner);
 router.get('/users/:id', p(PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_DELIVERY), usersCtrl.getUserDetail);
 router.patch('/pickers/:id/status', p(PERMISSIONS.MANAGE_PICKERS), usersCtrl.updateProfileStatus('picker'));

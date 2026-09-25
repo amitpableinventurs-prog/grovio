@@ -6,6 +6,43 @@ const deliveryProfileSchema = new Schema({
   vehicleNumber: { type: String, default: null },
   licenseNumber: { type: String, default: null },
   status: { type: String, enum: ['pending', 'approved', 'blocked'], default: 'pending' },
+
+  // Delivery app onboarding (see controllers/delivery/onboarding.controller.js and
+  // utils/deliveryOnboarding.js): identity proof, address proof and a selfie, all submitted from
+  // the app after OTP signup and reviewed by an admin before approval. Image fields hold
+  // '/uploads/<file>' paths.
+  kyc: {
+    idType: { type: String, enum: ['pan', 'aadhaar'], default: null },
+    idNumber: { type: String, default: null },
+    fullName: { type: String, default: null },
+    gender: { type: String, enum: ['male', 'female', 'other'], default: null },
+    fatherName: { type: String, default: null },
+    dateOfBirth: { type: Date, default: null },
+    document: { type: String, default: null },
+    submittedAt: { type: Date, default: null },
+  },
+  addressProof: {
+    frontImage: { type: String, default: null },
+    backImage: { type: String, default: null },
+    submittedAt: { type: Date, default: null },
+  },
+  selfie: {
+    image: { type: String, default: null },
+    submittedAt: { type: Date, default: null },
+  },
+  // Where the partner's payouts (settlements) go. Entered in the app's last onboarding step, or by
+  // an admin on the Delivery Partners page. `document` is an optional cancelled cheque / passbook.
+  bankDetails: {
+    accountHolderName: { type: String, default: null },
+    accountNumber: { type: String, default: null },
+    ifsc: { type: String, default: null },
+    bankName: { type: String, default: null },
+    document: { type: String, default: null },
+    submittedAt: { type: Date, default: null },
+  },
+  // Set once every onboarding step is done — when it landed in the admin's approval queue.
+  onboardingCompletedAt: { type: Date, default: null },
+
   isAvailable: { type: Boolean, default: false },
   currentLat: { type: Number, default: null },
   currentLng: { type: Number, default: null },
@@ -22,5 +59,16 @@ const deliveryProfileSchema = new Schema({
     expiresAt: { type: Date, default: null },
   },
 }, { timestamps: true });
+
+// A full Aadhaar number is never sent back out (UIDAI masking rule) — only its last 4 digits.
+// The stored value stays complete for verification against the uploaded document.
+function maskAadhaar(doc, ret) {
+  if (ret.kyc?.idType === 'aadhaar' && ret.kyc.idNumber) {
+    ret.kyc.idNumber = `XXXX XXXX ${ret.kyc.idNumber.slice(-4)}`;
+  }
+  return ret;
+}
+deliveryProfileSchema.set('toJSON', { transform: maskAadhaar });
+deliveryProfileSchema.set('toObject', { transform: maskAadhaar });
 
 module.exports = model('DeliveryProfile', deliveryProfileSchema);

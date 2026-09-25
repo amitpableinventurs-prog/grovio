@@ -8,12 +8,12 @@ const ROLE_PATH: Record<Extract<Role, 'customer' | 'picker' | 'delivery'>, strin
   delivery: 'delivery-partners',
 };
 
-export function fetchUsersByRole(role: keyof typeof ROLE_PATH, params: ListParams = {}) {
-  return unwrap<Paginated<UserWithProfile>>(apiClient.get(`/admin/${ROLE_PATH[role]}`, { params }));
+export function fetchUsersByRole<T = UserWithProfile>(role: keyof typeof ROLE_PATH, params: ListParams = {}) {
+  return unwrap<Paginated<T>>(apiClient.get(`/admin/${ROLE_PATH[role]}`, { params }));
 }
 
-export function fetchUserDetail(id: string) {
-  return unwrap<UserWithProfile>(apiClient.get(`/admin/users/${id}`));
+export function fetchUserDetail<T = UserWithProfile>(id: string) {
+  return unwrap<T>(apiClient.get(`/admin/users/${id}`));
 }
 
 export function updatePickerStatus(userId: string, status: string) {
@@ -35,6 +35,7 @@ export interface DeliveryPartnerInput {
   vehicleType?: string;
   vehicleNumber?: string;
   licenseNumber?: string;
+  bankDetails?: { accountHolderName?: string; accountNumber?: string; ifsc?: string; bankName?: string };
 }
 
 export function createDeliveryPartner(data: DeliveryPartnerInput) {

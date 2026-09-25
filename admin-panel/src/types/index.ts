@@ -113,6 +113,44 @@ export interface DeliveryProfile {
   isAvailable: boolean;
   currentLat?: number | null;
   currentLng?: number | null;
+  // Submitted from the Delivery app's onboarding screens (backend delivery/onboarding.controller.js).
+  kyc?: {
+    idType?: 'pan' | 'aadhaar' | null;
+    idNumber?: string | null; // Aadhaar arrives masked: XXXX XXXX 1234
+    fullName?: string | null;
+    gender?: 'male' | 'female' | 'other' | null;
+    fatherName?: string | null;
+    dateOfBirth?: string | null;
+    document?: string | null;
+    submittedAt?: string | null;
+  };
+  addressProof?: { frontImage?: string | null; backImage?: string | null; submittedAt?: string | null };
+  selfie?: { image?: string | null; submittedAt?: string | null };
+  bankDetails?: BankDetails;
+  onboardingCompletedAt?: string | null;
+}
+
+// A delivery partner's payout account.
+export interface BankDetails {
+  accountHolderName?: string | null;
+  accountNumber?: string | null;
+  ifsc?: string | null;
+  bankName?: string | null;
+  document?: string | null; // cancelled cheque / passbook photo
+  submittedAt?: string | null;
+}
+
+// Mirrors backend utils/deliveryOnboarding.js.
+export interface DeliveryOnboarding {
+  status: 'pending' | 'approved' | 'blocked';
+  steps: { vehicle: boolean; identity: boolean; addressProof: boolean; selfie: boolean; bank: boolean };
+  completedSteps: number;
+  totalSteps: number;
+  nextStep: 'vehicle' | 'identity' | 'addressProof' | 'selfie' | 'bank' | 'pending_approval' | 'home' | 'blocked';
+}
+
+export interface DeliveryPartner extends Omit<UserWithProfile, 'onboarding'> {
+  onboarding?: DeliveryOnboarding;
 }
 
 export interface UserWithProfile extends User {

@@ -126,12 +126,12 @@ const verifyOtp = catchAsync(async (req, res) => {
     // land in {Picker,Delivery}Profile.status='pending', just like an admin-created one. Neither
     // can actually work (accept jobs / get assigned pick-lists) until an admin approves them —
     // see PATCH /admin/delivery-partners/:id/status and admin/pickers.controller.js.
+    // A delivery partner's vehicle and KYC are collected after signup, one app screen at a time
+    // (/delivery/onboarding/* — see delivery/onboarding.controller.js). Vehicle details are still
+    // accepted here for older clients that send them with the OTP.
     let vehicleType, vehicleNumber, licenseNumber;
     if (effectiveRole === 'delivery') {
       ({ vehicleType, vehicleNumber, licenseNumber } = req.body);
-      if (!vehicleType || !vehicleNumber || !licenseNumber) {
-        throw new ApiError(400, 'vehicleType, vehicleNumber and licenseNumber are required to register as a delivery partner');
-      }
     }
 
     // A picker's KYC (ID proof type/number, address, emergency contact, and the actual document

@@ -100,7 +100,7 @@ paths['/auth/verify-otp'] = {
     summary: 'Verify OTP — logs in, or signs up on first verification',
     description:
       'Send `otp` (the field name the apps use; `code` is accepted as an alias). `role` is optional and defaults to `customer` — the Customer app never sends it; the Delivery app passes `role: "delivery"` explicitly. ' +
-      'Self-registration works for `customer`, `delivery` and `picker` alike. When registering as `delivery` for the first time, `vehicleType`, `vehicleNumber` and `licenseNumber` are required — a DeliveryProfile is created with `status: "pending"`. When registering as `picker` for the first time, a bare account + PickerProfile (`status: "pending"`) is created immediately — no KYC fields are required here. The app\'s onboarding flow collects those afterward in separate steps: PUT /auth/me for name/email/gender/dateOfBirth, then PATCH /picker/kyc-upload (multipart) for ID-proof type/number/document. `idProofType`/`idProofNumber`/`address`/`emergencyContactName`/`emergencyContactPhone` are still accepted here too, purely for a client that wants to submit everything in one call. Either way, the account cannot actually work (accept jobs / get pick-lists assigned) until an admin approves it — see PATCH /admin/delivery-partners/{id}/status and PATCH /admin/pickers/{id}/status. ' +
+      'Self-registration works for `customer`, `delivery` and `picker` alike. When registering as `delivery` for the first time, a DeliveryProfile is created with `status: "pending"` (the Delivery app should use /auth/delivery/* instead, which returns the onboarding step; `vehicleType`/`vehicleNumber`/`licenseNumber` are optional here). When registering as `picker` for the first time, a bare account + PickerProfile (`status: "pending"`) is created immediately — no KYC fields are required here. The app\'s onboarding flow collects those afterward in separate steps: PUT /auth/me for name/email/gender/dateOfBirth, then PATCH /picker/kyc-upload (multipart) for ID-proof type/number/document. `idProofType`/`idProofNumber`/`address`/`emergencyContactName`/`emergencyContactPhone` are still accepted here too, purely for a client that wants to submit everything in one call. Either way, the account cannot actually work (accept jobs / get pick-lists assigned) until an admin approves it — see PATCH /admin/delivery-partners/{id}/status and PATCH /admin/pickers/{id}/status. ' +
       'The response\'s `isNewUser` is the single source of truth for whether to route to a "create your profile" screen or straight to Home. ' +
       'On a wrong/expired/exhausted OTP this returns 400 with `errors: [{ reason, attemptsLeft }]` where `reason` is one of `invalid | expired | max_attempts | not_found`, so the UI can show a specific inline message.',
     requestBody: jsonBody({
@@ -108,9 +108,9 @@ paths['/auth/verify-otp'] = {
       otp: { type: 'string', example: '1234' },
       role: { type: 'string', enum: ['customer', 'delivery', 'picker'], description: 'Optional, defaults to customer. Only used on first-time signup.' },
       name: { type: 'string', example: 'Test Customer' },
-      vehicleType: { type: 'string', example: 'bike', description: 'Required when role=delivery on first-time signup' },
-      vehicleNumber: { type: 'string', example: 'DL01AB1234', description: 'Required when role=delivery on first-time signup' },
-      licenseNumber: { type: 'string', example: 'DL-0420110012345', description: 'Required when role=delivery on first-time signup' },
+      vehicleType: { type: 'string', example: 'bike', description: 'Optional, role=delivery only' },
+      vehicleNumber: { type: 'string', example: 'DL01AB1234', description: 'Optional, role=delivery only' },
+      licenseNumber: { type: 'string', example: 'DL-0420110012345', description: 'Optional, role=delivery only' },
       idProofType: { type: 'string', example: 'Aadhaar', description: 'Optional, role=picker signup — can instead be filled in later via PATCH /picker/kyc-upload' },
       idProofNumber: { type: 'string', example: '1234-5678-9012', description: 'Optional, role=picker signup — can instead be filled in later via PATCH /picker/kyc-upload' },
       address: { type: 'string', description: 'Optional, role=picker signup' },
@@ -129,7 +129,7 @@ paths['/auth/verify-otp'] = {
           user: ref('User'),
         },
       }, 'Login successful'),
-      400: errorResponse('Incorrect OTP, or missing vehicle details for a delivery signup'),
+      400: errorResponse('Incorrect OTP'),
     },
   },
 };
@@ -286,6 +286,128 @@ paths['/auth/picker/logout-all'] = {
     tags: ['Auth'],
     summary: 'Picker app — log out from all devices',
     description: 'Revokes every refresh token for this picker, sets them offline and unavailable, and clears the push token.',
+    ...bearer(),
+    responses: { 200: envelope(null, 'Logged out from all devices'), 401: RESPONSES_401, 403: RESPONSES_403 },
+  },
+};
+
+// ---------- Delivery app auth ----------
+const deliveryOnboardingSchema = {
+  type: 'object',
+  description: 'Where the app should route the delivery partner next',
+  properties: {
+    status: { type: 'string', enum: ['pending', 'approved', 'blocked'] },
+    steps: { type: 'object', properties: { vehicle: { type: 'boolean' }, identity: { type: 'boolean' }, addressProof: { type: 'boolean' }, selfie: { type: 'boolean' }, bank: { type: 'boolean' } } },
+    completedSteps: { type: 'integer', example: 0 },
+    totalSteps: { type: 'integer', example: 5 },
+    nextStep: { type: 'string', enum: ['vehicle', 'identity', 'addressProof', 'selfie', 'bank', 'pending_approval', 'home', 'blocked'], example: 'vehicle' },
+  },
+};
+const deliveryOtpSentSchema = {
+  ...pickerOtpSentSchema,
+  properties: {
+    ...pickerOtpSentSchema.properties,
+    isRegistered: { type: 'boolean', description: 'false = verifying will create a new delivery partner account' },
+  },
+};
+const deliveryAuthResult = {
+  type: 'object',
+  properties: { user: ref('User'), deliveryProfile: ref('DeliveryProfile'), onboarding: deliveryOnboardingSchema },
+};
+
+paths['/auth/delivery/send-otp'] = {
+  post: {
+    tags: ['Auth'],
+    summary: 'Delivery app — send login/signup OTP',
+    description: 'Same OTP flow as /auth/send-otp, but only for delivery accounts: a number already registered as a customer, picker or admin gets 409, and a disabled partner gets 403, before any SMS is sent.',
+    requestBody: jsonBody(otpPhoneFields, ['phone']),
+    responses: {
+      200: envelope(deliveryOtpSentSchema, 'OTP sent successfully'),
+      403: errorResponse('Your account has been disabled'),
+      409: errorResponse('This number is already registered with a different Grovio account'),
+      429: errorResponse('Please wait Ns before requesting another OTP'),
+    },
+  },
+};
+
+paths['/auth/delivery/resend-otp'] = {
+  post: {
+    tags: ['Auth'],
+    summary: 'Delivery app — resend OTP (same body/behavior as send-otp, cooldown applies)',
+    requestBody: jsonBody(otpPhoneFields, ['phone']),
+    responses: {
+      200: envelope(deliveryOtpSentSchema, 'OTP resent successfully'),
+      409: errorResponse('This number is already registered with a different Grovio account'),
+      429: errorResponse('Please wait Ns before requesting another OTP'),
+    },
+  },
+};
+
+paths['/auth/delivery/verify-otp'] = {
+  post: {
+    tags: ['Auth'],
+    summary: 'Delivery app — verify OTP (logs in, or creates a pending delivery partner on first verification)',
+    description:
+      'A new number creates a delivery account with a DeliveryProfile in `status: "pending"`. Use `onboarding.nextStep` to route: ' +
+      '`vehicle` → PUT /delivery/onboarding/vehicle, `identity` → POST /delivery/onboarding/identity, `addressProof` → POST /delivery/onboarding/address-proof, ' +
+      '`selfie` → POST /delivery/onboarding/selfie, `bank` → POST /delivery/onboarding/bank, ' +
+      '`pending_approval` → waiting screen until an admin approves via PATCH /admin/delivery-partners/{id}/status, `home` → approved, `blocked` → contact support. ' +
+      'On a wrong/expired/exhausted OTP this returns 400 with `errors: [{ reason, attemptsLeft }]` (`invalid | expired | max_attempts | not_found`). ' +
+      'Token refresh uses the shared /auth/refresh; sign out with /auth/delivery/logout.',
+    requestBody: jsonBody({
+      ...otpPhoneFields,
+      otp: { type: 'string', example: '1234' },
+      name: { type: 'string', description: 'Optional — the name from the PAN/Aadhaar step is used otherwise' },
+      deviceId: { type: 'string' },
+      platform: { type: 'string', enum: ['android', 'ios', 'web'] },
+    }, ['phone', 'otp']),
+    responses: {
+      200: envelope({
+        type: 'object',
+        properties: {
+          accessToken: { type: 'string' },
+          refreshToken: { type: 'string' },
+          isNewUser: { type: 'boolean' },
+          ...deliveryAuthResult.properties,
+        },
+      }, 'Login successful'),
+      400: errorResponse('Incorrect OTP'),
+      403: errorResponse('Your account has been disabled'),
+      409: errorResponse('This number is already registered with a different Grovio account'),
+    },
+  },
+};
+
+paths['/auth/delivery/me'] = {
+  get: {
+    tags: ['Auth'],
+    summary: 'Delivery app — current partner, profile and onboarding step (for splash-screen routing)',
+    ...bearer(),
+    responses: { 200: envelope(deliveryAuthResult), 401: RESPONSES_401, 403: RESPONSES_403 },
+  },
+};
+
+paths['/auth/delivery/logout'] = {
+  post: {
+    tags: ['Auth'],
+    summary: 'Delivery app — log out this device',
+    description: 'Revokes the given refresh token (must belong to the logged-in partner), sets them unavailable so no new jobs are assigned, and clears the push token. The app should then discard both tokens.',
+    ...bearer(),
+    requestBody: jsonBody({ refreshToken: { type: 'string' } }, ['refreshToken']),
+    responses: {
+      200: envelope(null, 'Logged out'),
+      400: errorResponse('Invalid or already-revoked refresh token'),
+      401: RESPONSES_401,
+      403: RESPONSES_403,
+    },
+  },
+};
+
+paths['/auth/delivery/logout-all'] = {
+  post: {
+    tags: ['Auth'],
+    summary: 'Delivery app — log out from all devices',
+    description: 'Revokes every refresh token for this partner, sets them unavailable, and clears the push token.',
     ...bearer(),
     responses: { 200: envelope(null, 'Logged out from all devices'), 401: RESPONSES_401, 403: RESPONSES_403 },
   },

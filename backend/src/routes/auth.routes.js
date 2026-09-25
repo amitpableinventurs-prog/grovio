@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/auth/auth.controller');
 const pickerCtrl = require('../controllers/auth/pickerAuth.controller');
+const deliveryCtrl = require('../controllers/auth/deliveryAuth.controller');
 const validate = require('../middleware/validate.middleware');
 const { authenticate, authorize } = require('../middleware/auth.middleware');
 const {
@@ -11,6 +12,8 @@ const {
   pickerVerifyOtpRules,
   pickerRegisterRules,
   pickerLogoutRules,
+  deliveryVerifyOtpRules,
+  deliveryLogoutRules,
 } = require('../validators/auth.validator');
 
 router.post('/register-vendor', registerVendorRules, validate, ctrl.registerVendor);
@@ -28,6 +31,15 @@ router.get('/picker/me', authenticate, authorize('picker'), pickerCtrl.me);
 router.post('/picker/register', authenticate, authorize('picker'), pickerRegisterRules, validate, pickerCtrl.register);
 router.post('/picker/logout', authenticate, authorize('picker'), pickerLogoutRules, validate, pickerCtrl.logout);
 router.post('/picker/logout-all', authenticate, authorize('picker'), pickerCtrl.logoutAll);
+
+// Delivery app: phone + OTP login/signup, locked to role 'delivery' (see deliveryAuth.controller.js).
+// After login the app follows onboarding.nextStep through /delivery/onboarding/*.
+router.post('/delivery/send-otp', sendOtpRules, validate, deliveryCtrl.sendOtp);
+router.post('/delivery/resend-otp', sendOtpRules, validate, deliveryCtrl.resendOtp);
+router.post('/delivery/verify-otp', deliveryVerifyOtpRules, validate, deliveryCtrl.verifyOtp);
+router.get('/delivery/me', authenticate, authorize('delivery'), deliveryCtrl.me);
+router.post('/delivery/logout', authenticate, authorize('delivery'), deliveryLogoutRules, validate, deliveryCtrl.logout);
+router.post('/delivery/logout-all', authenticate, authorize('delivery'), deliveryCtrl.logoutAll);
 
 // Google/Apple social login are not wired up yet — they need OAuth app credentials
 // (Google client ID/secret, Apple key) from the client team before the token-verification

@@ -1,11 +1,91 @@
 const {
   envelope, paginated, ref, errorResponse,
-  RESPONSES_401, RESPONSES_404,
-  jsonBody, idParam, q, PAGE_QS, bearer,
+  RESPONSES_401, RESPONSES_404, RESPONSES_422,
+  jsonBody, formBody, idParam, q, PAGE_QS, bearer,
 } = require('../helpers');
 
 const paths = {};
 const TAG = ['Delivery'];
+
+// ---------- Onboarding (after OTP signup; one endpoint per app screen) ----------
+const Onboarding = {
+  type: 'object',
+  properties: {
+    status: { type: 'string', enum: ['pending', 'approved', 'blocked'] },
+    steps: { type: 'object', properties: { vehicle: { type: 'boolean' }, identity: { type: 'boolean' }, addressProof: { type: 'boolean' }, selfie: { type: 'boolean' }, bank: { type: 'boolean' } } },
+    completedSteps: { type: 'integer', example: 2 },
+    totalSteps: { type: 'integer', example: 5 },
+    nextStep: { type: 'string', enum: ['vehicle', 'identity', 'addressProof', 'selfie', 'bank', 'pending_approval', 'home', 'blocked'] },
+  },
+};
+const onboardingResult = (message) => envelope({ type: 'object', properties: { profile: ref('DeliveryProfile'), onboarding: Onboarding } }, message);
+const RESPONSES_400_REVIEWED = errorResponse('Documents already reviewed (partner is approved or blocked)');
+const image = { type: 'string', format: 'binary' };
+
+paths['/delivery/onboarding'] = {
+  get: {
+    tags: TAG, summary: 'Onboarding progress + next screen, and the vehicle options', ...bearer(),
+    responses: {
+      200: envelope({ type: 'object', properties: {
+        profile: ref('DeliveryProfile'),
+        onboarding: Onboarding,
+        vehicleTypes: { type: 'array', items: { type: 'object', properties: { value: { type: 'string', example: 'motorcycle' }, label: { type: 'string', example: 'Motorcycle' } } } },
+      } }),
+      401: RESPONSES_401, 404: RESPONSES_404,
+    },
+  },
+};
+paths['/delivery/onboarding/vehicle'] = {
+  put: {
+    tags: TAG, summary: 'Select vehicle screen', ...bearer(),
+    requestBody: jsonBody({ vehicleType: { type: 'string', enum: ['motorcycle', 'bicycle', 'electric_scooter'] } }, ['vehicleType']),
+    responses: { 200: onboardingResult('Vehicle saved'), 400: RESPONSES_400_REVIEWED, 401: RESPONSES_401, 422: RESPONSES_422 },
+  },
+};
+paths['/delivery/onboarding/identity'] = {
+  post: {
+    tags: TAG, summary: 'Verify PAN / Aadhaar screen (details + card photo). An Aadhaar number is returned masked.', ...bearer(),
+    requestBody: formBody({
+      idType: { type: 'string', enum: ['pan', 'aadhaar'] },
+      idNumber: { type: 'string', example: 'ABCDE1234F', description: 'PAN (ABCDE1234F) or 12-digit Aadhaar; spaces are ignored' },
+      fullName: { type: 'string', example: 'Ravi Kumar' },
+      gender: { type: 'string', enum: ['male', 'female', 'other'] },
+      fatherName: { type: 'string', example: 'Suresh Kumar' },
+      dateOfBirth: { type: 'string', example: '1998-04-21', description: 'YYYY-MM-DD, must be 18+' },
+      document: { ...image, description: 'Photo of the card — required the first time' },
+    }, ['idType', 'idNumber', 'fullName', 'gender', 'fatherName', 'dateOfBirth']),
+    responses: { 200: onboardingResult('PAN details saved'), 400: RESPONSES_400_REVIEWED, 401: RESPONSES_401, 422: RESPONSES_422 },
+  },
+};
+paths['/delivery/onboarding/address-proof'] = {
+  post: {
+    tags: TAG, summary: 'Submit address documents screen (voter ID / driving licence / ration card — not PAN). Send one or both sides.', ...bearer(),
+    requestBody: formBody({ frontImage: image, backImage: image }),
+    responses: { 200: onboardingResult('Address document saved'), 400: RESPONSES_400_REVIEWED, 401: RESPONSES_401, 422: RESPONSES_422 },
+  },
+};
+paths['/delivery/onboarding/selfie'] = {
+  post: {
+    tags: TAG, summary: 'Take selfie screen', ...bearer(),
+    requestBody: formBody({ selfie: image }, ['selfie']),
+    responses: { 200: onboardingResult('Selfie saved'), 400: RESPONSES_400_REVIEWED, 401: RESPONSES_401, 422: RESPONSES_422 },
+  },
+};
+
+paths['/delivery/onboarding/bank'] = {
+  post: {
+    tags: TAG, summary: 'Bank details screen — payout account (JSON, or multipart when sending the optional cheque/passbook photo)', ...bearer(),
+    requestBody: formBody({
+      accountHolderName: { type: 'string', example: 'Ravi Kumar' },
+      accountNumber: { type: 'string', example: '123456789012', description: '9–18 digits' },
+      ifsc: { type: 'string', example: 'SBIN0001234' },
+      bankName: { type: 'string', example: 'State Bank of India' },
+      confirmAccountNumber: { type: 'string', description: 'Optional; must match accountNumber when sent' },
+      document: { ...image, description: 'Optional cancelled cheque / passbook photo' },
+    }, ['accountHolderName', 'accountNumber', 'ifsc']),
+    responses: { 200: onboardingResult('Bank details saved'), 400: RESPONSES_400_REVIEWED, 401: RESPONSES_401, 422: RESPONSES_422 },
+  },
+};
 
 paths['/delivery/availability'] = {
   patch: { tags: TAG, summary: 'Toggle online/offline', ...bearer(), requestBody: jsonBody({ isAvailable: { type: 'boolean' } }, ['isAvailable']), responses: { 200: envelope(ref('DeliveryProfile'), 'Availability updated'), 401: RESPONSES_401 } },
