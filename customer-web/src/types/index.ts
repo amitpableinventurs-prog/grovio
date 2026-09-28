@@ -184,7 +184,8 @@ export interface Eta {
 export interface OrderTracking {
   orderNumber: string;
   orderStatus: OrderStatus;
-  deliveryPartner?: { _id: string; name: string; phone?: string } | null;
+  // Never includes a phone number — call in-app instead (voip/voipStore.ts).
+  deliveryPartner?: { _id: string; name: string } | null;
   hub: { lat: number; lng: number; name: string } | null;
   drop: { lat: number; lng: number } | null;
   rider: { lat: number; lng: number; updatedAt: string } | null;

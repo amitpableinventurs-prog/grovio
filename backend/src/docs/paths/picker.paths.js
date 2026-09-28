@@ -39,6 +39,20 @@ paths['/picker/jobs/{id}'] = {
 paths['/picker/jobs/{id}/start'] = {
   post: { tags: TAG, summary: "Mark my own pickTask 'picking' (the order itself is already picking/partially_picked from the moment it was split across pickers)", ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('Order'), 'Started picking'), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
+paths['/picker/jobs/{id}/reject'] = {
+  post: {
+    tags: TAG,
+    summary: "Reject my part of an order, before I've pressed start. My items go to another available picker at my store (or a teammate already on the order); if nobody is free they wait for an admin (PATCH /admin/orders/{id}/assign-picker). The order leaves my job list and is never offered to me again.",
+    ...bearer(), parameters: [idParam()],
+    requestBody: jsonBody({ reason: { type: 'string', example: 'Items not in my section', description: 'Optional, max 200 characters' } }),
+    responses: {
+      200: envelope({ type: 'object', properties: { orderId: { type: 'string' }, orderNumber: { type: 'string' }, reassigned: { type: 'integer', example: 3, description: 'My items handed to another picker' }, waitingForPicker: { type: 'integer', example: 0, description: 'Items left for an admin to assign' } } }, 'Order rejected and handed to another picker'),
+      400: errorResponse('Already started / completed, or the order is past picking'),
+      401: RESPONSES_401,
+      404: RESPONSES_404,
+    },
+  },
+};
 paths['/picker/jobs/{id}/items/{itemId}'] = {
   patch: { tags: TAG, summary: 'Mark an item picked / out-of-stock / substituted — no scanning, this is the only way to report an item (only items assigned to me)', ...bearer(), parameters: [idParam(), idParam('itemId', 'Order item subdocument ID')], requestBody: jsonBody({ pickedQty: { type: 'integer' }, isAvailable: { type: 'boolean' }, substituteProductId: { type: 'string' }, substituteNote: { type: 'string' } }), responses: { 200: envelope(ref('OrderItem'), 'Item updated'), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };

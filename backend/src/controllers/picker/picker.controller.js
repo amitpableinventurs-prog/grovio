@@ -13,7 +13,7 @@ const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const { transitionOrder, ensureHandoverOtp, ensureHandoverQrToken, advancePickingStatus } = require('../../services/order.service');
-const { findNearestDeliveryPartner } = require('../../services/assignment.service');
+const { findNearestDeliveryPartner, reassignPickerItems } = require('../../services/assignment.service');
 const { notifyUser } = require('../../services/notification.service');
 
 const getProfile = catchAsync(async (req, res) => {
@@ -49,6 +49,10 @@ const toggleAvailability = catchAsync(async (req, res) => {
   if (!profile) throw new ApiError(404, 'Picker profile not found');
   profile.isAvailable = !!req.body.isAvailable;
   await profile.save();
+  // Login hours: shift completion, attendance and the minimum guarantee (services/pickerPay.service.js).
+  const sessions = require('../../services/riderSession.service');
+  if (profile.isAvailable) await sessions.goOnline(req.user.id);
+  else await sessions.goOffline(req.user.id);
   new ApiResponse(200, profile, 'Availability updated').send(res);
 });
 
@@ -135,7 +139,9 @@ const getPerformance = catchAsync(async (req, res) => {
     ? Number((pickDurations.reduce((a, b) => a + b, 0) / pickDurations.length / 60000).toFixed(1))
     : null;
 
-  new ApiResponse(200, { totalPicked, substitutionsMade, avgPickTimeMinutes }).send(res);
+  const rejectedJobs = await Order.countDocuments({ 'pickerRejections.picker': req.user.id });
+
+  new ApiResponse(200, { totalPicked, substitutionsMade, avgPickTimeMinutes, rejectedJobs }).send(res);
 });
 
 async function findAssignedJob(req) {
@@ -270,6 +276,53 @@ const getHandoverQr = catchAsync(async (req, res) => {
 // pickup. Once every picker on the order has done the same, it rolls up to 'packed' ("fully
 // ready for pickup" — see order.service.js#advancePickingStatus) and a delivery partner is
 // auto-assigned.
+// POST /picker/jobs/:id/reject { reason } -> turn down my part of this order, before I've started
+// picking it. My items go to another picker at my store (assignment.service.js#reassignPickerItems);
+// if nobody is free they wait for an admin. The order then drops off my job list, and I'm never
+// offered it again.
+const REJECTABLE_STATUSES = ['accepted', 'picking', 'partially_picked'];
+const rejectJob = catchAsync(async (req, res) => {
+  const order = await findAssignedJob(req);
+  const task = myPickTask(order, req.user.id);
+  if (!task) throw new ApiError(404, 'Job not found or not assigned to you');
+  if (!REJECTABLE_STATUSES.includes(order.orderStatus)) throw new ApiError(400, `This order can no longer be rejected (status: ${order.orderStatus})`);
+  if (task.status === 'completed') throw new ApiError(400, 'You have already completed your portion of this order');
+  if (task.status === 'picking') throw new ApiError(400, 'You have already started picking this order. Finish it, or ask your store manager to reassign it.');
+
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 200) || null : null;
+  const store = task.store;
+  const excluded = (order.pickerRejections || []).map((r) => r.picker);
+  const myItemCount = order.items.filter((i) => i.assignedPicker?.toString() === req.user.id).length;
+  const { assignedTo, unassignedItems } = await reassignPickerItems(order, req.user.id, excluded);
+
+  order.pickerRejections.push({ picker: req.user.id, store, reason, reassignedItems: myItemCount - unassignedItems });
+  // No picker left at all: back to 'accepted', where an admin assigning a picker picks it up again
+  // (admin orders.controller.js#assignPicker). Not a TRANSITIONS move — nothing was picked yet.
+  if (!order.pickTasks.length && ['picking', 'partially_picked'].includes(order.orderStatus)) {
+    order.orderStatus = 'accepted';
+    order.statusLogs.push({ status: 'accepted', changedBy: req.user.id, note: 'All pickers rejected — waiting for a picker' });
+  }
+  await order.save();
+  // Other pickers may all be done already, in which case my rejection completes the picking.
+  if (order.pickTasks.length) await advancePickingStatus({ order, changedBy: req.user.id });
+
+  const note = reason ? ` (reason: ${reason})` : '';
+  await Promise.all([...new Set(assignedTo.map(String))].map((pickerId) => notifyUser(pickerId, {
+    title: 'New pick-list assigned',
+    body: `Items on order ${order.orderNumber} have been assigned to you.`,
+    type: 'picker_assignment',
+    data: { orderId: order._id },
+  })));
+  if (unassignedItems) console.warn(`Order ${order.orderNumber}: ${unassignedItems} item(s) need a picker — rejected by ${req.user.id}${note}`);
+
+  new ApiResponse(200, {
+    orderId: order._id,
+    orderNumber: order.orderNumber,
+    reassigned: myItemCount - unassignedItems,
+    waitingForPicker: unassignedItems,
+  }, unassignedItems ? 'Order rejected. No other picker is free, so your store manager will reassign it.' : 'Order rejected and handed to another picker').send(res);
+});
+
 const completeMyPicking = catchAsync(async (req, res) => {
   const order = await findAssignedJob(req);
   const task = myPickTask(order, req.user.id);
@@ -279,6 +332,8 @@ const completeMyPicking = catchAsync(async (req, res) => {
   task.status = 'completed';
   task.completedAt = new Date();
   await order.save();
+  // Picker pay for this portion, credited straight away (services/pickerPay.service.js).
+  await require('../../services/pickerPay.service').payTask(order, req.user.id);
   await advancePickingStatus({ order, changedBy: req.user.id });
 
   if (order.orderStatus === 'packed') {
@@ -315,4 +370,5 @@ module.exports = {
   getHandoverOtp,
   getHandoverQr,
   completeMyPicking,
+  rejectJob,
 };

@@ -37,6 +37,8 @@ const pickTaskSchema = new Schema({
   status: { type: String, enum: ['assigned', 'picking', 'completed'], default: 'assigned' },
   startedAt: { type: Date, default: null },
   completedAt: { type: Date, default: null },
+  // Picker pay for this portion, set on completion (services/pickerPay.service.js#payTask).
+  pay: { type: Schema.Types.Mixed, default: null },
 });
 
 const statusLogSchema = new Schema({
@@ -77,6 +79,100 @@ const orderSchema = new Schema({
   // (geofence in services/tracking.service.js) — the customer's "almost there" alert fires once.
   nearbyAlertAt: { type: Date, default: null },
   failureReason: { type: String, default: null },
+  // Every time a picker turned down their part of this order (POST /picker/jobs/:id/reject). A
+  // picker listed here is never offered this order again.
+  pickerRejections: {
+    type: [{
+      _id: false,
+      picker: { type: Schema.Types.ObjectId, ref: 'User' },
+      store: { type: Schema.Types.ObjectId, ref: 'Store' },
+      reason: { type: String, default: null },
+      // How many of the picker's items were handed to someone else (the rest wait for an admin).
+      reassignedItems: { type: Number, default: 0 },
+      at: { type: Date, default: Date.now },
+    }],
+    default: [],
+  },
+  // Every time a delivery partner handed this order back (POST /delivery/jobs/:id/reject):
+  // 'denial' before accepting it, 'cancellation' after. Counted by incentive offer conditions.
+  deliveryRejections: {
+    type: [{
+      _id: false,
+      rider: { type: Schema.Types.ObjectId, ref: 'User' },
+      kind: { type: String, enum: ['denial', 'cancellation'] },
+      reason: { type: String, default: null },
+      at: { type: Date, default: Date.now },
+    }],
+    default: [],
+  },
+  // Hub -> drop road distance estimate (straight line x 1.3), set at delivery. Trips km on the
+  // delivery app's dashboard.
+  tripDistanceKm: { type: Number, default: null },
+  // The delivery partner's run this order is part of (models/deliveryTrip.model.js).
+  trip: { type: Schema.Types.ObjectId, ref: 'DeliveryTrip', default: null },
+  // What the partner will be paid for this order, worked out when it's assigned to them
+  // (services/riderPay.service.js#quoteOrder) — shown in the app before accepting.
+  riderPayQuote: {
+    type: new Schema({
+      mappedDistanceKm: { type: Number, default: null },
+      distanceSource: { type: String, default: null }, // google | estimate | unknown
+      kmSlab: { type: String, default: null },
+      basePayout: { type: Number, default: 0 },
+      peakBonus: { type: Number, default: 0 },
+      rainBonus: { type: Number, default: 0 },
+      heavyLoadBonus: { type: Number, default: 0 },
+      weightKg: { type: Number, default: null },
+      rain: { type: String, default: 'none' },
+      surge: { type: String, default: 'none' },
+      total: { type: Number, default: 0 },
+      rates: { type: String, default: null }, // default | partner
+      quotedAt: { type: Date, default: null },
+    }, { _id: false }),
+    default: null,
+  },
+  // What the partner was paid for this order, set when its trip is paid (services/riderPay.service.js):
+  // KM base for its own mapped distance + peak / rain / heavy-load bonuses + waiting pay, or
+  // cancellation pay when cancelled after they reached the hub. null until then. Older orders
+  // hold { orderPay, incentivePay, returnPay, total } from the previous formula.
+  riderPay: {
+    type: new Schema({
+      status: { type: String, default: null },
+      mappedDistanceKm: { type: Number, default: null },
+      distanceSource: { type: String, default: null },
+      kmSlab: { type: String, default: null },
+      basePayout: { type: Number, default: 0 },
+      peakBonus: { type: Number, default: 0 },
+      rainBonus: { type: Number, default: 0 },
+      heavyLoadBonus: { type: Number, default: 0 },
+      weightKg: { type: Number, default: null },
+      waitingMinutes: { type: Number, default: 0 },
+      waitingPay: { type: Number, default: 0 },
+      cancellationPay: { type: Number, default: 0 },
+      total: { type: Number, default: 0 },
+      rates: { type: String, default: null },
+      paidAt: { type: Date, default: null },
+    }, { _id: false, strict: false }),
+    default: null,
+  },
+  // Items' weight (Product.weightKg x qty), for the heavy-load bonus. null = no weights known.
+  weightKg: { type: Number, default: null },
+  // Contains a requiresColdBag product; set when a delivery partner is assigned.
+  needsColdBag: { type: Boolean, default: false },
+  coldBag: { type: Schema.Types.ObjectId, ref: 'ColdBag', default: null },
+  // "Collect ₹228 via UPI" at the door (services/collect.service.js).
+  upiQr: {
+    type: new Schema({
+      provider: { type: String, enum: ['razorpay', 'static'] },
+      id: { type: String, default: null },
+      imageUrl: { type: String, default: null },
+      upiString: { type: String, default: null },
+      amount: { type: Number },
+      closeBy: { type: Date, default: null },
+      paidAt: { type: Date, default: null },
+      paymentId: { type: String, default: null },
+    }, { _id: false, timestamps: { createdAt: true, updatedAt: false } }),
+    default: null,
+  },
   items: { type: [orderItemSchema], default: [] },
   statusLogs: { type: [statusLogSchema], default: [] },
   itemTotal: { type: Number, required: true },

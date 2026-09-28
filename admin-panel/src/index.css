@@ -12,11 +12,30 @@ body {
   background: #f5f5f5;
 }
 
+/* Sidebar brand: white logo + role tag; icon on a white badge when collapsed */
 .grovio-logo {
-  font-weight: 700;
-  font-size: 20px;
-  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
+.grovio-logo img { height: 30px; width: auto; display: block; }
+.grovio-logo-role {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #ff8a00;
+}
+.grovio-logo-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #fff;
+}
+.grovio-logo-badge img { width: 30px; height: 30px; }
 
 /* Live Map: map and rider list side by side, stacked on narrow screens */
 @media (max-width: 992px) {

@@ -32,6 +32,7 @@ Interactive, browsable docs for all ~135 endpoints: **http://localhost:5000/api-
    ```
    npm run seed
    ```
+   Optional sample data: `npm run seed:gigs` (hourly gigs for today + 6 days, so the app's Gigs screen isn't empty — `node src/seeders/gigs.seed.js 14` for 14 days) and `npm run seed:announcements`.
 5. Run the server:
    ```
    npm run dev
@@ -132,6 +133,176 @@ Screen API (header `X-Hub-Display-Key`): `GET /hub-display/board`, `GET /hub-dis
 
 Calls are placed in the background and never block an order action. A failed call is logged with its error.
 
+## Delivery Partner Gigs, Offers & Earnings
+
+These APIs back the delivery app's Feed, Gigs, Offers, Earnings, Session History and Trip History screens. All the endpoints are listed in Swagger under **Delivery - Gigs, Offers & Earnings** and **Admin - Delivery Programs**. Days, weeks (Mon–Sun) and gig hours are in IST (`APP_UTC_OFFSET_MINUTES`, default 330).
+
+- **Login sessions** (`RiderSession`). A session starts when `PATCH /delivery/availability` goes online and ends when it goes offline. They drive:
+  - login hours on the Earnings screen
+  - Session History (`GET /delivery/sessions`)
+  - gig completion
+  - offers' compulsory login
+- **Gigs** (`GigSlot`, `GigBooking`). Admins create shifts with `POST /admin/gigs/bulk`: each slot on each date, with pay/hour, capacity and minimum login. Partners manage them from the app:
+  - list: `GET /delivery/gigs`, grouped Lunch/Evening/…
+  - book: `POST /delivery/gigs/book`
+  - cancel before start: `POST /delivery/gigs/:id/cancel`
+  - live progress: `GET /delivery/gigs/current`
+  - history: `GET /delivery/gigs/history`
+
+  When a gig ends it becomes **completed** if the partner was online at least `minLoginMinutes` inside it. Otherwise it's **incomplete**. An incomplete **free** gig is automatically **exempted**, and admins can exempt any gig with `PATCH /admin/gig-bookings/:id/exempt`. Exempted gigs don't count against offers.
+- **Offers** (`IncentiveOffer`, `OfferPayout`). Tiers are paid for gigs + orders, or for order earnings. The highest tier reached is paid, not the sum.
+  - **"Don't do" conditions:** max order denials, cancellations and incomplete gigs. Handing an order back with `POST /delivery/jobs/:id/reject` counts as a **denial** before accepting it and a **cancellation** after.
+  - **Compulsory login windows.**
+  - **Progress** is computed live (`GET /delivery/offers`, `/offers/:id`).
+  - **Payout:** when an offer ends, a background job (every 5 min, `RIDER_JOBS_DISABLED=true` to switch off) or `POST /admin/offers/:id/settle` pays each partner as an `incentive` wallet credit, once.
+- **Earnings.** `GET /delivery/earnings/summary?period=day|week|month` totals the partner's wallet credits by `category`:
+  - `order_earning`: per delivered order
+  - `incentive`: offer payouts
+  - `other_earning`: `POST /admin/delivery-partners/:id/earnings`
+
+  It also returns orders, login hours, earnings/hour and the chart.
+- **Trips.** `GET /delivery/trips` returns delivered, failed and returned jobs with earning, cash collected and distance. The distance is hub→drop straight-line × 1.3, stored at delivery.
+- **Home map.** `GET /delivery/map?lat=&lng=` tells the app where the rider should head now:
+  - **Online, no order:** the hub, with "Reach the store to pick orders", then "Scan QR to get orders" at the hub.
+  - **Order to collect:** the pickup.
+  - **Order picked up:** the customer's location.
+  - **After delivering:** back to the hub.
+
+  Each response carries the destination, Google Maps navigation links (two-wheeler) and the buttons to show. The route and "13 mins | 4.3 km away" come from the Google Routes API when a Google Maps key is set in Settings (enable the *Routes API* on it); otherwise straight-line × 1.3 is used and there's no polyline. Routes are cached for a minute.
+- **Feed.** `GET /delivery/dashboard` returns the online state, gig in progress, today's progress, live offers, the store card (`GET /delivery/home-store`, "Reach the store to pick orders") and pending popups ("Failed to transfer amount") in one call.
+- **Earnings total** is order earning + incentive + other earnings **minus deductions**.
+- **Trip details.** `GET /delivery/trips/:id` returns the pay lines (KM pay, bonuses, waiting / cancellation pay + extra pay an admin tied to the order with `POST /admin/delivery-partners/:id/earnings { orderId }`), customer name, assigned / picked / delivered times and distance.
+- **Offer condition sheets.** `GET /delivery/offers/:id/conditions/orderDenials|cancellations|incompleteGigs` lists each denied or cancelled order with the customer's name. A lost offer carries `missed` ("You have missed ₹339 incentive — More than 1 order denial").
+
+### Delivery partner pay: KM earning + incentives (GoGrovio policy)
+
+`src/services/riderPay.service.js`. Every number is in one rate card (`GET/PUT /admin/rider-pay/policy`, Admin > Settings > *Delivery Partner Rate Card*), with the proposed GoGrovio rates as defaults.
+
+    Total = KM base + daily incentive + weekly incentive + peak + rain + heavy load
+            + waiting / cancellation pay + eligible minimum-guarantee top-up
+
+- **Trips.** Every order assigned to a partner joins their open **trip** at that hub. The trip stops taking orders once the first one goes out for delivery. It's **paid once all its orders are finished**, but **each order is paid for its own distance** (a MULTI ORDER trip is still one card in Trip History).
+- **KM base** by the hub → drop **mapped** distance (Google Routes when a Maps key is set, else straight line × 1.3): 0–1 km ₹12, 1–2 ₹15, 2–3 ₹22, 3–4 ₹30, 4–5 ₹38, 5–6 ₹46, 6–7 ₹54, 7–8 ₹62, 8–9 ₹70, 9–10 ₹78, then +₹8 per started km beyond 10. The order's value never changes it.
+- **Per-delivery bonuses:**
+  - **Peak:** +₹5 in the peak windows (07–10, 18–22), or +₹10 while the hub is on *high surge*.
+  - **Rain:** +₹5 normal / ₹10 heavy / ₹15 severe, by the hub's rain level (`PUT /admin/stores/:id/rider-conditions`). Only switch on severe where riding is safely permitted.
+  - **Heavy load:** 10–20 kg +₹5, 20–30 kg +₹10, 30 kg+ +₹15. Uses the order weight from `Product.weightKg` (or the variant's) × qty.
+  - **Waiting pay:** per minute beyond the free minutes, at the hub (once per trip) and at the door. **Off until `waiting.perMinute` is set.**
+  - **Cancellation pay:** when an order is cancelled (by the customer or care, not handed back) after the partner reached the hub or picked it up. **Off until set.** Failed / returned orders still pay ₹0.
+- **Before accepting**, each assigned order carries `riderPayQuote` (mapped km, KM slab and pay, bonuses, estimated total). Final pay is never below the quote, even if the rain stops or the rates change. **After delivery**, `riderPay` on the order and `GET /delivery/trips/:id` show the actual breakdown.
+- **Daily slab / tier:** 5 deliveries ₹20, 10 ₹50 (Bronze), 15 ₹100 (Silver), 20 ₹175 (Gold), 25 ₹275 (Platinum), 30 ₹400 / 35 ₹550 / 40 ₹700 (Diamond). The tiers are the daily slabs' names; they're not paid twice.
+- **Weekly slab** (Mon–Sun): 60 ₹150, 90 ₹300, 120 ₹500, 150 ₹750, 180 ₹1,000, 210+ ₹1,300.
+- **Minimum guarantee** (**off by default**; `guarantee.enabled`): ₹300/day when online ≥ 8h (optionally with a completed gig), ≥ 8 deliveries and eligible. It pays the top-up to the guarantee when the calculated day earning is lower.
+- **Eligibility** for the daily / weekly / guarantee payouts:
+  - Every delivery is proven by the customer's PIN.
+  - The cancellation rate (hand-backs after accepting ÷ (delivered + those)) must be ≤ 10%, checked from 5 orders.
+  - Not withheld by an admin. GPS or payment manipulation and verified complaints aren't detected automatically: admins withhold the day / week (`POST /admin/delivery-partners/:id/pay-periods/:kind/:key/withhold`) and later `/release` it.
+- **Settlement:** days and weeks are settled `settleDelayHours` (12h) after they end by the rider jobs loop (or `POST /admin/rider-pay/settle`), as a `RiderPayPeriod`. Each one holds its figures, eligibility, payout status and audit log.
+- **Pocket lines:** Trip Earning (KM); Peak / Rain incentive, Heavy load bonus, Daily incentive · Gold, Weekly incentive (incentive); Waiting / Cancellation pay, Minimum guarantee top-up (other earning).
+- **Partner app:** `GET /delivery/earnings/incentives` shows the day's slab, tier and deliveries to the next slab, the week's progress, the guarantee and the rate card.
+- **Admin:** `GET /admin/rider-pay/preview?km=&kg=&time=&storeId=` previews one order's pay. `GET /admin/delivery-partners/:id/pay-periods` shows a partner's periods. `PUT /admin/delivery-partners/:id/pay` sets a partner's own rate card sections.
+- **Launch testing:** run the rate card for 2–4 weeks, then tune it against real order density, route distance, active hours and the contribution report (`GET /admin/reports/order-contribution`).
+
+### Account on hold, cold bags, UPI at the door
+
+- **Account on hold** (`services/accountHold.service.js`). The system or an admin (`POST /admin/delivery-partners/:id/hold`) puts the account on hold.
+  - **While on hold** the partner is offline and gets `423` on going online, hub check-in and claiming orders.
+  - **Release:** it lifts itself at `releaseAt`, or an admin unlocks it with `/unhold`. The app reads `GET /delivery/account-status`.
+  - **Selfie checks:** the partner uploads `POST /delivery/selfie-checks`, an admin reviews them with `PATCH /admin/selfie-checks/:id`, and a mismatch holds the account "Face not matching" for `riderFaceMismatchHoldHours` (24). Automatic face matching needs a face-recognition provider, which isn't connected.
+- **Cold bags** (`services/coldBag.service.js`). A product marked *Frozen — needs a cold bag* makes its orders `needsColdBag`.
+  - **Pickup:** the handover OTP / QR is refused until the partner scans a bag of that store (`POST /delivery/jobs/:id/cold-bag`).
+  - **Return:** after delivering they scan it back in at a store (`POST /delivery/cold-bags/return`).
+  - **Admin:** creates bags with printable QR labels (`POST /admin/cold-bags`), sees overdue ones (`coldBagReturnHours`, default 4), and can mark a bag lost with a deduction.
+- **UPI at the door** (`services/collect.service.js`). For COD, `GET /delivery/jobs/:id/collect` returns a "Collect ₹X via UPI" QR, and the payment goes straight to the company.
+  - **Razorpay single-use UPI QR:** payment is verified, and completing with `collectionMethod=upi` requires it paid. Your Razorpay account needs the QR Codes feature enabled.
+  - **Fallback:** a UPI QR to `upiVpa`, which can't be verified.
+
+### Picker product-based pay (GoGrovio policy)
+
+`src/services/pickerPay.service.js`. All the numbers are in one policy (`GET/PUT /admin/picker-pay/policy`), with the proposed GoGrovio rates as defaults.
+
+- **Per order**, when a picker presses *Ready for pickup*, they're paid for their portion. It's credited as "Picking pay".
+  - **Item pay** by product type: normal ₹0.60, small ₹0.50, fruits & veg ₹0.80, dairy ₹0.80, frozen ₹1, fragile ₹1, heavy 5–10 kg ₹1.50, heavy 10 kg+ ₹2, special ₹2.
+  - **Peak:** +₹0.50/item in peak windows.
+  - **Order bonus** by item count: ₹1–₹7.
+  - **Speed bonus** against the target time (base + seconds per item, measured from *Start*): ₹1 within target, ₹2 at 10% faster, ₹3 at 20% faster.
+  - **Packing:** ₹1 normal, ₹2 fragile, ₹3 large, ₹5 special.
+  - **Not paid:** stock-outs.
+- **Product type:** set `pickType` on the product (plus `costPrice` for the report). Otherwise it's worked out from the category (fruits/vegetables, dairy) or the cold bag flag (frozen), else normal.
+- **Per day**, settled once the day is over plus `settleDelayHours` (12h, time for error reports):
+  - **Productivity bonus:** 50 items ₹10 … 600+ ₹500.
+  - **Quality bonus:** 97% ₹20, 99% ₹40, 99.5% ₹60 accuracy, from 50 items.
+  - **Sunday/holiday:** ₹100/day or ₹0.50/item, not both.
+  - **Minimum guarantee:** ₹300 in the first 7 days (training), ₹350 after. It applies when the picker was online ≥ 8h, reached the item minimum and ≥ 97% accuracy, and isn't blocked. The higher of calculated and guarantee is paid.
+- **Per week:** ₹150 attendance bonus for 6 days with ≥ 4h online (Mon–Sun).
+- **Login hours:** pickers' online/offline toggle now records sessions, used for shift, attendance and the guarantee.
+- **Errors:**
+  - **Report:** `POST /admin/picker-errors`.
+  - **Confirm or waive:** `PATCH /admin/picker-errors/:id`. Confirming deducts the fine (wrong/missing ₹10, wrong quantity ₹5–10, damaged ₹10–30) and takes back that order's speed bonus. No blanket deductions.
+- **Rates per person:** these defaults are only a starting point, and everyone can be paid differently. The picker policy layers default → store (`PUT /admin/stores/:id/picker-pay-policy`) → picker (`PUT /admin/pickers/:id/pay-policy`). Each level holds only what it changes, and every payment records which level's rates were used. Delivery partners can have their own rate card sections the same way (`PUT /admin/delivery-partners/:id/pay`).
+- **Picker app:** `/picker/earnings/today|orders|summary`, `/picker/errors`, `/picker/pocket`.
+- **Company contribution per order:** `GET /admin/reports/order-contribution`, with assumptions in `/admin/order-economics`.
+
+### Notices (Updates tab)
+
+`src/services/announcement.service.js`. These are company notices to delivery partners, pickers or customers ("महत्वपूर्ण सूचना").
+
+- **Admins** write them with `POST /admin/announcements`. The body is plain text: `**bold**`, `* ` / `• ` bullets, and a line that's all bold becomes a heading.
+- **Who sees a notice:** it targets roles, stores or specific people. It can be pinned, and scheduled with `publishAt` / `expiresAt`.
+- **Confirming:** a notice can require an "Okay, I understand" confirmation.
+- **Publishing** pushes a notification to its audience. For a scheduled notice, the background job sends it when the time comes.
+- **Apps** read `GET /common/announcements` (list), `/unread-count` (badge, also in the delivery dashboard) and `/:id` (details, with `blocks` ready to render, marks it read), and confirm with `POST /common/announcements/:id/ack`.
+- **Stats:** `GET /admin/announcements/:id/stats` shows who hasn't read or confirmed.
+- **Samples:** `npm run seed:announcements` adds four sample notices (EPH, COD process, fast delivery, MDND).
+
+### Pocket, payouts and deposits
+
+`src/services/pocket.service.js`. The pocket is the partner's wallet used as a running account, and **it can go negative**.
+
+| Entry | Sign | From |
+|---|---|---|
+| Trip Earning, Incentive, Other earning | + | delivery, offer payout, admin |
+| Cash collected | − | a COD order paid in cash (the partner now holds the platform's cash) |
+| Cash Deposit | + | Razorpay (`POST /delivery/pocket/deposit` + `/verify`) or at the hub (`POST /admin/delivery-partners/:id/cash-deposits`) |
+| Pocket Withdrawal | − | `POST /delivery/pocket/withdraw` (min `riderMinWithdrawal`, default ₹100; one at a time) |
+| Weekly payout | − | every Monday from `riderWeeklyPayoutHour` (default 7), for approved partners with bank details and a positive balance, once a week (`riderWeeklyPayoutEnabled=false` to stop; `POST /admin/pocket-transfers/weekly-payouts` to run now) |
+| Deduction | − | `POST /admin/delivery-partners/:id/deductions` ("Temp Manual Pay — Cold Bag Fraud 27th Jan") |
+
+- **Statements.** `GET /delivery/pocket/statement?week=this|last|YYYY-MM-DD&filter=` and `GET /delivery/pocket/deductions?week=`.
+- **Bank transfers are processed by an admin.** No payout provider is connected yet, so an admin moves each withdrawal or payout with `PATCH /admin/pocket-transfers/:id` through `in_process` → `completed` (with the IMPS/UTR reference) or `failed`.
+  - **Failed:** the amount goes back into the pocket and the partner gets the popup.
+  - **Rider view:** `GET /delivery/pocket/transfers/:id` shows the Initiated / In Process / Completed timeline and the masked bank account.
+
+### Support tickets
+
+`controllers/common/support.controller.js`. Tickets are conversations and work for every app.
+
+- **Create:** pick an issue from `GET /common/support/categories` (e.g. *Past order related issues → Long Distance Return Pay*), optionally for an `orderId`, `transferId` or `offerId`.
+- **Converse:** reply with `POST /common/support/:id/messages`. Support answers with the existing `PATCH /admin/support-tickets/:id { adminReply, status }`.
+- **After closing:** the user can rate (`/rate`, up/down) or reopen (`/reopen`).
+
+## Masked Calls (in-app VoIP, Twilio)
+
+`src/services/voip.service.js`. The customer and their delivery partner call each other app to app over Twilio Voice, instead of from the phone's dialler. **Neither side ever receives the other's phone number.** The apps only know an opaque Twilio identity (`u_<userId>`). The callee sees the caller's first name, their role and the order number. Every call is logged in `VoipCall` (Admin > **Masked Calls**). With provider **None**, calls are only recorded as `simulated`.
+
+- **Who can call.** Only the order's customer and its assigned rider, and only while the order is `assigned`, `picked_up` or `out_for_delivery`. This is checked when the call is started and again when Twilio connects it, so a reassigned or delivered order can't be called.
+- **No numbers in the API.** `GET /customer/orders/:id/tracking` returns the rider's name only, and `GET /delivery/jobs` returns the customer's name only.
+
+**Flow.**
+1. The app gets a token from `GET /voip/token?platform=web|android|ios` and registers a Twilio Voice SDK `Device`. It refreshes the token on `tokenWillExpire`.
+2. The caller taps Call. The customer app calls `POST /customer/orders/:id/call` and the rider app calls `POST /delivery/jobs/:id/call`. Either returns `{ callId, callee, params }`.
+3. Within 2 minutes the app runs `device.connect({ params })`. Twilio asks `/voip/twilio/voice` for TwiML, and we answer with `<Dial><Client>` to the other party.
+4. The callee's `incoming` call carries `customParameters`: `callId`, `orderNumber`, `callerRole` and `callerName`.
+
+**Setup.**
+1. In the Twilio Console, create an **API key** (Standard) and a **TwiML App**:
+   - Voice Request URL: `POST {public URL}/api/v1/voip/twilio/voice`
+   - Status Callback URL: `{public URL}/api/v1/voip/twilio/status`
+2. Admin > Settings > **In-app Calls**: choose Twilio and enter the Account SID, Auth Token (used to verify webhook signatures), API key SID/secret and TwiML App SID. *Public server URL* must be set, because signatures are checked against it.
+3. **Mobile apps** (Twilio Voice Android/iOS SDK): create FCM/APNs **push credentials** in Twilio and enter their SIDs, so incoming calls ring while the app is in the background. On iOS, report calls through CallKit.
+
+The customer website (`customer-web`) registers the Device while it's open, shows the Call button on the tracking card and an incoming-call panel.
+
 ## Payment Gateways (Razorpay, PhonePe, PayU)
 
 Checkout offers COD, Wallet, Razorpay, PhonePe and PayU. Each can be switched on or off in Admin > Settings > Checkout Payment Options, and PhonePe/PayU only appear once their keys are set. `POST /customer/checkout/summary` returns `paymentOptions`, and `POST /customer/orders` rejects a method that is switched off. An unpaid online order can't be accepted on Live Orders.
@@ -171,7 +342,7 @@ Checkout offers COD, Wallet, Razorpay, PhonePe and PayU. Each can be switched on
 - `POST/GET/PATCH/DELETE /admin/categories`
 - `GET /admin/products`, `POST /admin/products`, `PATCH /admin/products/:id` (full edit), `PATCH /admin/products/:id/status` (quick toggle), `DELETE /admin/products/:id` — admin can create/edit/delete a product under **any** store (support/onboarding use case; vendors otherwise manage their own via `/vendor/products`)
 - `GET /admin/orders`, `GET /admin/orders/:id`, `PATCH /admin/orders/:id/assign-picker|assign-delivery`
-- `GET /admin/tracking/riders` (live map), `GET /admin/orders/:id/tracking`, `POST /admin/orders/:id/ivr-call`, `GET /admin/ivr/calls`, `GET /admin/ivr/config`
+- `GET /admin/tracking/riders` (live map), `GET /admin/orders/:id/tracking`, `POST /admin/orders/:id/ivr-call`, `GET /admin/ivr/calls`, `GET /admin/ivr/config`, `GET /admin/voip/calls`, `GET /admin/voip/config`
 - `POST /admin/orders/:id/refund` — `{ amount, reason }` (manual/partial refund to customer wallet)
 - `POST/GET/PATCH/DELETE /admin/coupons`
 - `POST/GET/PATCH/DELETE /admin/banners`

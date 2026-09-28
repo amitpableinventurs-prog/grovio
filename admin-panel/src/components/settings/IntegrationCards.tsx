@@ -1,8 +1,9 @@
 import { Card, Form, Input, Select, Typography, Alert, Space } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { fetchIvrConfig } from '../../api/ivr';
+import { fetchVoipConfig } from '../../api/voip';
 
-// Settings page sections for payment gateways, tracking and IVR. Every value is stored as a string
+// Settings page sections for payment gateways, tracking, IVR and in-app calls. Every value is stored as a string
 // setting (backend Setting model); secrets are masked by the API and left blank here to keep them.
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1').replace(/\/api\/v1\/?$/, '');
@@ -179,6 +180,89 @@ export function IvrCard({ data, provider }: { data: Settings; provider?: string 
           </div>
         </div>
       )}
+    </Card>
+  );
+}
+
+export function VoipCard({ data, provider }: { data: Settings; provider?: string }) {
+  const { data: config } = useQuery({ queryKey: ['voip-config'], queryFn: fetchVoipConfig });
+
+  return (
+    <Card title="In-app Calls — Masked Customer ↔ Rider Calls (Twilio)" style={{ maxWidth: 640 }}>
+      <Typography.Paragraph type="secondary">
+        Customers and delivery partners call each other inside the app (VoIP), so neither ever sees the other's phone number.
+        Calls are only possible while the order is out for delivery. With "None", calls are only recorded in Masked Calls as
+        simulated. See the backend README, "Masked Calls".
+      </Typography.Paragraph>
+      <Form.Item name="voipProvider" label="Provider">
+        <Select options={[{ value: 'none', label: 'None (simulate calls)' }, { value: 'twilio', label: 'Twilio Voice' }]} />
+      </Form.Item>
+
+      {provider === 'twilio' && (
+        <>
+          <Space style={{ display: 'flex' }}>
+            <Form.Item name="twilioAccountSid" label="Account SID" style={{ flex: 1 }}><Input placeholder="AC..." /></Form.Item>
+            <Form.Item name="twilioAuthToken" label="Auth Token" extra={secretHint(data?.twilioAuthToken)} style={{ flex: 1 }}>{secretInput}</Form.Item>
+          </Space>
+          <Space style={{ display: 'flex' }}>
+            <Form.Item name="twilioApiKeySid" label="API Key SID" style={{ flex: 1 }}><Input placeholder="SK..." /></Form.Item>
+            <Form.Item name="twilioApiKeySecret" label="API Key Secret" extra={secretHint(data?.twilioApiKeySecret)} style={{ flex: 1 }}>{secretInput}</Form.Item>
+          </Space>
+          <Form.Item name="twilioTwimlAppSid" label="TwiML App SID"><Input placeholder="AP..." /></Form.Item>
+          <Space style={{ display: 'flex' }}>
+            <Form.Item name="twilioPushCredentialAndroid" label="Push credential — Android (FCM)" style={{ flex: 1 }} extra="Optional: rings the rider app in background">
+              <Input placeholder="CR..." />
+            </Form.Item>
+            <Form.Item name="twilioPushCredentialIos" label="Push credential — iOS (APNs)" style={{ flex: 1 }}><Input placeholder="CR..." /></Form.Item>
+          </Space>
+          <Form.Item name="voipRingSeconds" label="Ring for (seconds)"><Input type="number" placeholder="30" style={{ width: 180 }} /></Form.Item>
+        </>
+      )}
+
+      {config && provider === 'twilio' && (
+        <div style={{ marginTop: 8 }}>
+          {!config.publicBaseUrlSet && (
+            <Alert style={{ marginBottom: 12 }} type="warning" showIcon
+              title="Set “Public server URL” in General — Twilio webhook signatures are checked against it." />
+          )}
+          {config.missing.length > 0 && config.provider === 'twilio' && (
+            <Alert style={{ marginBottom: 12 }} type="warning" showIcon title={`Not ready — missing: ${config.missing.join(', ')}`} />
+          )}
+          <Typography.Text strong style={{ display: 'block' }}>URLs for your Twilio TwiML App</Typography.Text>
+          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px', marginTop: 8, fontSize: 12 }}>
+            <WebhookRow label="Voice Request URL (POST)" url={config.webhooks.voice} />
+            <WebhookRow label="Status Callback URL" url={config.webhooks.status} />
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// Delivery partner pocket and rider rules (backend services/pocket.service.js, coldBag.service.js,
+// accountHold.service.js, collect.service.js). Pay itself is the rate card (RiderRateCard.tsx).
+export function RiderPayCard() {
+  return (
+    <Card title="Delivery Partner Pocket & Rules" style={{ maxWidth: 640 }}>
+      <Typography.Paragraph type="secondary">
+        KM pay, bonuses and daily / weekly incentives are set in the <b>Delivery Partner Rate Card</b> below.
+      </Typography.Paragraph>
+      <Typography.Text strong style={{ display: 'block', margin: '8px 0' }}>Pocket</Typography.Text>
+      <Space wrap>
+        <Form.Item name="riderMinWithdrawal" label="Minimum withdrawal (₹)"><Input type="number" placeholder="100" style={{ width: 180 }} /></Form.Item>
+        <Form.Item name="riderWeeklyPayoutEnabled" label="Weekly payout (Mondays)"><Select style={{ width: 120 }} options={ON_OFF} /></Form.Item>
+        <Form.Item name="riderWeeklyPayoutHour" label="From hour (0-23)"><Input type="number" placeholder="7" style={{ width: 140 }} /></Form.Item>
+      </Space>
+
+      <Typography.Text strong style={{ display: 'block', margin: '8px 0' }}>Rules</Typography.Text>
+      <Space wrap>
+        <Form.Item name="coldBagReturnHours" label="Return cold bag within (hours)"><Input type="number" placeholder="4" style={{ width: 200 }} /></Form.Item>
+        <Form.Item name="riderFaceMismatchHoldHours" label="Face mismatch hold (hours)"><Input type="number" placeholder="24" style={{ width: 200 }} /></Form.Item>
+      </Space>
+      <Space wrap>
+        <Form.Item name="upiVpa" label="UPI ID for doorstep payments" extra="Used when Razorpay UPI QR isn't available"><Input placeholder="grovio@okaxis" style={{ width: 260 }} /></Form.Item>
+        <Form.Item name="upiPayeeName" label="Payee name"><Input placeholder="Grovio" style={{ width: 200 }} /></Form.Item>
+      </Space>
     </Card>
   );
 }

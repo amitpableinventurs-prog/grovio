@@ -11,4 +11,6 @@ export const INTEGRATION_DEFAULTS: Record<string, string> = {
   exotelSubdomain: 'api.exotel.com',
   ivrAutoCallEvents: 'out_for_delivery,delivery_failed,rider_arrived',
   ivrMissedCallCallback: 'true',
+  voipProvider: 'none',
+  riderWeeklyPayoutEnabled: 'true',
 };

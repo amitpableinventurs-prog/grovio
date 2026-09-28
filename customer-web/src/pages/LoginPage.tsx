@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingCart } from 'lucide-react';
 import * as authApi from '../api/auth';
 import { apiErrorMessage } from '../api/client';
 import { useAuthStore } from '../store/authStore';
@@ -64,11 +63,10 @@ export default function LoginPage() {
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4">
       <div className="mb-8 text-center">
-        <div className="mb-2 flex justify-center text-brand-600">
-          <ShoppingCart size={40} strokeWidth={2} />
-        </div>
-        <h1 className="text-2xl font-extrabold text-brand-700">Grovio</h1>
-        <p className="text-gray-500 text-sm mt-1">Quick groceries, delivered fast</p>
+        <h1 className="flex justify-center">
+          <img src="/brand/grovio-logo.svg" alt="Grovio — Freshness. Faster. Everyday." className="h-20 w-auto sm:h-24" />
+        </h1>
+        <p className="text-gray-500 text-sm mt-3">Fresh groceries at your door in minutes</p>
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">

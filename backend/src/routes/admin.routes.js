@@ -32,6 +32,12 @@ const contentPagesCtrl = require('../controllers/admin/contentPages.controller')
 const hubDisplaysCtrl = require('../controllers/admin/hubDisplays.controller');
 const trackingCtrl = require('../controllers/admin/tracking.controller');
 const ivrCtrl = require('../controllers/admin/ivr.controller');
+const voipCtrl = require('../controllers/admin/voip.controller');
+const announcementsCtrl = require('../controllers/admin/announcements.controller');
+const pickerPayCtrl = require('../controllers/admin/pickerPay.controller');
+const riderPayCtrl = require('../controllers/admin/riderPay.controller');
+const programsCtrl = require('../controllers/admin/riderPrograms.controller');
+const { gigBulkRules, gigUpdateRules, offerRules, earningAdjustmentRules, deductionRules, cashDepositRules, announcementRules } = require('../validators/programs.validator');
 
 router.use(authenticate, authorize('admin'));
 
@@ -62,6 +68,76 @@ router.get('/users/:id', p(PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_DELIVE
 router.patch('/pickers/:id/status', p(PERMISSIONS.MANAGE_PICKERS), usersCtrl.updateProfileStatus('picker'));
 router.patch('/pickers/:id/assign-store', p(PERMISSIONS.MANAGE_PICKERS), usersCtrl.assignPickerToStore);
 router.patch('/delivery-partners/:id/status', p(PERMISSIONS.MANAGE_DELIVERY), usersCtrl.updateProfileStatus('delivery'));
+// Delivery partner programs: gigs (bookable shifts), incentive offers and extra earnings — the
+// data behind the delivery app's Gigs / Offers / Earnings screens.
+router.get('/gigs', p(PERMISSIONS.MANAGE_DELIVERY), programsCtrl.listGigs);
+router.post('/gigs/bulk', p(PERMISSIONS.MANAGE_DELIVERY), gigBulkRules, validate, programsCtrl.bulkCreateGigs);
+router.patch('/gigs/:id', p(PERMISSIONS.MANAGE_DELIVERY), gigUpdateRules, validate, programsCtrl.updateGig);
+router.delete('/gigs/:id', p(PERMISSIONS.MANAGE_DELIVERY), programsCtrl.cancelGig);
+router.get('/gigs/:id/bookings', p(PERMISSIONS.MANAGE_DELIVERY), programsCtrl.gigBookings);
+router.patch('/gig-bookings/:id/exempt', p(PERMISSIONS.MANAGE_DELIVERY), programsCtrl.exemptBooking);
+router.get('/offers', p(PERMISSIONS.MANAGE_DELIVERY), programsCtrl.listOffers);
+router.post('/offers', p(PERMISSIONS.MANAGE_DELIVERY), offerRules, validate, programsCtrl.createOffer);
+router.get('/offers/:id', p(PERMISSIONS.MANAGE_DELIVERY), programsCtrl.getOffer);
+router.put('/offers/:id', p(PERMISSIONS.MANAGE_DELIVERY), offerRules, validate, programsCtrl.updateOffer);
+router.delete('/offers/:id', p(PERMISSIONS.MANAGE_DELIVERY), programsCtrl.cancelOffer);
+router.get('/offers/:id/riders', p(PERMISSIONS.MANAGE_DELIVERY), programsCtrl.offerRiders);
+router.post('/offers/:id/settle', p(PERMISSIONS.MANAGE_DELIVERY), programsCtrl.settleOffer);
+router.post('/delivery-partners/:id/earnings', p(PERMISSIONS.MANAGE_DELIVERY), earningAdjustmentRules, validate, programsCtrl.addEarning);
+// Delivery partner pocket: deductions, cash handed in at the hub, withdrawals / weekly payouts.
+router.post('/delivery-partners/:id/deductions', p(PERMISSIONS.MANAGE_DELIVERY), deductionRules, validate, programsCtrl.addDeduction);
+router.post('/delivery-partners/:id/cash-deposits', p(PERMISSIONS.MANAGE_DELIVERY), cashDepositRules, validate, programsCtrl.recordCashDeposit);
+router.get('/pocket-transfers', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS), programsCtrl.listPocketTransfers);
+router.post('/pocket-transfers/weekly-payouts', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS), programsCtrl.runWeeklyPayouts);
+router.patch('/pocket-transfers/:id', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS), programsCtrl.updatePocketTransfer);
+// Account holds ("Face not matching" etc.), selfie checks, cold bags.
+router.post('/delivery-partners/:id/hold', p(PERMISSIONS.MANAGE_DELIVERY), programsCtrl.holdAccount);
+router.post('/delivery-partners/:id/unhold', p(PERMISSIONS.MANAGE_DELIVERY), programsCtrl.unholdAccount);
+router.get('/delivery-partners/:id/holds', p(PERMISSIONS.MANAGE_DELIVERY), programsCtrl.listHolds);
+router.get('/selfie-checks', p(PERMISSIONS.MANAGE_DELIVERY), programsCtrl.listSelfieChecks);
+router.patch('/selfie-checks/:id', p(PERMISSIONS.MANAGE_DELIVERY), programsCtrl.reviewSelfieCheck);
+router.post('/cold-bags', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_INVENTORY), programsCtrl.createColdBags);
+router.get('/cold-bags', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_INVENTORY), programsCtrl.listColdBags);
+router.get('/cold-bags/overdue', p(PERMISSIONS.MANAGE_DELIVERY), programsCtrl.overdueColdBags);
+router.patch('/cold-bag-issues/:id/lost', p(PERMISSIONS.MANAGE_DELIVERY), programsCtrl.markColdBagLost);
+// Delivery partner KM + incentive pay: rate card, preview, hub rain / surge, daily / weekly periods.
+router.get('/rider-pay/policy', p(PERMISSIONS.MANAGE_SETTINGS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS), riderPayCtrl.getPolicy);
+router.put('/rider-pay/policy', p(PERMISSIONS.MANAGE_SETTINGS), riderPayCtrl.updatePolicy);
+router.get('/rider-pay/preview', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTINGS), riderPayCtrl.previewPay);
+router.post('/rider-pay/settle', p(PERMISSIONS.MANAGE_SETTLEMENTS, PERMISSIONS.MANAGE_SETTINGS), riderPayCtrl.settle);
+router.get('/rider-pay/periods', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS), riderPayCtrl.listPeriods);
+router.get('/rider-pay/conditions', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_STORES), riderPayCtrl.listConditions);
+router.put('/stores/:id/rider-conditions', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_STORES), riderPayCtrl.setConditions);
+router.get('/delivery-partners/:id/pay-periods', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS), riderPayCtrl.riderPeriods);
+router.post('/delivery-partners/:id/pay-periods/:kind/:key/withhold', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS), riderPayCtrl.withholdPeriod);
+router.post('/delivery-partners/:id/pay-periods/:kind/:key/release', p(PERMISSIONS.MANAGE_SETTLEMENTS), riderPayCtrl.releasePeriod);
+// Notices for partners / customers (Updates tab).
+router.get('/announcements', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PROMOTIONS), announcementsCtrl.list);
+router.post('/announcements', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PROMOTIONS), announcementRules, validate, announcementsCtrl.create);
+router.get('/announcements/:id', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PROMOTIONS), announcementsCtrl.get);
+router.put('/announcements/:id', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PROMOTIONS), announcementRules, validate, announcementsCtrl.update);
+router.delete('/announcements/:id', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PROMOTIONS), announcementsCtrl.archive);
+router.post('/announcements/:id/publish', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PROMOTIONS), announcementsCtrl.publish);
+router.get('/announcements/:id/stats', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PROMOTIONS), announcementsCtrl.stats);
+// Picker product-based pay: policy, earnings, errors; per-order contribution report.
+router.get('/picker-pay/policy', p(PERMISSIONS.MANAGE_SETTINGS, PERMISSIONS.MANAGE_SETTLEMENTS), pickerPayCtrl.getPolicy);
+router.put('/picker-pay/policy', p(PERMISSIONS.MANAGE_SETTINGS), pickerPayCtrl.updatePolicy);
+router.post('/picker-pay/settle', p(PERMISSIONS.MANAGE_SETTLEMENTS, PERMISSIONS.MANAGE_SETTINGS), pickerPayCtrl.settle);
+router.get('/pickers/:id/earnings', p(PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_SETTLEMENTS), pickerPayCtrl.pickerDay);
+// Individual rates: everyone can be paid differently (default -> store -> person).
+router.get('/pickers/:id/pay-policy', p(PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_SETTINGS), pickerPayCtrl.getPickerPolicy);
+router.put('/pickers/:id/pay-policy', p(PERMISSIONS.MANAGE_SETTINGS), pickerPayCtrl.setPickerPolicy);
+router.get('/stores/:id/picker-pay-policy', p(PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_SETTINGS), pickerPayCtrl.getStorePolicy);
+router.put('/stores/:id/picker-pay-policy', p(PERMISSIONS.MANAGE_SETTINGS), pickerPayCtrl.setStorePolicy);
+router.get('/delivery-partners/:id/pay', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTINGS), riderPayCtrl.getRiderPay);
+router.put('/delivery-partners/:id/pay', p(PERMISSIONS.MANAGE_SETTINGS), riderPayCtrl.setRiderPay);
+router.get('/pickers/:id/earning-days', p(PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_SETTLEMENTS), pickerPayCtrl.pickerDays);
+router.get('/picker-errors', p(PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), pickerPayCtrl.listErrors);
+router.post('/picker-errors', p(PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), pickerPayCtrl.reportError);
+router.patch('/picker-errors/:id', p(PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_ORDERS), pickerPayCtrl.reviewError);
+router.get('/order-economics', p(PERMISSIONS.VIEW_REPORTS, PERMISSIONS.MANAGE_SETTINGS), pickerPayCtrl.getEconomics);
+router.put('/order-economics', p(PERMISSIONS.MANAGE_SETTINGS), pickerPayCtrl.updateEconomics);
+router.get('/reports/order-contribution', p(PERMISSIONS.VIEW_REPORTS), pickerPayCtrl.contribution);
 router.patch('/users/:id/active', p(PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_DELIVERY), usersCtrl.toggleActive);
 
 // Stores (admin-owned — no vendor/store login)
@@ -130,6 +206,9 @@ router.get('/tracking/riders', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_D
 router.get('/ivr/calls', p(PERMISSIONS.MANAGE_ORDERS), ivrCtrl.listCalls);
 router.get('/ivr/config', p(PERMISSIONS.MANAGE_SETTINGS), ivrCtrl.getConfig);
 router.post('/orders/:id/ivr-call', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ivrCtrl.callCustomer);
+// Masked customer <-> rider calls (in-app VoIP): call log and Twilio TwiML App URLs
+router.get('/voip/calls', p(PERMISSIONS.MANAGE_ORDERS), voipCtrl.listCalls);
+router.get('/voip/config', p(PERMISSIONS.MANAGE_SETTINGS), voipCtrl.getConfig);
 router.get('/orders/:id/tracking', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), trackingCtrl.getOrderTracking);
 router.post('/orders/:id/refund', p(PERMISSIONS.MANAGE_PAYMENTS), paymentsCtrl.issueRefund);
 
@@ -172,6 +251,7 @@ router.get('/reports/delivery-partners', p(PERMISSIONS.VIEW_REPORTS), reportsCtr
 
 // Support tickets
 router.get('/support-tickets', p(PERMISSIONS.MANAGE_ORDERS), supportCtrl.listAllTickets);
+router.get('/support-tickets/:id', p(PERMISSIONS.MANAGE_ORDERS), supportCtrl.getTicketAdmin);
 router.patch('/support-tickets/:id', p(PERMISSIONS.MANAGE_ORDERS), supportCtrl.replyToTicket);
 
 // Inventory

@@ -40,6 +40,7 @@ const spec = {
     { name: 'Admin - Payments' },
     { name: 'Admin - Settlements' },
     { name: 'Admin - RBAC' },
+    { name: 'Admin - Delivery Programs' },
     { name: 'Customer - Home & Catalog' },
     { name: 'Customer - Cart' },
     { name: 'Customer - Addresses' },
@@ -49,8 +50,12 @@ const spec = {
     { name: 'Customer - Support' },
     { name: 'Picker' },
     { name: 'Delivery' },
+    { name: 'Delivery - Gigs, Offers & Earnings' },
     { name: 'Hub Screen' },
     { name: 'IVR (Exotel webhooks)' },
+    { name: 'VoIP (masked calls)' },
+    { name: 'Notices (Updates tab)' },
+    { name: 'Picker - Earnings' },
   ],
   paths: {
     ...require('./paths/core.paths'),
@@ -60,6 +65,7 @@ const spec = {
     ...require('./paths/delivery.paths'),
     ...require('./paths/hubDisplay.paths'),
     ...require('./paths/features.paths'),
+    ...require('./paths/programs.paths'),
   },
 };
 

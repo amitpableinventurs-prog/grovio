@@ -96,6 +96,8 @@ const setProductStatus = catchAsync(async (req, res) => {
 // inventory-manager may omit storeId — it defaults to their assigned store)
 const createProduct = catchAsync(async (req, res) => {
   const { name, description, categoryId, unit, price, discountPrice, stockQty, sku } = req.body;
+  // Multipart form: booleans arrive as 'true' / 'false'.
+  const requiresColdBag = req.body.requiresColdBag === true || req.body.requiresColdBag === 'true';
   const storeId = resolveStoreScope(req.user, req.body.storeId);
   if (!storeId) throw new ApiError(400, 'storeId is required');
 
@@ -114,6 +116,10 @@ const createProduct = catchAsync(async (req, res) => {
     discountPrice: discountPrice || null,
     stockQty: stockQty || 0,
     sku,
+    requiresColdBag,
+    pickType: req.body.pickType || null,
+    costPrice: req.body.costPrice === undefined || req.body.costPrice === '' ? null : Number(req.body.costPrice),
+    weightKg: req.body.weightKg === undefined || req.body.weightKg === '' || req.body.weightKg === 'null' ? null : Number(req.body.weightKg),
     images,
     qrToken: generateProductQrToken(),
   });
@@ -129,11 +135,17 @@ const updateProduct = catchAsync(async (req, res) => {
   if (!product) throw new ApiError(404, 'Product not found');
   resolveStoreScope(req.user, product.store);
 
-  const fields = ['name', 'description', 'unit', 'price', 'discountPrice', 'stockQty', 'sku', 'isAvailable', 'status'];
+  const fields = ['name', 'description', 'unit', 'price', 'discountPrice', 'stockQty', 'sku', 'isAvailable', 'status', 'pickType', 'costPrice', 'weightKg'];
   fields.forEach((f) => {
     if (req.body[f] !== undefined) product[f] = req.body[f];
   });
   if (req.body.categoryId !== undefined) product.category = req.body.categoryId;
+  // Frozen items travel in a cold bag (services/coldBag.service.js).
+  if (req.body.requiresColdBag !== undefined) product.requiresColdBag = req.body.requiresColdBag === true || req.body.requiresColdBag === 'true';
+  // Multipart form: '' clears these back to automatic / default margin.
+  if (product.pickType === '') product.pickType = null;
+  if (product.costPrice === '' || product.costPrice === 'null') product.costPrice = null;
+  if (product.weightKg === '' || product.weightKg === 'null') product.weightKg = null;
   // Only a full MANAGE_CATALOG admin may move a product to a different store.
   if (req.body.storeId !== undefined) product.store = resolveStoreScope(req.user, req.body.storeId);
   if (req.files?.length) product.images = req.files.map((f) => `/uploads/${f.filename}`);

@@ -19,6 +19,7 @@ async function getApprovedProfile(userId) {
   const profile = await DeliveryProfile.findOne({ user: userId });
   if (!profile) throw new ApiError(404, 'Delivery profile not found');
   if (profile.status !== 'approved') throw new ApiError(403, 'Your account must be approved before you can pick up orders');
+  await require('../../services/accountHold.service').assertNotOnHold(userId);
   return profile;
 }
 

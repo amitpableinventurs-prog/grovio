@@ -18,6 +18,22 @@ const storeSchema = new Schema({
   closeTime: { type: String, default: null },
   isOpen: { type: Boolean, default: true },
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+  // Picker pay rates for this store: only what differs from the default policy
+  // (services/pickerPay.service.js). A picker's own rates override these.
+  pickerPayPolicy: { type: Schema.Types.Mixed, default: null },
+  // Weather / surge at this hub for delivery partner pay (services/riderPay.service.js), set by an
+  // admin: rain none|normal|heavy|severe, surge none|high; applies to deliveries in [since, until).
+  riderConditions: {
+    type: new Schema({
+      rain: { type: String, enum: ['none', 'normal', 'heavy', 'severe'], default: 'none' },
+      surge: { type: String, enum: ['none', 'high'], default: 'none' },
+      since: { type: Date, default: null },
+      until: { type: Date, default: null },
+      updatedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+      updatedAt: { type: Date, default: null },
+    }, { _id: false }),
+    default: null,
+  },
 }, { timestamps: true });
 
 module.exports = model('Store', storeSchema);

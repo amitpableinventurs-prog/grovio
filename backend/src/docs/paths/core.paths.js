@@ -520,16 +520,31 @@ paths['/common/notifications/{id}/read'] = {
 paths['/common/notifications/read-all'] = {
   patch: { tags: ['Common'], summary: 'Mark all my notifications as read', ...bearer(), responses: { 200: envelope(null, 'All notifications marked as read'), 401: RESPONSES_401 } },
 };
+paths['/common/support/categories'] = {
+  get: { tags: ['Common'], summary: 'Help categories and issues for my app (delivery / customer / picker). needsOrder = orderId required.', ...bearer(), responses: { 200: envelope({ type: 'array', items: { type: 'object', properties: { key: { type: 'string', example: 'past_order' }, label: { type: 'string', example: 'Past order related issues' }, needsOrder: { type: 'boolean' }, issues: { type: 'array', items: { type: 'object', properties: { key: { type: 'string', example: 'long_distance_return_pay' }, label: { type: 'string', example: 'Long Distance Return Pay' } } } } } } }), 401: RESPONSES_401 } },
+};
 paths['/common/support'] = {
   post: {
-    tags: ['Common'], summary: 'Create a support ticket (any role)', ...bearer(),
-    requestBody: jsonBody({ subject: { type: 'string' }, message: { type: 'string' } }, ['subject', 'message']),
-    responses: { 201: envelope(ref('SupportTicket'), 'Support ticket created'), 401: RESPONSES_401 },
+    tags: ['Common'], summary: 'Create a support ticket (any role). Pick category + subcategory (from /common/support/categories), optionally about an order (Trip details "Help center"), a pocket transfer ("Raise a ticket") or an offer. Older clients may still send just subject + message.', ...bearer(),
+    requestBody: jsonBody({ category: { type: 'string', example: 'past_order' }, subcategory: { type: 'string', example: 'long_distance_return_pay' }, message: { type: 'string' }, orderId: { type: 'string' }, transferId: { type: 'string' }, offerId: { type: 'string' }, subject: { type: 'string', description: 'Only without a category' } }, ['message']),
+    responses: { 201: envelope(ref('SupportTicket'), 'Support ticket created'), 401: RESPONSES_401, 404: RESPONSES_404, 422: RESPONSES_422 },
   },
   get: {
-    tags: ['Common'], summary: 'List my support tickets', ...bearer(), parameters: PAGE_QS,
+    tags: ['Common'], summary: 'List my support tickets (without the conversation)', ...bearer(), parameters: [...PAGE_QS, q('status', 'open | in_progress | resolved | closed')],
     responses: { 200: envelope(paginated(ref('SupportTicket'))), 401: RESPONSES_401 },
   },
+};
+paths['/common/support/{id}'] = {
+  get: { tags: ['Common'], summary: 'A ticket with its conversation (messages: user / agent / system) and canReply / canRate / canReopen', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('SupportTicket')), 401: RESPONSES_401, 404: RESPONSES_404 } },
+};
+paths['/common/support/{id}/messages'] = {
+  post: { tags: ['Common'], summary: 'Reply in the conversation (not once closed — reopen first)', ...bearer(), parameters: [idParam()], requestBody: jsonBody({ text: { type: 'string' } }, ['text']), responses: { 201: envelope(ref('SupportTicket')), 400: errorResponse('Ticket closed'), 401: RESPONSES_401, 404: RESPONSES_404 } },
+};
+paths['/common/support/{id}/rate'] = {
+  post: { tags: ['Common'], summary: '"How would you like to rate my assistance?" — after it is closed', ...bearer(), parameters: [idParam()], requestBody: jsonBody({ rating: { type: 'string', enum: ['up', 'down'] } }, ['rating']), responses: { 200: envelope(ref('SupportTicket')), 400: errorResponse('Not closed yet'), 401: RESPONSES_401, 404: RESPONSES_404 } },
+};
+paths['/common/support/{id}/reopen'] = {
+  post: { tags: ['Common'], summary: '"Still have an issue? Reopen ticket" (optional text is added to the conversation)', ...bearer(), parameters: [idParam()], requestBody: jsonBody({ text: { type: 'string' } }), responses: { 200: envelope(ref('SupportTicket')), 400: errorResponse('Still open'), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
 
 // ============================== PAYMENTS ==============================

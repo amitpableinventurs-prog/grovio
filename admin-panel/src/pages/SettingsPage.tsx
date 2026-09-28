@@ -2,8 +2,9 @@ import { Button, Card, Form, Input, Select, Typography, App as AntApp, Spin, Spa
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { fetchSettings, updateSettings } from '../api/settings';
-import { IvrCard, PaymentOptionsCard, PayuCard, PhonepeCard, TrackingCard } from '../components/settings/IntegrationCards';
+import { IvrCard, PaymentOptionsCard, PayuCard, PhonepeCard, RiderPayCard, TrackingCard, VoipCard } from '../components/settings/IntegrationCards';
 import { INTEGRATION_DEFAULTS } from '../components/settings/defaults';
+import { HubConditionsCard, RiderRateCard } from '../components/settings/RiderRateCard';
 
 // Fields whose fetched value is a masked placeholder (e.g. "••••1234"), never the real secret —
 // see SECRET_KEYS in backend/src/controllers/admin/settings.controller.js. These must NOT be
@@ -12,6 +13,7 @@ import { INTEGRATION_DEFAULTS } from '../components/settings/defaults';
 const SECRET_KEYS = [
   'razorpayKeySecret', 'razorpayWebhookSecret', 'smsApiKey', 'smsApiSecret', 'googleMapsApiKey',
   'payuSalt', 'phonepeClientSecret', 'phonepeWebhookPassword', 'exotelApiKey', 'exotelApiToken', 'ivrWebhookToken',
+  'twilioAuthToken', 'twilioApiKeySecret',
 ];
 
 function secretHint(value?: string | null) {
@@ -24,6 +26,7 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const smsProvider = Form.useWatch('smsProvider', form);
   const ivrProvider = Form.useWatch('ivrProvider', form);
+  const voipProvider = Form.useWatch('voipProvider', form);
 
   const { data, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -35,6 +38,7 @@ export default function SettingsPage() {
     onSuccess: () => {
       message.success('Settings saved');
       queryClient.invalidateQueries({ queryKey: ['ivr-config'] });
+      queryClient.invalidateQueries({ queryKey: ['voip-config'] });
     },
     onError: (err: any) => message.error(err?.response?.data?.message || 'Could not save settings'),
   });
@@ -70,7 +74,7 @@ export default function SettingsPage() {
             <Form.Item name="appVersion" label="App Version">
               <Input />
             </Form.Item>
-            <Form.Item name="publicBaseUrl" label="Public server URL" extra="Where this API is reachable from the internet, e.g. https://api.grovio.in — used by payment callbacks, IVR webhooks and hub screen links">
+            <Form.Item name="publicBaseUrl" label="Public server URL" extra="Where this API is reachable from the internet, e.g. https://api.grovio.in — used by payment callbacks, IVR / VoIP webhooks and hub screen links">
               <Input placeholder="https://api.example.com" />
             </Form.Item>
             <Form.Item name="customerWebUrl" label="Customer website URL" extra="Customers return here after paying with PayU / PhonePe">
@@ -142,11 +146,14 @@ export default function SettingsPage() {
           </Card>
 
           <IvrCard data={data} provider={ivrProvider} />
+          <VoipCard data={data} provider={voipProvider} />
           <TrackingCard />
+          <RiderPayCard />
 
           <Card title="Google Maps" style={{ maxWidth: 640 }}>
             <Typography.Paragraph type="secondary">
-              Stored for use by map/geocoding features. No feature currently consumes this key.
+              Used for the delivery app's map: road routes and "13 mins | 4.3 km away" times to the store and the customer.
+              Enable the Routes API on this key in Google Cloud. Without a key, distances are estimated in a straight line.
             </Typography.Paragraph>
             <Form.Item name="googleMapsApiKey" label="API Key" extra={secretHint(data?.googleMapsApiKey)}>
               <Input.Password placeholder="Leave blank to keep existing" autoComplete="new-password" />
@@ -160,6 +167,12 @@ export default function SettingsPage() {
           </Button>
         </Space>
       </Form>
+
+      {/* Saved on their own (not with Save Settings above). */}
+      <Space direction="vertical" size="large" style={{ width: '100%', marginTop: 32 }}>
+        <RiderRateCard />
+        <HubConditionsCard />
+      </Space>
     </div>
   );
 }

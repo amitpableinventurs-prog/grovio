@@ -3,6 +3,8 @@ const { VEHICLE_TYPES } = require('../utils/deliveryOnboarding');
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const AADHAAR_REGEX = /^[2-9][0-9]{11}$/;
+// Aadhaar Virtual ID — a 16-digit stand-in for the Aadhaar number that UIDAI accepts for KYC.
+const AADHAAR_VID_REGEX = /^[0-9]{16}$/;
 const MIN_AGE = 18;
 
 const vehicleRules = [
@@ -13,11 +15,17 @@ const vehicleRules = [
 // Sent as multipart/form-data alongside the `document` photo (the ID card itself).
 const identityRules = [
   body('idType').trim().toLowerCase().isIn(['pan', 'aadhaar']).withMessage('idType must be pan or aadhaar'),
-  // The app shows Aadhaar as "1234 5678 9012" — spaces are dropped before checking.
-  body('idNumber').customSanitizer((v) => String(v ?? '').replace(/\s+/g, '').toUpperCase())
+  // The app shows Aadhaar as "1234 5678 9012" — spaces and dashes are dropped before checking.
+  body('idNumber').customSanitizer((v) => String(v ?? '').replace(/[\s-]+/g, '').toUpperCase())
     .custom((value, { req }) => {
       if (req.body.idType === 'pan' && !PAN_REGEX.test(value)) throw new Error('Enter a valid PAN number (e.g. ABCDE1234F)');
-      if (req.body.idType === 'aadhaar' && !AADHAAR_REGEX.test(value)) throw new Error('Enter a valid 12-digit Aadhaar number');
+      if (req.body.idType === 'aadhaar' && !AADHAAR_REGEX.test(value) && !AADHAAR_VID_REGEX.test(value)) {
+        // UIDAI never issues numbers starting with 0 or 1 — say so, since the screen's own
+        // placeholder (1234 5678 9012) is the first thing testers type.
+        throw new Error(/^[01][0-9]{11}$/.test(value)
+          ? 'Aadhaar number cannot start with 0 or 1'
+          : 'Enter your 12-digit Aadhaar number or 16-digit Virtual ID');
+      }
       return true;
     }),
   body('fullName').trim().isLength({ min: 2, max: 60 }).withMessage('Enter your full name as on the card (2–60 characters)'),

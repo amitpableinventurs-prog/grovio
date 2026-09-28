@@ -32,6 +32,7 @@ import {
 import type { DeliveryOnboarding, DeliveryPartner } from '../types';
 import { usePageState } from '../hooks/usePageState';
 import StatusTag from '../components/StatusTag';
+import RiderPayPeriods from '../components/RiderPayPeriods';
 import { assetUrl, formatDateTime, titleCase } from '../utils/format';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'blocked';
@@ -374,6 +375,8 @@ export default function DeliveryPartnersPage() {
               <Descriptions.Item label="Bank">{orDash(profile?.bankDetails?.bankName)}</Descriptions.Item>
               <Descriptions.Item label="Cheque / passbook"><DocImage path={profile?.bankDetails?.document} label="Cancelled cheque or passbook" /></Descriptions.Item>
             </Descriptions>
+
+            <RiderPayPeriods riderId={detail._id} />
           </>
         )}
       </Drawer>

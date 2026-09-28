@@ -472,6 +472,7 @@ paths['/admin/support-tickets'] = {
   get: { tags: TAG_SUPPORT, summary: 'List all support tickets', ...bearer(), parameters: [...PAGE_QS, statusParam], responses: { 200: envelope(paginated(ref('SupportTicket'))), 401: RESPONSES_401 } },
 };
 paths['/admin/support-tickets/{id}'] = {
+  get: { tags: TAG_SUPPORT, summary: 'A ticket with its conversation', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('SupportTicket')), 401: RESPONSES_401, 404: RESPONSES_404 } },
   patch: { tags: TAG_SUPPORT, summary: 'Reply to / change status of a ticket', ...bearer(), parameters: [idParam()], requestBody: jsonBody({ adminReply: { type: 'string' }, status: { type: 'string', enum: ['open', 'in_progress', 'resolved', 'closed'] } }), responses: { 200: envelope(ref('SupportTicket'), 'Ticket updated'), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
 

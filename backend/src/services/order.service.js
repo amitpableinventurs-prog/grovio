@@ -167,6 +167,16 @@ async function transitionOrder({ order, toStatus, changedBy, note }) {
 
   emitOrderEvent(order._id.toString(), 'order:status', { orderId: order._id, status: toStatus, note });
 
+  // Delivery partner side: flag cold-bag orders on assignment, and keep the partner's trip in step
+  // (join on assignment, close when leaving the hub, pay once all its orders are finished). Never
+  // fails the status change itself. Required lazily (they depend on this module).
+  try {
+    if (toStatus === 'assigned') await require('./coldBag.service').markNeedsColdBag(order);
+    await require('./riderPay.service').onOrderStatus(order, toStatus);
+  } catch (err) {
+    console.error(`Trip/pay update for ${order.orderNumber} (${toStatus}) failed:`, err.message);
+  }
+
   const message = STATUS_MESSAGES[toStatus];
   if (message) {
     await notifyUser(order.customer, {
@@ -206,7 +216,11 @@ async function transitionOrder({ order, toStatus, changedBy, note }) {
 // Non-hub pickers still need to physically get their portion to the hub (order.store) themselves —
 // that hand-off isn't tracked here, it's on the pickers to coordinate.
 async function advancePickingStatus({ order, changedBy }) {
-  const allCompleted = order.pickTasks.every((t) => t.status === 'completed');
+  // An item left without a picker (e.g. after a picker rejected and nobody else was free) still
+  // has to be picked, so the order isn't packed until an admin assigns it and that's done too.
+  const allCompleted = order.pickTasks.length > 0
+    && order.pickTasks.every((t) => t.status === 'completed')
+    && order.items.every((i) => i.assignedPicker);
   const anyCompleted = order.pickTasks.some((t) => t.status === 'completed');
 
   if (allCompleted && order.orderStatus !== 'packed') {

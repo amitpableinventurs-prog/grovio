@@ -9,6 +9,7 @@ const { connectDB } = require('./src/config/db');
 require('./src/models'); // registers all Mongoose models
 
 const { initSocket } = require('./src/sockets');
+const { startRiderJobs } = require('./src/services/riderJobs.service');
 const { notFoundHandler, errorHandler } = require('./src/middleware/error.middleware');
 const swaggerUi = require('swagger-ui-express');
 const openapiSpec = require('./src/docs/openapi');
@@ -42,6 +43,8 @@ app.use('/partner-login', express.static(path.join(__dirname, '../partner-login'
 // its pairing link) and the page a plain camera lands on if it scans that QR.
 app.use('/hub-display', express.static(path.join(__dirname, '../hub-display')));
 app.use('/hub-checkin', express.static(path.join(__dirname, '../hub-checkin')));
+// Grovio logo files (brand/) for those pages.
+app.use('/brand', express.static(path.join(__dirname, '../brand'), { maxAge: '7d' }));
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/', (req, res) => {
@@ -65,6 +68,7 @@ initSocket(server);
 connectDB()
   .then(() => {
     server.listen(PORT, () => console.log(`Grovio backend running on port ${PORT}`));
+    startRiderJobs();
   })
   .catch((err) => {
     console.error('Failed to connect to MongoDB:', err.message);

@@ -137,7 +137,8 @@ async function fetchPaymentInstrument(razorpayPaymentId) {
   }
 }
 
-async function creditWallet({ userId, amount, reason, refOrderId = null }) {
+// category/refOfferId: delivery partner earnings only (see models/walletTransaction.model.js).
+async function creditWallet({ userId, amount, reason, refOrderId = null, category = null, refOfferId = null }) {
   let wallet = await Wallet.findOne({ user: userId });
   if (!wallet) wallet = await Wallet.create({ user: userId, balance: 0 });
 
@@ -151,6 +152,8 @@ async function creditWallet({ userId, amount, reason, refOrderId = null }) {
     amount,
     reason,
     refOrderId,
+    category,
+    refOfferId,
     balanceAfter: newBalance,
   });
 

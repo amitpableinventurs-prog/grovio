@@ -11,6 +11,7 @@ const { invalidateSettingsCache } = require('../../services/settings.service');
 const SECRET_KEYS = [
   'razorpayKeySecret', 'razorpayWebhookSecret', 'smsApiKey', 'smsApiSecret', 'googleMapsApiKey',
   'payuSalt', 'phonepeClientSecret', 'phonepeWebhookPassword', 'exotelApiKey', 'exotelApiToken', 'ivrWebhookToken',
+  'twilioAuthToken', 'twilioApiKeySecret',
 ];
 
 function maskSecret(value) {

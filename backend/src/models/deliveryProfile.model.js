@@ -44,6 +44,17 @@ const deliveryProfileSchema = new Schema({
   onboardingCompletedAt: { type: Date, default: null },
 
   isAvailable: { type: Boolean, default: false },
+  // This partner's own pay rate card — only the policy sections that differ from the default
+  // riderPayPolicy (services/riderPay.service.js).
+  payOverride: { type: Schema.Types.Mixed, default: null },
+  // Account on hold (services/accountHold.service.js): can't go online or take orders until
+  // releaseAt (then it lifts itself) or an admin unlocks it. Details live in the AccountHold case.
+  hold: {
+    active: { type: Boolean, default: false },
+    case: { type: Schema.Types.ObjectId, ref: 'AccountHold', default: null },
+    title: { type: String, default: null },
+    releaseAt: { type: Date, default: null },
+  },
   currentLat: { type: Number, default: null },
   currentLng: { type: Number, default: null },
   // When currentLat/currentLng were last reported — a stale fix isn't used for ETA/tracking
@@ -60,11 +71,13 @@ const deliveryProfileSchema = new Schema({
   },
 }, { timestamps: true });
 
-// A full Aadhaar number is never sent back out (UIDAI masking rule) — only its last 4 digits.
-// The stored value stays complete for verification against the uploaded document.
+// A full Aadhaar number (12 digits) or Virtual ID (16 digits) is never sent back out (UIDAI
+// masking rule) — only its last 4 digits, e.g. "XXXX XXXX 1234" / "XXXX XXXX XXXX 1234". The
+// stored value stays complete for verification against the uploaded document.
 function maskAadhaar(doc, ret) {
   if (ret.kyc?.idType === 'aadhaar' && ret.kyc.idNumber) {
-    ret.kyc.idNumber = `XXXX XXXX ${ret.kyc.idNumber.slice(-4)}`;
+    const hiddenGroups = Math.max(1, Math.ceil(ret.kyc.idNumber.length / 4) - 1);
+    ret.kyc.idNumber = `${'XXXX '.repeat(hiddenGroups)}${ret.kyc.idNumber.slice(-4)}`;
   }
   return ret;
 }

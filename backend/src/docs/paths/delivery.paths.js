@@ -44,10 +44,10 @@ paths['/delivery/onboarding/vehicle'] = {
 };
 paths['/delivery/onboarding/identity'] = {
   post: {
-    tags: TAG, summary: 'Verify PAN / Aadhaar screen (details + card photo). An Aadhaar number is returned masked.', ...bearer(),
+    tags: TAG, summary: 'Verify PAN / Aadhaar screen (details + card photo). An Aadhaar number / VID is returned masked.', ...bearer(),
     requestBody: formBody({
       idType: { type: 'string', enum: ['pan', 'aadhaar'] },
-      idNumber: { type: 'string', example: 'ABCDE1234F', description: 'PAN (ABCDE1234F) or 12-digit Aadhaar; spaces are ignored' },
+      idNumber: { type: 'string', example: 'ABCDE1234F', description: 'PAN (ABCDE1234F), 12-digit Aadhaar or 16-digit Aadhaar Virtual ID; spaces and dashes are ignored' },
       fullName: { type: 'string', example: 'Ravi Kumar' },
       gender: { type: 'string', enum: ['male', 'female', 'other'] },
       fatherName: { type: 'string', example: 'Suresh Kumar' },
@@ -98,7 +98,7 @@ paths['/delivery/profile'] = {
   patch: { tags: TAG, summary: 'Update vehicle/license details', ...bearer(), requestBody: jsonBody({ vehicleType: { type: 'string' }, vehicleNumber: { type: 'string' }, licenseNumber: { type: 'string' } }), responses: { 200: envelope(ref('DeliveryProfile'), 'Profile updated'), 401: RESPONSES_401 } },
 };
 paths['/delivery/jobs'] = {
-  get: { tags: TAG, summary: 'List my assigned/active jobs', ...bearer(), parameters: [...PAGE_QS, q('status', "default: assigned,out_for_delivery")], responses: { 200: envelope(paginated(ref('Order'))), 401: RESPONSES_401 } },
+  get: { tags: TAG, summary: 'List my assigned/active jobs. Each order has riderPayQuote: mapped distance, KM pay, peak / rain / heavy-load bonus and estimated total — shown before accepting.', ...bearer(), parameters: [...PAGE_QS, q('status', "default: assigned,out_for_delivery")], responses: { 200: envelope(paginated(ref('Order'))), 401: RESPONSES_401 } },
 };
 paths['/delivery/jobs/{id}'] = {
   get: { tags: TAG, summary: 'Get one job detail', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('Order')), 401: RESPONSES_401, 404: RESPONSES_404 } },

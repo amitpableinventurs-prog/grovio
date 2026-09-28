@@ -43,8 +43,9 @@ export default function LoginPage() {
     >
       <Card style={{ width: 380 }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <Typography.Title level={3} style={{ marginBottom: 0, color: '#16a34a' }}>
-            Grovio Admin
+          <img src="/brand/grovio-logo.svg" alt="Grovio — Freshness. Faster. Everyday." style={{ height: 76, width: 'auto', marginBottom: 8 }} />
+          <Typography.Title level={4} style={{ margin: '4px 0 0', color: '#0f3d22' }}>
+            Admin Panel
           </Typography.Title>
           <Typography.Text type="secondary">Sign in to manage your platform</Typography.Text>
         </div>

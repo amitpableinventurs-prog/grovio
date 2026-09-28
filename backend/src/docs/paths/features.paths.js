@@ -4,7 +4,7 @@ const {
   jsonBody, idParam, q, PAGE_QS, bearer,
 } = require('../helpers');
 
-// Live tracking, IVR and the PayU / PhonePe gateways.
+// Live tracking, IVR, masked in-app calls (VoIP) and the PayU / PhonePe gateways.
 const paths = {};
 
 const ETA = {
@@ -23,7 +23,7 @@ const TRACKING = {
   properties: {
     orderNumber: { type: 'string' },
     orderStatus: { type: 'string' },
-    deliveryPartner: { type: 'object', nullable: true, properties: { name: { type: 'string' }, phone: { type: 'string' } } },
+    deliveryPartner: { type: 'object', nullable: true, description: 'No phone number — call through POST /customer/orders/{id}/call', properties: { _id: { type: 'string' }, name: { type: 'string' } } },
     hub: { ...POINT, properties: { ...POINT.properties, name: { type: 'string' } } },
     drop: POINT,
     rider: { ...POINT, properties: { ...POINT.properties, updatedAt: { type: 'string', format: 'date-time' } } },
@@ -122,6 +122,51 @@ paths['/ivr/exotel/{token}/missed-call'] = { get: exotelHook('Passthru on the mi
 paths['/ivr/exotel/{token}/care/prompt'] = { get: exotelHook('Customer care menu greeting', true) };
 paths['/ivr/exotel/{token}/care/input'] = { get: { ...exotelHook('Care menu key press: 1 status, 2 agent (responds 302 → Connect), 3 call back'), responses: { 200: { description: 'Success branch' }, 302: { description: 'Connect to support agent' } } } };
 paths['/ivr/exotel/{token}/care/result'] = { get: exotelHook('Care menu result text', true) };
+
+// ---- Masked calls (in-app VoIP, Twilio) -------------------------------------------------------
+const VOIP_TAG = ['VoIP (masked calls)'];
+const START_CALL = {
+  type: 'object',
+  properties: {
+    callId: { type: 'string' },
+    simulated: { type: 'boolean', description: 'true when no VoIP provider is configured: nothing is dialled' },
+    orderNumber: { type: 'string' },
+    callee: { type: 'object', properties: { role: { type: 'string', enum: ['customer', 'delivery'] }, name: { type: 'string', description: 'First name only' } } },
+    params: { type: 'object', description: 'Pass to the Twilio Voice SDK: device.connect({ params })', properties: { callId: { type: 'string' } } },
+  },
+};
+const startCallDoc = (tags, who) => ({
+  tags, summary: `Start a masked in-app call to ${who}. Only while the order is assigned / picked up / out for delivery. Returns no phone number — connect with the Twilio Voice SDK within 2 minutes.`,
+  ...bearer(), parameters: [idParam()],
+  responses: { 201: envelope(START_CALL), 400: errorResponse('Order not out for delivery / no rider assigned'), 401: RESPONSES_401, 404: RESPONSES_404, 503: errorResponse('VoIP not fully configured') },
+});
+paths['/customer/orders/{id}/call'] = { post: startCallDoc(['Customer - Checkout & Orders'], 'the delivery partner') };
+paths['/delivery/jobs/{id}/call'] = { post: startCallDoc(['Delivery'], 'the customer') };
+paths['/voip/token'] = {
+  get: {
+    tags: VOIP_TAG,
+    summary: 'Twilio Voice access token (1 h) for the Voice SDK Device, for customers and delivery partners. Refresh on the SDK tokenWillExpire event. Incoming calls carry customParameters callId, orderNumber, callerRole, callerName.',
+    ...bearer(), parameters: [q('platform', 'web (default), android or ios — picks the push credential for incoming calls')],
+    responses: {
+      200: envelope({ type: 'object', properties: { enabled: { type: 'boolean', description: 'false = in-app calling is off (no other fields)' }, identity: { type: 'string', example: 'u_665f0c...' }, token: { type: 'string' }, ttlSec: { type: 'integer' }, expiresAt: { type: 'string', format: 'date-time' } } }),
+      401: RESPONSES_401, 503: errorResponse('VoIP not fully configured'),
+    },
+  },
+};
+const twilioHook = (summary) => ({
+  tags: VOIP_TAG, summary: `${summary} (Twilio webhook, verified by X-Twilio-Signature)`,
+  responses: { 200: { description: 'TwiML', content: { 'text/xml': { schema: { type: 'string' } } } }, 403: errorResponse('Bad signature') },
+});
+paths['/voip/twilio/voice'] = { post: twilioHook("TwiML App Voice URL: bridges the caller to the other party's app with <Dial><Client>") };
+paths['/voip/twilio/status'] = { post: twilioHook("TwiML App status callback for the caller's leg") };
+paths['/voip/twilio/dial-result'] = { post: twilioHook('<Dial action>: how the call ended (?callId=)') };
+paths['/voip/twilio/client-status'] = { post: twilioHook('Callee answered (?callId=)') };
+paths['/admin/voip/calls'] = {
+  get: { tags: ['Admin - Support'], summary: 'Masked customer <-> rider call log', ...bearer(), parameters: [...PAGE_QS, q('status', 'Call status'), q('orderId', 'Order')], responses: { 200: envelope(paginated({ type: 'object' })), 401: RESPONSES_401, 403: RESPONSES_403 } },
+};
+paths['/admin/voip/config'] = {
+  get: { tags: ['Admin - Settings'], summary: 'VoIP provider state, missing settings and the URLs for the Twilio TwiML App', ...bearer(), responses: { 200: envelope({ type: 'object' }), 401: RESPONSES_401, 403: RESPONSES_403 } },
+};
 
 // ---- PayU / PhonePe ---------------------------------------------------------------------------
 const PAY_TAG = ['Payments'];

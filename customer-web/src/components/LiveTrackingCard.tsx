@@ -5,6 +5,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import * as ordersApi from '../api/orders';
 import { onSocketEvent } from '../realtime/socket';
+import { useVoipStore } from '../voip/voipStore';
 import type { DeliveryLocationEvent, Order, OrderTracking } from '../types';
 
 const TRACKABLE = ['placed', 'accepted', 'picking', 'partially_picked', 'packed', 'assigned', 'picked_up', 'out_for_delivery'];
@@ -64,6 +65,8 @@ function TrackingMapView({ tracking }: { tracking: OrderTracking }) {
 
 export default function LiveTrackingCard({ order }: { order: Order }) {
   const queryClient = useQueryClient();
+  const voipEnabled = useVoipStore((s) => s.enabled);
+  const onCall = useVoipStore((s) => !!s.call && s.call.phase !== 'ended');
   const active = TRACKABLE.includes(order.orderStatus);
   const key = ['order-tracking', order._id];
 
@@ -113,10 +116,17 @@ export default function LiveTrackingCard({ order }: { order: Order }) {
           <div className="flex items-center gap-2 text-sm">
             <Bike className="h-4 w-4 text-orange-600" />
             <span className="font-medium text-gray-800">{tracking.deliveryPartner.name}</span>
-            {tracking.deliveryPartner.phone && (
-              <a href={`tel:${tracking.deliveryPartner.phone}`} className="inline-flex items-center gap-1 rounded-full border border-gray-300 px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50">
+            {/* Masked in-app call — the rider's number is never sent to us. In dev without a VoIP
+                provider the button still works; the backend records a simulated call. */}
+            {(voipEnabled || import.meta.env.DEV) && (
+              <button
+                type="button"
+                onClick={() => useVoipStore.getState().callRider(order._id)}
+                disabled={onCall}
+                className="inline-flex items-center gap-1 rounded-full border border-gray-300 px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
                 <Phone className="h-3 w-3" /> Call
-              </a>
+              </button>
             )}
           </div>
         )}

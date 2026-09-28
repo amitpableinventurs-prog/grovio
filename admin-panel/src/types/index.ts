@@ -193,6 +193,8 @@ export interface Product {
   sku?: string | null;
   variants: ProductVariant[];
   isAvailable: boolean;
+  requiresColdBag?: boolean;
+  weightKg?: number | null;
   status: 'active' | 'inactive';
   qrToken?: string | null;
   createdAt: string;
@@ -509,6 +511,31 @@ export interface IvrCall {
   durationSec?: number | null;
   error?: string | null;
   createdAt: string;
+}
+
+// Masked in-app call between a customer and their delivery partner (backend models/voipCall.model.js).
+export interface VoipCall {
+  _id: string;
+  order?: { _id: string; orderNumber: string; orderStatus: OrderStatus } | null;
+  caller?: { _id: string; name: string; phone?: string } | null;
+  callerRole: 'customer' | 'delivery';
+  callee?: { _id: string; name: string; phone?: string } | null;
+  calleeRole: 'customer' | 'delivery';
+  provider: 'twilio' | 'simulated';
+  status: 'initiated' | 'ringing' | 'in-progress' | 'completed' | 'busy' | 'no-answer' | 'failed' | 'canceled' | 'expired' | 'simulated';
+  answeredAt?: string | null;
+  endedAt?: string | null;
+  durationSec?: number | null;
+  error?: string | null;
+  createdAt: string;
+}
+
+export interface VoipConfig {
+  provider: string;
+  publicBaseUrlSet: boolean;
+  missing: string[];
+  callableStatuses: string[];
+  webhooks: Record<'voice' | 'status' | 'dialResult' | 'clientStatus', string>;
 }
 
 export interface IvrConfig {
