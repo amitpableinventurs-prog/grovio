@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { Table, Typography, Space, Button, Modal, Form, Input, Select, Popconfirm, App as AntApp } from 'antd';
+import { Table, Typography, Space, Button, Modal, Form, Input, InputNumber, Select, Popconfirm, App as AntApp } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchStores, updateStore } from '../api/stores';
 import type { Store, Vendor } from '../types';
 import { usePageState } from '../hooks/usePageState';
 import StatusTag from '../components/StatusTag';
+import HubScreensModal from '../components/HubScreensModal';
 
 export default function StoresPage() {
   const { page, pageSize, onChange } = usePageState();
   const [editing, setEditing] = useState<Store | null>(null);
+  const [screensFor, setScreensFor] = useState<Store | null>(null);
   const [form] = Form.useForm();
   const { message } = AntApp.useApp();
   const queryClient = useQueryClient();
@@ -44,6 +46,7 @@ export default function StoresPage() {
           },
           { title: 'Address', dataIndex: 'address' },
           { title: 'Zone', dataIndex: 'zoneId', render: (v) => v || '—' },
+          { title: 'Delivery Radius', render: (_, r) => (r.serviceRadiusKm ? `${r.serviceRadiusKm} km` : 'Default') },
           { title: 'Hours', render: (_, r) => (r.openTime && r.closeTime ? `${r.openTime} - ${r.closeTime}` : '—') },
           { title: 'Open Now', render: (_, r) => <StatusTag status={r.isOpen ? 'open' : 'closed'} /> },
           { title: 'Status', render: (_, r) => <StatusTag status={r.status} /> },
@@ -55,10 +58,13 @@ export default function StoresPage() {
                   size="small"
                   onClick={() => {
                     setEditing(r);
-                    form.setFieldsValue({ zoneId: r.zoneId, status: r.status, openTime: r.openTime, closeTime: r.closeTime });
+                    form.setFieldsValue({ zoneId: r.zoneId, status: r.status, openTime: r.openTime, closeTime: r.closeTime, lat: r.lat, lng: r.lng, serviceRadiusKm: r.serviceRadiusKm });
                   }}
                 >
                   Edit
+                </Button>
+                <Button size="small" onClick={() => setScreensFor(r)}>
+                  Hub screens
                 </Button>
                 <Popconfirm
                   title={r.status === 'active' ? 'Deactivate this store?' : 'Activate this store?'}
@@ -85,10 +91,21 @@ export default function StoresPage() {
         <Form
           form={form}
           layout="vertical"
-          onFinish={(values) => editing && updateMutation.mutate({ id: editing._id, values })}
+          onFinish={(values) => editing && updateMutation.mutate({ id: editing._id, values: { ...values, serviceRadiusKm: values.serviceRadiusKm ?? '' } })}
         >
           <Form.Item name="zoneId" label="Zone ID">
             <Input placeholder="e.g. ZONE-NORTH" />
+          </Form.Item>
+          <Space style={{ display: 'flex' }}>
+            <Form.Item name="lat" label="Latitude" style={{ flex: 1 }} extra="Needed for ETAs, the live map and the delivery area">
+              <InputNumber style={{ width: '100%' }} min={-90} max={90} step={0.0001} placeholder="28.4595" />
+            </Form.Item>
+            <Form.Item name="lng" label="Longitude" style={{ flex: 1 }}>
+              <InputNumber style={{ width: '100%' }} min={-180} max={180} step={0.0001} placeholder="77.0266" />
+            </Form.Item>
+          </Space>
+          <Form.Item name="serviceRadiusKm" label="Delivery radius (km)" extra="Addresses farther than this can't order from the store. Blank = the default in Settings.">
+            <InputNumber style={{ width: '100%' }} min={0} step={0.5} />
           </Form.Item>
           <Space style={{ display: 'flex' }}>
             <Form.Item name="openTime" label="Open Time" style={{ flex: 1 }}>
@@ -108,6 +125,8 @@ export default function StoresPage() {
           </Form.Item>
         </Form>
       </Modal>
+
+      <HubScreensModal store={screensFor} onClose={() => setScreensFor(null)} />
     </div>
   );
 }

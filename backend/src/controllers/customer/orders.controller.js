@@ -1,17 +1,19 @@
-const { Cart, Order, Product, Store, Address, Coupon, CouponUsage, Setting, Refund, Wallet } = require('../../models');
+const { Cart, Order, Product, Store, Address, Coupon, CouponUsage, Refund, Wallet } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const generateOrderNumber = require('../../utils/orderNumber');
-const { transitionOrder } = require('../../services/order.service');
-const { splitOrderAcrossPickers } = require('../../services/assignment.service');
+const { transitionOrder, dispatchToPickers } = require('../../services/order.service');
 const { debitWallet, creditWallet } = require('../../services/payment.service');
-const { notifyUser } = require('../../services/notification.service');
+const { getChargeConfig, computeCharges, round2 } = require('../../services/charges.service');
+const { trackingSnapshot, checkServiceArea } = require('../../services/tracking.service');
+const { requestOrderConfirmation } = require('../../services/ivr.service');
+const { enabledPaymentOptions } = require('../../services/gateways');
 
-async function getSetting(key, fallback) {
-  const row = await Setting.findOne({ key });
-  return row ? row.value : fallback;
+function serviceAreaError(check) {
+  const s = check.outside[0];
+  return new ApiError(400, `This address is outside ${s.storeName}'s delivery area (${s.distanceKm} km away, delivers up to ${s.radiusKm} km). Choose a closer address or remove its items.`);
 }
 
 async function resolveCoupon(code, itemTotal, userId) {
@@ -71,7 +73,6 @@ async function loadAndPriceCart(userId, couponCodeOverride) {
   const stores = await Store.find({ _id: { $in: [...itemsByStore.keys()] } });
   const storeById = new Map(stores.map((s) => [s._id.toString(), s]));
 
-  const deliveryFeePerStore = Number(await getSetting('deliveryFee', process.env.DEFAULT_DELIVERY_FEE || 25));
   const itemTotal = cart.items.reduce((sum, i) => sum + Number(i.priceSnapshot) * i.qty, 0);
   const couponCode = couponCodeOverride !== undefined ? couponCodeOverride : cart.couponCode;
   const { discount, coupon } = await resolveCoupon(couponCode, itemTotal, userId);
@@ -93,29 +94,36 @@ async function loadAndPriceCart(userId, couponCodeOverride) {
       : Number((discount * (groupItemTotal / itemTotal)).toFixed(2));
     discountRemaining = Number((discountRemaining - groupDiscount).toFixed(2));
 
-    const groupGrandTotal = Number((groupItemTotal + deliveryFeePerStore + 0 - groupDiscount).toFixed(2));
     storeGroups.push({
       store,
       items,
       itemTotal: groupItemTotal,
-      deliveryFee: deliveryFeePerStore,
       discount: groupDiscount,
-      tax: 0,
-      grandTotal: groupGrandTotal,
     });
   }
 
-  const deliveryFee = deliveryFeePerStore * itemsByStore.size;
+  // Delivery / handling / packing / surcharge are charged ONCE per order (not per store), as
+  // configured on the admin Charges page — see services/charges.service.js.
+  const charges = computeCharges(itemTotal, await getChargeConfig());
   const tax = 0;
-  const grandTotal = Number((itemTotal + deliveryFee + tax - discount).toFixed(2));
+  const grandTotal = round2(
+    itemTotal + charges.deliveryFee + charges.handlingCharge + charges.packingCharge + charges.surcharge + tax - discount
+  );
 
-  return { cart, storeGroups, itemTotal, deliveryFee, discount, coupon, tax, grandTotal };
+  return { cart, storeGroups, itemTotal, charges, discount, coupon, tax, grandTotal };
 }
 
-// POST /customer/checkout/summary  { couponCode? }  -> recalculate totals without placing the order
+// POST /customer/checkout/summary  { couponCode?, addressId? }  -> recalculate totals without
+// placing the order. With addressId it also says whether every store can deliver there.
 const checkoutSummary = catchAsync(async (req, res) => {
-  const { couponCode } = req.body;
-  const { itemTotal, deliveryFee, discount, tax, grandTotal, coupon, storeGroups } = await loadAndPriceCart(req.user.id, couponCode);
+  const { couponCode, addressId } = req.body;
+  const { itemTotal, charges, discount, tax, grandTotal, coupon, storeGroups } = await loadAndPriceCart(req.user.id, couponCode);
+
+  let serviceArea = null;
+  if (addressId) {
+    const address = await Address.findOne({ _id: addressId, user: req.user.id });
+    if (address) serviceArea = await checkServiceArea(storeGroups.map((g) => g.store), address);
+  }
 
   // Included so the client can show/enable "Pay with Wallet" (and how much is available) at
   // checkout without a separate GET /customer/wallet call — placeOrder still re-checks the
@@ -128,18 +136,25 @@ const checkoutSummary = catchAsync(async (req, res) => {
       storeId: g.store._id,
       storeName: g.store.name,
       itemTotal: g.itemTotal,
-      deliveryFee: g.deliveryFee,
       discount: g.discount,
-      grandTotal: g.grandTotal,
     })),
     itemTotal,
-    deliveryFee,
+    deliveryFee: charges.deliveryFee,
+    // Show "Add ₹X more for free delivery" while freeDeliveryApplied is false.
+    freeDeliveryAbove: charges.freeDeliveryAbove,
+    freeDeliveryApplied: charges.freeDeliveryApplied,
+    handlingCharge: charges.handlingCharge,
+    packingCharge: charges.packingCharge,
+    surcharge: charges.surcharge,
+    surchargeLabel: charges.surchargeLabel,
     discount,
     tax,
     grandTotal,
     couponCode: coupon ? coupon.code : null,
     walletBalance,
     walletSufficient: walletBalance >= grandTotal,
+    serviceArea,
+    paymentOptions: await enabledPaymentOptions(),
   }).send(res);
 });
 
@@ -159,14 +174,20 @@ const placeOrder = catchAsync(async (req, res) => {
   const address = await Address.findOne({ _id: addressId, user: req.user.id });
   if (!address) throw new ApiError(404, 'Address not found');
 
-  const { cart, storeGroups, itemTotal, deliveryFee, discount, coupon, tax, grandTotal } = await loadAndPriceCart(req.user.id);
+  const { cart, storeGroups, itemTotal, charges, discount, coupon, tax, grandTotal } = await loadAndPriceCart(req.user.id);
+
+  const serviceArea = await checkServiceArea(storeGroups.map((g) => g.store), address);
+  if (!serviceArea.serviceable) throw serviceAreaError(serviceArea);
+
+  if (!(await enabledPaymentOptions()).some((o) => o.method === paymentMethod)) {
+    throw new ApiError(400, `Payment method ${paymentMethod} is not available`);
+  }
 
   if (paymentMethod === 'WALLET') {
     await debitWallet({ userId: req.user.id, amount: grandTotal, reason: 'Order payment' });
   }
 
   const hubGroup = storeGroups.reduce((max, g) => (g.items.length > max.items.length ? g : max), storeGroups[0]);
-  const storeNameById = new Map(storeGroups.map((g) => [g.store._id.toString(), g.store.name]));
 
   const items = storeGroups.flatMap((group) =>
     group.items.map((item) => {
@@ -189,7 +210,12 @@ const placeOrder = catchAsync(async (req, res) => {
     store: hubGroup.store._id,
     address: addressId,
     itemTotal,
-    deliveryFee,
+    deliveryFee: charges.deliveryFee,
+    handlingCharge: charges.handlingCharge,
+    packingCharge: charges.packingCharge,
+    surcharge: charges.surcharge,
+    surchargeLabel: charges.surchargeLabel,
+    deliveryPartnerEarning: charges.deliveryPartnerEarning,
     discount,
     tax,
     grandTotal,
@@ -219,22 +245,13 @@ const placeOrder = catchAsync(async (req, res) => {
   cart.couponCode = null;
   await cart.save();
 
-  // Stores are company-owned now — there's no vendor to approve the order, so it's accepted
-  // immediately and split across up to 3 pickers per store represented in it, who then work their
-  // assigned items in parallel — see assignment.service.js#splitOrderAcrossPickers.
-  await transitionOrder({ order, toStatus: 'accepted', changedBy: req.user.id, note: 'Auto-accepted (no vendor approval required)' });
+  // COD confirmation call, when switched on (services/ivr.service.js). Never blocks checkout.
+  requestOrderConfirmation(order).catch((err) => console.error(`Confirmation call for ${order.orderNumber} failed:`, err.message));
 
-  const pickerIds = await splitOrderAcrossPickers(order);
-  if (pickerIds.length) {
-    await order.save();
-    await transitionOrder({ order, toStatus: 'picking', changedBy: req.user.id, note: `Split across ${pickerIds.length} picker(s)` });
-    await Promise.all(order.pickTasks.map((task) => notifyUser(task.picker, {
-      title: 'New order assigned',
-      body: `Order ${order.orderNumber} is ready to be picked at ${storeNameById.get(task.store.toString())}.`,
-      type: 'new_order',
-      data: { orderId: order._id },
-    })));
-  }
+  // No manual accept step: COD/Wallet orders go straight to the pickers here. An online order
+  // waits at 'placed' until it's paid, then the payment handlers dispatch it — see
+  // order.service.js#dispatchToPickers.
+  await dispatchToPickers({ order, changedBy: req.user.id });
 
   new ApiResponse(201, order, 'Order placed successfully').send(res);
 });
@@ -262,19 +279,27 @@ const getOrderDetail = catchAsync(async (req, res) => {
   new ApiResponse(200, order).send(res);
 });
 
-// GET /customer/orders/:id/tracking  -> lightweight status-timeline view for a tracking screen
+// GET /customer/orders/:id/tracking -> status timeline plus live tracking: hub and drop
+// locations, the delivery partner's last GPS fix (while they're on the job) and an ETA. Live
+// updates after this arrive as 'delivery:location' socket events { orderId, lat, lng, eta }.
 const getTracking = catchAsync(async (req, res) => {
   const order = await Order.findOne({ _id: req.params.id, customer: req.user.id })
-    .select('orderNumber orderStatus statusLogs deliveredAt delivery')
-    .populate('delivery', 'name phone');
+    .select('orderNumber orderStatus statusLogs deliveredAt delivery store address placedAt createdAt arrivedAtPickupAt arrivedAtDropAt')
+    // No phone: the customer calls the rider in-app (POST /customer/orders/:id/call).
+    .populate('delivery', 'name')
+    .populate('store', 'name lat lng')
+    .populate('address', 'lat lng');
   if (!order) throw new ApiError(404, 'Order not found');
 
+  const snapshot = await trackingSnapshot(order);
   new ApiResponse(200, {
     orderNumber: order.orderNumber,
     orderStatus: order.orderStatus,
     statusLogs: order.statusLogs,
     deliveredAt: order.deliveredAt,
     deliveryPartner: order.delivery,
+    arrivedAtDropAt: order.arrivedAtDropAt,
+    ...snapshot,
   }).send(res);
 });
 

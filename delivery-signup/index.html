@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/svg+xml" href="/brand/grovio-icon.svg">
 <title>Become a Grovio Delivery Partner</title>
 <style>
   :root {
@@ -80,8 +81,7 @@
   <div class="shell">
     <div class="panel">
       <div class="brand-mark">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-        Grovio
+        <img src="/brand/grovio-logo-white.svg" alt="Grovio — Freshness. Faster. Everyday." style="height:64px;width:auto;display:block">
       </div>
       <h1>Deliver with Grovio</h1>
       <p>Earn on your own schedule — pick up orders from a nearby store and deliver them to customers' doors.</p>
@@ -109,8 +109,8 @@
                 <input id="name" name="name" type="text" required autocomplete="name" />
               </div>
               <div class="field">
-                <label for="phone">Mobile Number</label>
-                <input id="phone" name="phone" type="tel" required autocomplete="tel" placeholder="+919876543210" />
+                <label for="phone">Mobile Number (+91)</label>
+                <input id="phone" name="phone" type="tel" required autocomplete="tel-national" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" title="10-digit mobile number" placeholder="9876543210" />
               </div>
             </div>
           </fieldset>
@@ -206,7 +206,7 @@
         const body = await res.json();
         if (!res.ok || !body.success) throw new Error(body.message || 'Could not send OTP. Please try again.');
 
-        document.getElementById('otp-phone-label').textContent = phone;
+        document.getElementById('otp-phone-label').textContent = `+91 ${phone}`;
         detailsForm.style.display = 'none';
         otpForm.style.display = 'block';
         stepLede.textContent = 'Almost done — just verify your number.';

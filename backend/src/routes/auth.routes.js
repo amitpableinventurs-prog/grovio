@@ -1,20 +1,47 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/auth/auth.controller');
+const pickerCtrl = require('../controllers/auth/pickerAuth.controller');
+const deliveryCtrl = require('../controllers/auth/deliveryAuth.controller');
 const validate = require('../middleware/validate.middleware');
-const { authenticate } = require('../middleware/auth.middleware');
+const { authenticate, authorize } = require('../middleware/auth.middleware');
+const vendorAuthCtrl = require('../controllers/vendor/vendorAuth.controller');
+const { registerVendorRules } = require('../validators/vendor.validator');
 const {
-  registerVendorRules,
   loginRules,
   sendOtpRules,
   verifyOtpRules,
+  pickerVerifyOtpRules,
+  pickerRegisterRules,
+  pickerLogoutRules,
+  deliveryVerifyOtpRules,
+  deliveryLogoutRules,
 } = require('../validators/auth.validator');
 
-router.post('/register-vendor', registerVendorRules, validate, ctrl.registerVendor);
+// Older path for POST /vendor/auth/register (vendor code lives under controllers/vendor/).
+router.post('/register-vendor', registerVendorRules, validate, vendorAuthCtrl.register);
 router.post('/login', loginRules, validate, ctrl.loginWithPassword);
 router.post('/send-otp', sendOtpRules, validate, ctrl.sendOtp);
 router.post('/resend-otp', sendOtpRules, validate, ctrl.resendOtp);
 router.post('/verify-otp', verifyOtpRules, validate, ctrl.verifyOtp);
 router.post('/refresh', ctrl.refresh);
+
+// Picker app: phone + OTP login/signup, locked to role 'picker' (see pickerAuth.controller.js).
+router.post('/picker/send-otp', sendOtpRules, validate, pickerCtrl.sendOtp);
+router.post('/picker/resend-otp', sendOtpRules, validate, pickerCtrl.resendOtp);
+router.post('/picker/verify-otp', pickerVerifyOtpRules, validate, pickerCtrl.verifyOtp);
+router.get('/picker/me', authenticate, authorize('picker'), pickerCtrl.me);
+router.post('/picker/register', authenticate, authorize('picker'), pickerRegisterRules, validate, pickerCtrl.register);
+router.post('/picker/logout', authenticate, authorize('picker'), pickerLogoutRules, validate, pickerCtrl.logout);
+router.post('/picker/logout-all', authenticate, authorize('picker'), pickerCtrl.logoutAll);
+
+// Delivery app: phone + OTP login/signup, locked to role 'delivery' (see deliveryAuth.controller.js).
+// After login the app follows onboarding.nextStep through /delivery/onboarding/*.
+router.post('/delivery/send-otp', sendOtpRules, validate, deliveryCtrl.sendOtp);
+router.post('/delivery/resend-otp', sendOtpRules, validate, deliveryCtrl.resendOtp);
+router.post('/delivery/verify-otp', deliveryVerifyOtpRules, validate, deliveryCtrl.verifyOtp);
+router.get('/delivery/me', authenticate, authorize('delivery'), deliveryCtrl.me);
+router.post('/delivery/logout', authenticate, authorize('delivery'), deliveryLogoutRules, validate, deliveryCtrl.logout);
+router.post('/delivery/logout-all', authenticate, authorize('delivery'), deliveryCtrl.logoutAll);
 
 // Google/Apple social login are not wired up yet — they need OAuth app credentials
 // (Google client ID/secret, Apple key) from the client team before the token-verification

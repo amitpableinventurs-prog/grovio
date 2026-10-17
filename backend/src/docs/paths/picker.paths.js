@@ -9,9 +9,12 @@ const TAG = ['Picker'];
 
 paths['/picker/profile'] = {
   get: { tags: TAG, summary: 'Get my picker profile', ...bearer(), responses: { 200: envelope(ref('PickerProfile')), 401: RESPONSES_401, 404: RESPONSES_404 } },
+};
+paths['/picker/kyc-upload'] = {
   patch: {
     tags: TAG,
-    summary: 'Fill in KYC details after signup — ID proof type/number/document, address, emergency contact. Used by the onboarding flow\'s "Upload document" step, but any field can be updated any time.',
+    summary: 'KYC upload — ID proof type/number/document, address, emergency contact (multipart)',
+    description: 'The onboarding flow\'s "Upload document" step (`onboarding.nextStep === "kyc"`). Once `idProofType`, `idProofNumber` and the `idProofDocument` file are all saved, `nextStep` becomes `pending_approval`. Any field can be updated again later; send only the fields that change.',
     ...bearer(),
     requestBody: formBody({
       idProofType: { type: 'string', example: 'Aadhaar' },
@@ -21,7 +24,7 @@ paths['/picker/profile'] = {
       emergencyContactName: { type: 'string' },
       emergencyContactPhone: { type: 'string' },
     }),
-    responses: { 200: envelope(ref('PickerProfile'), 'Profile updated'), 401: RESPONSES_401, 404: RESPONSES_404 },
+    responses: { 200: envelope(ref('PickerProfile'), 'KYC details saved'), 401: RESPONSES_401, 404: RESPONSES_404 },
   },
 };
 paths['/picker/availability'] = {
@@ -33,8 +36,25 @@ paths['/picker/jobs'] = {
 paths['/picker/jobs/{id}'] = {
   get: { tags: TAG, summary: 'Get one job (pick-list) detail', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('Order')), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
+paths['/picker/jobs/{id}/accept'] = {
+  post: { tags: TAG, summary: "Accept my part of a new order (the alternative to reject). Sets my pickTask.acceptedAt; after this the order can't be rejected. Calling it again is a no-op.", ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('Order'), 'Order accepted'), 400: errorResponse('The order is past picking'), 401: RESPONSES_401, 404: RESPONSES_404 } },
+};
 paths['/picker/jobs/{id}/start'] = {
-  post: { tags: TAG, summary: "Mark my own pickTask 'picking' (the order itself is already picking/partially_picked from the moment it was split across pickers)", ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('Order'), 'Started picking'), 401: RESPONSES_401, 404: RESPONSES_404 } },
+  post: { tags: TAG, summary: "Mark my own pickTask 'picking' (the order itself is already picking/partially_picked from the moment it was split across pickers). Also accepts the job if I haven't yet.", ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('Order'), 'Started picking'), 401: RESPONSES_401, 404: RESPONSES_404 } },
+};
+paths['/picker/jobs/{id}/reject'] = {
+  post: {
+    tags: TAG,
+    summary: "Reject my part of an order, before I've accepted or started it. My items go to another available picker at my store (or a teammate already on the order); if nobody is free they wait for an admin (PATCH /admin/orders/{id}/assign-picker). The order leaves my job list and is never offered to me again.",
+    ...bearer(), parameters: [idParam()],
+    requestBody: jsonBody({ reason: { type: 'string', example: 'Items not in my section', description: 'Optional, max 200 characters' } }),
+    responses: {
+      200: envelope({ type: 'object', properties: { orderId: { type: 'string' }, orderNumber: { type: 'string' }, reassigned: { type: 'integer', example: 3, description: 'My items handed to another picker' }, waitingForPicker: { type: 'integer', example: 0, description: 'Items left for an admin to assign' } } }, 'Order rejected and handed to another picker'),
+      400: errorResponse('Already accepted / started / completed, or the order is past picking'),
+      401: RESPONSES_401,
+      404: RESPONSES_404,
+    },
+  },
 };
 paths['/picker/jobs/{id}/items/{itemId}'] = {
   patch: { tags: TAG, summary: 'Mark an item picked / out-of-stock / substituted — no scanning, this is the only way to report an item (only items assigned to me)', ...bearer(), parameters: [idParam(), idParam('itemId', 'Order item subdocument ID')], requestBody: jsonBody({ pickedQty: { type: 'integer' }, isAvailable: { type: 'boolean' }, substituteProductId: { type: 'string' }, substituteNote: { type: 'string' } }), responses: { 200: envelope(ref('OrderItem'), 'Item updated'), 401: RESPONSES_401, 404: RESPONSES_404 } },

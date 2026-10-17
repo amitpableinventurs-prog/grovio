@@ -26,6 +26,8 @@ export interface User {
   role: Role;
   permissions?: string[];
   profileImage?: string | null;
+  gender?: 'male' | 'female' | 'other' | null;
+  dateOfBirth?: string | null;
   isActive: boolean;
   isVerified: boolean;
   createdAt: string;
@@ -57,6 +59,19 @@ export interface Store {
   closeTime?: string | null;
   isOpen: boolean;
   status: 'active' | 'inactive';
+  // Delivery radius in km; null = the defaultServiceRadiusKm setting.
+  serviceRadiusKm?: number | null;
+  createdAt: string;
+}
+
+// A Hub Center screen showing /hub-display — see backend models/hubDisplay.model.js.
+export interface HubDisplay {
+  _id: string;
+  store: string;
+  name: string;
+  createdBy?: { _id: string; name: string } | string | null;
+  lastSeenAt?: string | null;
+  revokedAt?: string | null;
   createdAt: string;
 }
 
@@ -66,6 +81,26 @@ export interface PickerProfile {
   store?: string | Store | null;
   status: 'pending' | 'approved' | 'blocked';
   isAvailable: boolean;
+  onlineStatus?: 'online' | 'offline';
+  employeeId?: string | null;
+  address?: string | null;
+  idProofType?: string | null;
+  idProofNumber?: string | null;
+  idProofDocument?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  joiningDate?: string | null;
+  shift?: string | null;
+  createdAt?: string;
+}
+
+// Where a picker is in app onboarding — computed by the backend (utils/pickerOnboarding.js), the
+// same object the Picker app routes on.
+export interface PickerOnboarding {
+  status: 'pending' | 'approved' | 'blocked';
+  profileComplete: boolean;
+  kycComplete: boolean;
+  nextStep: 'profile' | 'kyc' | 'pending_approval' | 'home' | 'blocked';
 }
 
 export interface DeliveryProfile {
@@ -78,12 +113,51 @@ export interface DeliveryProfile {
   isAvailable: boolean;
   currentLat?: number | null;
   currentLng?: number | null;
+  // Submitted from the Delivery app's onboarding screens (backend delivery/onboarding.controller.js).
+  kyc?: {
+    idType?: 'pan' | 'aadhaar' | null;
+    idNumber?: string | null; // Aadhaar arrives masked: XXXX XXXX 1234
+    fullName?: string | null;
+    gender?: 'male' | 'female' | 'other' | null;
+    fatherName?: string | null;
+    dateOfBirth?: string | null;
+    document?: string | null;
+    submittedAt?: string | null;
+  };
+  addressProof?: { frontImage?: string | null; backImage?: string | null; submittedAt?: string | null };
+  selfie?: { image?: string | null; submittedAt?: string | null };
+  bankDetails?: BankDetails;
+  onboardingCompletedAt?: string | null;
+}
+
+// A delivery partner's payout account.
+export interface BankDetails {
+  accountHolderName?: string | null;
+  accountNumber?: string | null;
+  ifsc?: string | null;
+  bankName?: string | null;
+  document?: string | null; // cancelled cheque / passbook photo
+  submittedAt?: string | null;
+}
+
+// Mirrors backend utils/deliveryOnboarding.js.
+export interface DeliveryOnboarding {
+  status: 'pending' | 'approved' | 'blocked';
+  steps: { vehicle: boolean; identity: boolean; addressProof: boolean; selfie: boolean; bank: boolean };
+  completedSteps: number;
+  totalSteps: number;
+  nextStep: 'vehicle' | 'identity' | 'addressProof' | 'selfie' | 'bank' | 'pending_approval' | 'home' | 'blocked';
+}
+
+export interface DeliveryPartner extends Omit<UserWithProfile, 'onboarding'> {
+  onboarding?: DeliveryOnboarding;
 }
 
 export interface UserWithProfile extends User {
   vendorProfile?: Vendor | null;
   pickerProfile?: PickerProfile | null;
   deliveryProfile?: DeliveryProfile | null;
+  onboarding?: PickerOnboarding;
 }
 
 export interface Category {
@@ -119,6 +193,8 @@ export interface Product {
   sku?: string | null;
   variants: ProductVariant[];
   isAvailable: boolean;
+  requiresColdBag?: boolean;
+  weightKg?: number | null;
   status: 'active' | 'inactive';
   qrToken?: string | null;
   createdAt: string;
@@ -185,6 +261,8 @@ export interface ScannerLog {
   createdAt: string;
 }
 
+export type PaymentMethod = 'COD' | 'RAZORPAY' | 'WALLET' | 'PAYU' | 'PHONEPE';
+
 export interface Order {
   _id: string;
   orderNumber: string;
@@ -198,13 +276,20 @@ export interface Order {
   statusLogs: StatusLog[];
   itemTotal: number;
   deliveryFee: number;
+  handlingCharge?: number;
+  packingCharge?: number;
+  surcharge?: number;
+  surchargeLabel?: string | null;
+  deliveryPartnerEarning?: number | null;
   discount: number;
   tax: number;
   grandTotal: number;
   couponCode?: string | null;
-  paymentMethod: 'COD' | 'RAZORPAY' | 'WALLET';
+  paymentMethod: PaymentMethod;
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   orderStatus: OrderStatus;
+  // COD confirmation call outcome (IVR) — null when no call was made.
+  ivrConfirmation?: 'pending' | 'confirmed' | 'declined' | 'no_answer' | null;
   cancelReason?: string | null;
   placedAt: string;
   deliveredAt?: string | null;
@@ -253,7 +338,7 @@ export interface Payment {
   order: string | Order;
   user: string | User;
   amount: number;
-  method: 'COD' | 'RAZORPAY' | 'WALLET';
+  method: PaymentMethod;
   collectionMethod?: 'cash' | 'upi' | null;
   instrument?: 'card' | 'upi' | 'netbanking' | 'wallet' | 'emi' | null;
   gatewayOrderId?: string | null;
@@ -300,11 +385,45 @@ export interface AdminActivityLog {
   createdAt: string;
 }
 
+export type DashboardRange = 'today' | '7d' | '30d' | '90d';
+
+export interface DashboardPeriod {
+  orders: number;
+  gmv: number;
+  averageOrderValue: number;
+  delivered: number;
+  cancelled: number;
+  cancellationRate: number;
+  newCustomers: number;
+}
+
+// GET /admin/dashboard?range= — see backend controllers/admin/dashboard.controller.js
 export interface DashboardStats {
+  range: DashboardRange;
+  from: string;
+  to: string;
+  timezone: string;
+  granularity: 'hour' | 'day';
+  current: DashboardPeriod;
+  previous: DashboardPeriod;
+  trend: { bucket: string; orders: number; gmv: number }[];
+  ordersByHour: { hour: number; orders: number }[];
+  paymentMix: { method: string; orders: number; amount: number }[];
+  topProducts: { productId: string; name: string; qty: number; revenue: number }[];
+  topStores: { storeId: string; name: string; orders: number; gmv: number }[];
+  pipeline: { key: string; label: string; count: number }[];
+  operations: {
+    activeStores: number;
+    activePickers: number;
+    activeDeliveryPartners: number;
+    totalCustomers: number;
+    totalProducts: number;
+    lowStock: number;
+    lowStockAt: number;
+  };
+  // All-time
   totalOrders: number;
   totalCustomers: number;
-  totalVendors: number;
-  pendingVendors: number;
   activeStores: number;
   activePickers: number;
   activeDeliveryPartners: number;
@@ -313,4 +432,116 @@ export interface DashboardStats {
   cancelledOrders: number;
   gmv: number;
   averageOrderValue: number;
+}
+
+// Order charges configured on the Charges page — see backend/src/services/charges.service.js.
+export type ChargeType = 'fixed' | 'percent';
+export interface ChargeRule {
+  enabled: boolean;
+  type: ChargeType;
+  value: number;
+}
+export interface ChargeConfig {
+  delivery: ChargeRule & { freeAbove: number };
+  handling: ChargeRule;
+  packing: ChargeRule;
+  surcharge: ChargeRule & { label: string };
+}
+
+// ---- Live tracking (backend services/tracking.service.js) ----
+export interface Eta {
+  etaMinutes: number;
+  etaAt: string;
+  remainingKm: number | null;
+  approximate: boolean;
+}
+
+export interface LatLng {
+  lat: number;
+  lng: number;
+}
+
+export interface OrderTracking {
+  orderNumber: string;
+  orderStatus: OrderStatus;
+  deliveryPartner?: { _id: string; name: string; phone?: string } | null;
+  hub: (LatLng & { name: string }) | null;
+  drop: LatLng | null;
+  rider: (LatLng & { updatedAt: string }) | null;
+  eta: Eta | null;
+  arrivedAtPickupAt?: string | null;
+  arrivedAtDropAt?: string | null;
+  nearbyAlertAt?: string | null;
+}
+
+export interface LiveRider {
+  riderId: string;
+  name: string;
+  phone?: string;
+  isAvailable: boolean;
+  lat: number | null;
+  lng: number | null;
+  updatedAt: string | null;
+  stale: boolean;
+  orders: { orderId: string; orderNumber: string; orderStatus: OrderStatus; hub?: string }[];
+}
+
+export interface LiveMapData {
+  riders: LiveRider[];
+  stores: { _id: string; name: string; lat: number | null; lng: number | null; serviceRadiusKm?: number | null }[];
+  staleAfterMinutes: number;
+}
+
+// ---- IVR (backend services/ivr.service.js) ----
+export type IvrCallType = 'order_confirmation' | 'status_update' | 'delivery_alert' | 'missed_call' | 'missed_call_callback' | 'customer_care';
+
+export interface IvrCall {
+  _id: string;
+  type: IvrCallType;
+  direction: 'outbound' | 'inbound';
+  order?: { _id: string; orderNumber: string; orderStatus: OrderStatus } | null;
+  user?: { _id: string; name: string; phone?: string } | null;
+  phone: string;
+  event?: string | null;
+  message?: string | null;
+  provider: 'exotel' | 'simulated';
+  status: 'queued' | 'ringing' | 'in-progress' | 'completed' | 'failed' | 'busy' | 'no-answer' | 'simulated';
+  dtmf?: string | null;
+  outcome?: string | null;
+  durationSec?: number | null;
+  error?: string | null;
+  createdAt: string;
+}
+
+// Masked in-app call between a customer and their delivery partner (backend models/voipCall.model.js).
+export interface VoipCall {
+  _id: string;
+  order?: { _id: string; orderNumber: string; orderStatus: OrderStatus } | null;
+  caller?: { _id: string; name: string; phone?: string } | null;
+  callerRole: 'customer' | 'delivery';
+  callee?: { _id: string; name: string; phone?: string } | null;
+  calleeRole: 'customer' | 'delivery';
+  provider: 'twilio' | 'simulated';
+  status: 'initiated' | 'ringing' | 'in-progress' | 'completed' | 'busy' | 'no-answer' | 'failed' | 'canceled' | 'expired' | 'simulated';
+  answeredAt?: string | null;
+  endedAt?: string | null;
+  durationSec?: number | null;
+  error?: string | null;
+  createdAt: string;
+}
+
+export interface VoipConfig {
+  provider: string;
+  publicBaseUrlSet: boolean;
+  missing: string[];
+  callableStatuses: string[];
+  webhooks: Record<'voice' | 'status' | 'dialResult' | 'clientStatus', string>;
+}
+
+export interface IvrConfig {
+  provider: string;
+  publicBaseUrlSet: boolean;
+  autoCallEvents: string[];
+  availableEvents: string[];
+  webhooks: Record<'prompt' | 'input' | 'status' | 'missedCall' | 'carePrompt' | 'careInput' | 'careResult', string>;
 }

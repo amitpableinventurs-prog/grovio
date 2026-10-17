@@ -32,6 +32,17 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
+// Shared by the axios interceptor below and the realtime socket (realtime/socket.ts), so concurrent
+// 401s / socket auth failures trigger a single /auth/refresh call.
+export function refreshAccessTokenOnce(): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = refreshAccessToken().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -39,12 +50,7 @@ apiClient.interceptors.response.use(
 
     if (error.response?.status === 401 && original && !original._retry) {
       original._retry = true;
-      if (!refreshPromise) {
-        refreshPromise = refreshAccessToken().finally(() => {
-          refreshPromise = null;
-        });
-      }
-      const newToken = await refreshPromise;
+      const newToken = await refreshAccessTokenOnce();
       if (newToken) {
         original.headers = original.headers ?? {};
         original.headers.Authorization = `Bearer ${newToken}`;

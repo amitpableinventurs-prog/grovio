@@ -5,7 +5,7 @@ const paymentSchema = new Schema({
   order: { type: Schema.Types.ObjectId, ref: 'Order', default: null },
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   amount: { type: Number, required: true },
-  method: { type: String, enum: ['COD', 'RAZORPAY', 'WALLET'], required: true },
+  method: { type: String, enum: ['COD', 'RAZORPAY', 'WALLET', 'PAYU', 'PHONEPE'], required: true },
   // What this payment is for. Lets order payments and wallet top-ups share one Payment
   // collection (and the same Razorpay create/verify/webhook plumbing) instead of duplicating it.
   purpose: { type: String, enum: ['order', 'wallet_topup'], default: 'order' },
@@ -14,9 +14,9 @@ const paymentSchema = new Schema({
   retryOf: { type: Schema.Types.ObjectId, ref: 'Payment', default: null },
   // Only set for method === 'COD': how the delivery partner actually collected it at the door.
   collectionMethod: { type: String, enum: ['cash', 'upi'], default: null },
-  // Only set for method === 'RAZORPAY': the actual instrument Razorpay reports the customer paid
-  // with (card/upi/netbanking/wallet/emi), fetched on verify and again on the webhook — Razorpay
-  // itself is the gateway, this is what the customer picked inside its checkout widget.
+  // Only set for online gateways (RAZORPAY / PAYU / PHONEPE): the instrument the gateway reports
+  // the customer actually paid with (card/upi/netbanking/wallet/emi) — the gateway is the method,
+  // this is what the customer picked inside its checkout page.
   instrument: { type: String, enum: ['card', 'upi', 'netbanking', 'wallet', 'emi'], default: null },
   gatewayOrderId: { type: String, default: null },
   gatewayPaymentId: { type: String, default: null },

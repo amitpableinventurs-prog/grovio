@@ -5,6 +5,12 @@ const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const { transitionOrder, verifyHandoverOtp, verifyHandoverQr } = require('../../services/order.service');
 const { creditWallet } = require('../../services/payment.service');
+const { handleRiderLocation, planRiderRoute } = require('../../services/tracking.service');
+const riderSessions = require('../../services/riderSession.service');
+const { tripKm } = require('../../services/riderEarnings.service');
+const pocket = require('../../services/pocket.service');
+const coldBags = require('../../services/coldBag.service');
+const { pendingRequests } = require('../../services/deliveryRequest.service');
 
 const COD_COLLECTION_METHODS = ['cash', 'upi'];
 
@@ -32,22 +38,36 @@ const updateProfile = catchAsync(async (req, res) => {
 const toggleAvailability = catchAsync(async (req, res) => {
   const profile = await DeliveryProfile.findOne({ user: req.user.id });
   if (!profile) throw new ApiError(404, 'Delivery profile not found');
+  // Can't go online while the account is on hold (services/accountHold.service.js).
+  if (req.body.isAvailable) await require('../../services/accountHold.service').assertNotOnHold(req.user.id);
   profile.isAvailable = !!req.body.isAvailable;
   await profile.save();
+  // Login hours (Session History, gig completion, offers' compulsory login).
+  if (profile.isAvailable) await riderSessions.goOnline(req.user.id);
+  else await riderSessions.goOffline(req.user.id);
   new ApiResponse(200, profile, 'Availability updated').send(res);
 });
 
-// POST /delivery/location  { lat, lng }
+// POST /delivery/location  { lat, lng } -> stores the position and, for this partner's active
+// orders, pushes it + a fresh ETA to the customer and admins and runs the pickup/drop geofences
+// (see services/tracking.service.js). The app should send this every few seconds while on a job
+// (or use the 'delivery:location' socket event, which does the same).
 const updateLocation = catchAsync(async (req, res) => {
   const { lat, lng } = req.body;
-  const profile = await DeliveryProfile.findOne({ user: req.user.id });
-  if (!profile) throw new ApiError(404, 'Delivery profile not found');
+  const exists = await DeliveryProfile.exists({ user: req.user.id });
+  if (!exists) throw new ApiError(404, 'Delivery profile not found');
 
-  profile.currentLat = lat;
-  profile.currentLng = lng;
-  await profile.save();
+  const profile = await handleRiderLocation(req.user.id, lat, lng);
+  if (!profile) throw new ApiError(400, 'lat and lng must be valid coordinates');
 
   new ApiResponse(200, profile, 'Location updated').send(res);
+});
+
+// GET /delivery/route?lat=&lng= -> my active orders as an optimised list of stops (hub pickups
+// before their drops), with leg distances, arrival estimates and a Google Maps directions link.
+// lat/lng override my last reported position.
+const getRoute = catchAsync(async (req, res) => {
+  new ApiResponse(200, await planRiderRoute(req.user.id, req.query)).send(res);
 });
 
 // GET /delivery/jobs?status=  -> defaults to active jobs; pass status=available to see none
@@ -63,7 +83,8 @@ const listJobs = catchAsync(async (req, res) => {
     Order.find(where)
       .populate('store', 'name address lat lng')
       .populate('address')
-      .populate('customer', 'name phone')
+      // No phone: riders call the customer in-app (POST /delivery/jobs/:id/call).
+      .populate('customer', 'name')
       .sort({ createdAt: 1 })
       .skip(offset)
       .limit(limit),
@@ -71,6 +92,13 @@ const listJobs = catchAsync(async (req, res) => {
   ]);
 
   new ApiResponse(200, { items: rows, meta: buildPageMeta({ page, limit, count }) }).send(res);
+});
+
+// GET /delivery/requests?lat=&lng= -> "New order request" cards: orders assigned to me that I
+// haven't accepted or rejected yet, with pay, pickup (distance from my live location), drop and a
+// countdown (services/deliveryRequest.service.js). lat/lng override my last reported position.
+const listRequests = catchAsync(async (req, res) => {
+  new ApiResponse(200, await pendingRequests(req.user.id, req.query)).send(res);
 });
 
 // GET /delivery/history -> completed/failed/cancelled jobs
@@ -112,10 +140,19 @@ const acceptJob = catchAsync(async (req, res) => {
 // POST /delivery/jobs/:id/reject { reason } -> unassigns, awaiting reassignment
 const rejectAssignment = catchAsync(async (req, res) => {
   const order = await findAssignedOrder(req);
+  // Counted by incentive offers: handing an order back before accepting it is a denial, after
+  // accepting it a cancellation (services/offer.service.js).
+  order.deliveryRejections.push({
+    rider: req.user.id,
+    kind: order.deliveryAcceptedAt ? 'cancellation' : 'denial',
+    reason: req.body?.reason || null,
+  });
   order.delivery = null;
   order.deliveryAcceptedAt = null;
   order.orderStatus = 'packed';
   await order.save();
+  // Leaves my trip (a cancelled trip shows ₹0 in my trip history, from deliveryRejections).
+  await require('../../services/riderPay.service').detachFromTrip(order);
   new ApiResponse(200, order, 'Assignment rejected. Awaiting reassignment.').send(res);
 });
 
@@ -146,6 +183,7 @@ const verifyHandoverOtpCtrl = catchAsync(async (req, res) => {
 
   const { otp } = req.body;
   if (!otp) throw new ApiError(400, 'otp is required');
+  coldBags.requireForHandover(order);
 
   const result = await verifyHandoverOtp({ order, code: otp, changedBy: req.user.id });
   if (!result.valid) {
@@ -170,6 +208,7 @@ const scanHandoverQr = catchAsync(async (req, res) => {
 
   const { qrToken, deviceId, location } = req.body;
   if (!qrToken) throw new ApiError(400, 'qrToken is required');
+  coldBags.requireForHandover(order);
 
   const result = await verifyHandoverQr({ order, qrToken, scannedBy: req.user.id, userType: 'delivery', deviceId, location });
   if (!result.valid) {
@@ -217,6 +256,9 @@ const completeJob = catchAsync(async (req, res) => {
       throw new ApiError(400, `collectionMethod is required for COD orders and must be one of: ${COD_COLLECTION_METHODS.join(', ')}`);
     }
 
+    // Paid by scanning the Drop screen's Razorpay UPI QR: it must actually have been paid.
+    const gatewayPaymentId = collectionMethod === 'upi' ? await require('../../services/collect.service').assertUpiPaid(order) : null;
+
     order.paymentStatus = 'paid';
     order.codCollectionMethod = collectionMethod;
     await order.save();
@@ -227,16 +269,27 @@ const completeJob = catchAsync(async (req, res) => {
       amount: order.grandTotal,
       method: 'COD',
       collectionMethod,
+      gatewayPaymentId,
       status: 'paid',
     });
   }
 
+  // Trip km for the partner's dashboard; saved by transitionOrder below.
+  order.tripDistanceKm = tripKm(order);
   await transitionOrder({ order, toStatus: 'delivered', changedBy: req.user.id, note: 'Delivered to customer' });
 
-  // Credit a flat delivery earning to the delivery partner's wallet.
-  const deliveryEarning = Number(order.deliveryFee);
+  // Cash taken at the door is the platform's money in the partner's hands: it comes off their
+  // pocket until they deposit it (services/pocket.service.js). UPI at the door went straight to us.
+  if (order.paymentMethod === 'COD' && collectionMethod === 'cash') {
+    await pocket.post({ userId: req.user.id, type: 'debit', amount: order.grandTotal, category: 'cash_collected', refOrderId: order._id });
+  }
+
+  // Pay: an order on a trip is paid with its trip, by the pay formula, once all the trip's orders
+  // are finished (services/riderPay.service.js — run from transitionOrder above). Only an order
+  // assigned before trips existed is still paid its delivery charge directly.
+  const deliveryEarning = order.trip ? 0 : Number(order.deliveryPartnerEarning ?? order.deliveryFee);
   if (deliveryEarning > 0) {
-    await creditWallet({ userId: req.user.id, amount: deliveryEarning, reason: 'Delivery earning', refOrderId: order._id });
+    await creditWallet({ userId: req.user.id, amount: deliveryEarning, reason: 'Delivery earning', refOrderId: order._id, category: 'order_earning' });
   }
 
   new ApiResponse(200, order, 'Order delivered').send(res);
@@ -288,6 +341,8 @@ module.exports = {
   updateProfile,
   toggleAvailability,
   updateLocation,
+  getRoute,
+  listRequests,
   listJobs,
   listHistory,
   getJobDetail,

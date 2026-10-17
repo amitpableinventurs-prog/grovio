@@ -1,11 +1,91 @@
 const {
   envelope, paginated, ref, errorResponse,
-  RESPONSES_401, RESPONSES_404,
-  jsonBody, idParam, q, PAGE_QS, bearer,
+  RESPONSES_401, RESPONSES_404, RESPONSES_422,
+  jsonBody, formBody, idParam, q, PAGE_QS, bearer,
 } = require('../helpers');
 
 const paths = {};
 const TAG = ['Delivery'];
+
+// ---------- Onboarding (after OTP signup; one endpoint per app screen) ----------
+const Onboarding = {
+  type: 'object',
+  properties: {
+    status: { type: 'string', enum: ['pending', 'approved', 'blocked'] },
+    steps: { type: 'object', properties: { vehicle: { type: 'boolean' }, identity: { type: 'boolean' }, addressProof: { type: 'boolean' }, selfie: { type: 'boolean' }, bank: { type: 'boolean' } } },
+    completedSteps: { type: 'integer', example: 2 },
+    totalSteps: { type: 'integer', example: 5 },
+    nextStep: { type: 'string', enum: ['vehicle', 'identity', 'addressProof', 'selfie', 'bank', 'pending_approval', 'home', 'blocked'] },
+  },
+};
+const onboardingResult = (message) => envelope({ type: 'object', properties: { profile: ref('DeliveryProfile'), onboarding: Onboarding } }, message);
+const RESPONSES_400_REVIEWED = errorResponse('Documents already reviewed (partner is approved or blocked)');
+const image = { type: 'string', format: 'binary' };
+
+paths['/delivery/onboarding'] = {
+  get: {
+    tags: TAG, summary: 'Onboarding progress + next screen, and the vehicle options', ...bearer(),
+    responses: {
+      200: envelope({ type: 'object', properties: {
+        profile: ref('DeliveryProfile'),
+        onboarding: Onboarding,
+        vehicleTypes: { type: 'array', items: { type: 'object', properties: { value: { type: 'string', example: 'motorcycle' }, label: { type: 'string', example: 'Motorcycle' } } } },
+      } }),
+      401: RESPONSES_401, 404: RESPONSES_404,
+    },
+  },
+};
+paths['/delivery/onboarding/vehicle'] = {
+  put: {
+    tags: TAG, summary: 'Select vehicle screen', ...bearer(),
+    requestBody: jsonBody({ vehicleType: { type: 'string', enum: ['motorcycle', 'bicycle', 'electric_scooter'] } }, ['vehicleType']),
+    responses: { 200: onboardingResult('Vehicle saved'), 400: RESPONSES_400_REVIEWED, 401: RESPONSES_401, 422: RESPONSES_422 },
+  },
+};
+paths['/delivery/onboarding/identity'] = {
+  post: {
+    tags: TAG, summary: 'Verify PAN / Aadhaar screen (details + card photo). An Aadhaar number / VID is returned masked.', ...bearer(),
+    requestBody: formBody({
+      idType: { type: 'string', enum: ['pan', 'aadhaar'] },
+      idNumber: { type: 'string', example: 'ABCDE1234F', description: 'PAN (ABCDE1234F), 12-digit Aadhaar or 16-digit Aadhaar Virtual ID; spaces and dashes are ignored' },
+      fullName: { type: 'string', example: 'Ravi Kumar' },
+      gender: { type: 'string', enum: ['male', 'female', 'other'] },
+      fatherName: { type: 'string', example: 'Suresh Kumar' },
+      dateOfBirth: { type: 'string', example: '1998-04-21', description: 'YYYY-MM-DD, must be 18+' },
+      document: { ...image, description: 'Photo of the card — required the first time' },
+    }, ['idType', 'idNumber', 'fullName', 'gender', 'fatherName', 'dateOfBirth']),
+    responses: { 200: onboardingResult('PAN details saved'), 400: RESPONSES_400_REVIEWED, 401: RESPONSES_401, 422: RESPONSES_422 },
+  },
+};
+paths['/delivery/onboarding/address-proof'] = {
+  post: {
+    tags: TAG, summary: 'Submit address documents screen (voter ID / driving licence / ration card — not PAN). Send one or both sides.', ...bearer(),
+    requestBody: formBody({ frontImage: image, backImage: image }),
+    responses: { 200: onboardingResult('Address document saved'), 400: RESPONSES_400_REVIEWED, 401: RESPONSES_401, 422: RESPONSES_422 },
+  },
+};
+paths['/delivery/onboarding/selfie'] = {
+  post: {
+    tags: TAG, summary: 'Take selfie screen', ...bearer(),
+    requestBody: formBody({ selfie: image }, ['selfie']),
+    responses: { 200: onboardingResult('Selfie saved'), 400: RESPONSES_400_REVIEWED, 401: RESPONSES_401, 422: RESPONSES_422 },
+  },
+};
+
+paths['/delivery/onboarding/bank'] = {
+  post: {
+    tags: TAG, summary: 'Bank details screen — payout account (JSON, or multipart when sending the optional cheque/passbook photo)', ...bearer(),
+    requestBody: formBody({
+      accountHolderName: { type: 'string', example: 'Ravi Kumar' },
+      accountNumber: { type: 'string', example: '123456789012', description: '9–18 digits' },
+      ifsc: { type: 'string', example: 'SBIN0001234' },
+      bankName: { type: 'string', example: 'State Bank of India' },
+      confirmAccountNumber: { type: 'string', description: 'Optional; must match accountNumber when sent' },
+      document: { ...image, description: 'Optional cancelled cheque / passbook photo' },
+    }, ['accountHolderName', 'accountNumber', 'ifsc']),
+    responses: { 200: onboardingResult('Bank details saved'), 400: RESPONSES_400_REVIEWED, 401: RESPONSES_401, 422: RESPONSES_422 },
+  },
+};
 
 paths['/delivery/availability'] = {
   patch: { tags: TAG, summary: 'Toggle online/offline', ...bearer(), requestBody: jsonBody({ isAvailable: { type: 'boolean' } }, ['isAvailable']), responses: { 200: envelope(ref('DeliveryProfile'), 'Availability updated'), 401: RESPONSES_401 } },
@@ -17,8 +97,35 @@ paths['/delivery/profile'] = {
   get: { tags: TAG, summary: 'Get my delivery profile', ...bearer(), responses: { 200: envelope(ref('DeliveryProfile')), 401: RESPONSES_401, 404: RESPONSES_404 } },
   patch: { tags: TAG, summary: 'Update vehicle/license details', ...bearer(), requestBody: jsonBody({ vehicleType: { type: 'string' }, vehicleNumber: { type: 'string' }, licenseNumber: { type: 'string' } }), responses: { 200: envelope(ref('DeliveryProfile'), 'Profile updated'), 401: RESPONSES_401 } },
 };
+const num = (example, description) => ({ type: 'number', nullable: true, example, ...(description ? { description } : {}) });
+const RequestCard = {
+  type: 'object',
+  properties: {
+    orderId: { type: 'string' },
+    orderNumber: { type: 'string' },
+    earning: num(42, 'What I will be paid (riderPayQuote.total)'),
+    earningBreakup: { type: 'object', properties: { basePayout: num(30), peakBonus: num(12), rainBonus: num(0), heavyLoadBonus: num(0), kmSlab: { type: 'string', example: '1–2 km' } } },
+    pickup: { type: 'object', properties: { name: { type: 'string', example: 'Bhawarkua dark store' }, address: { type: 'string' }, lat: num(22.69), lng: num(75.86), distanceKm: num(0.8, 'From my live location; null without a GPS fix from the last 10 min'), etaMinutes: num(3) } },
+    drop: { type: 'object', properties: { title: { type: 'string', example: 'MG Road, near Regal Chowk' }, city: { type: 'string' }, lat: num(22.72), lng: num(75.87), distanceKm: num(1.8, 'Pickup -> drop') } },
+    totalDistanceKm: num(2.6, 'Me -> pickup -> drop'),
+    paymentMethod: { type: 'string', example: 'COD' },
+    riderLocation: { type: 'object', nullable: true, properties: { lat: { type: 'number' }, lng: { type: 'number' } } },
+    respondBy: { type: 'string', format: 'date-time' },
+    seconds: { type: 'integer', example: 30, description: 'Whole countdown (setting deliveryRequestSeconds, default 30)' },
+    secondsLeft: { type: 'integer', example: 6 },
+  },
+};
+paths['/delivery/requests'] = {
+  get: {
+    tags: TAG,
+    summary: "\"New order request\" cards: orders assigned to me that I haven't accepted or rejected yet. Answer with POST /delivery/jobs/{id}/accept or /reject. The same card is pushed as the 'delivery:request' socket event the moment an order is assigned to me.",
+    ...bearer(),
+    parameters: [q('lat', 'Optional, overrides my last reported position'), q('lng', 'Optional, overrides my last reported position')],
+    responses: { 200: envelope({ type: 'array', items: RequestCard }), 401: RESPONSES_401 },
+  },
+};
 paths['/delivery/jobs'] = {
-  get: { tags: TAG, summary: 'List my assigned/active jobs', ...bearer(), parameters: [...PAGE_QS, q('status', "default: assigned,out_for_delivery")], responses: { 200: envelope(paginated(ref('Order'))), 401: RESPONSES_401 } },
+  get: { tags: TAG, summary: 'List my assigned/active jobs. Each order has riderPayQuote: mapped distance, KM pay, peak / rain / heavy-load bonus and estimated total — shown before accepting.', ...bearer(), parameters: [...PAGE_QS, q('status', "default: assigned,out_for_delivery")], responses: { 200: envelope(paginated(ref('Order'))), 401: RESPONSES_401 } },
 };
 paths['/delivery/jobs/{id}'] = {
   get: { tags: TAG, summary: 'Get one job detail', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('Order')), 401: RESPONSES_401, 404: RESPONSES_404 } },
@@ -70,6 +177,44 @@ paths['/delivery/jobs/{id}/return'] = {
 };
 paths['/delivery/history'] = {
   get: { tags: TAG, summary: 'Completed/failed/cancelled deliveries history', ...bearer(), parameters: PAGE_QS, responses: { 200: envelope(paginated(ref('Order'))), 401: RESPONSES_401 } },
+};
+const HUB_ORDER = {
+  type: 'object',
+  properties: {
+    _id: { type: 'string' }, orderNumber: { type: 'string' }, orderStatus: { type: 'string' }, itemCount: { type: 'integer' },
+    paymentMethod: { type: 'string' }, paymentStatus: { type: 'string' }, grandTotal: { type: 'number' },
+    readySince: { type: 'string', format: 'date-time', nullable: true }, deliveryAcceptedAt: { type: 'string', format: 'date-time', nullable: true },
+    dropArea: { type: 'object', nullable: true, properties: { city: { type: 'string' }, pincode: { type: 'string' }, landmark: { type: 'string' }, lat: { type: 'number' }, lng: { type: 'number' } } },
+  },
+};
+const HUB_CHECKIN = {
+  type: 'object',
+  properties: {
+    hub: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, address: { type: 'string' }, lat: { type: 'number' }, lng: { type: 'number' } } },
+    checkedInAt: { type: 'string', format: 'date-time' },
+    expiresAt: { type: 'string', format: 'date-time' },
+    mine: { type: 'array', items: HUB_ORDER, description: 'Assigned to me / picked up at this hub' },
+    available: { type: 'array', items: HUB_ORDER, description: 'Packed, no delivery partner yet — claimable' },
+  },
+};
+paths['/delivery/hub/checkin'] = {
+  post: {
+    tags: TAG, summary: 'Check in at a Hub Center by scanning its screen\'s QR — single-use: the check-in replaces it with a new one', ...bearer(),
+    requestBody: jsonBody({ code: { type: 'string', description: 'The scanned QR content — the full URL (…/hub-checkin/?t=…) or just the token' } }, ['code']),
+    responses: { 200: envelope(HUB_CHECKIN, 'Checked in at <hub>'), 400: errorResponse('Hub QR already used or invalid, or inactive hub'), 401: RESPONSES_401, 403: errorResponse('Account not approved') },
+  },
+};
+paths['/delivery/hub/orders'] = {
+  get: { tags: TAG, summary: 'Orders at the hub I\'m checked in at (mine + available to claim)', ...bearer(), responses: { 200: envelope(HUB_CHECKIN), 401: RESPONSES_401, 403: errorResponse('Not checked in at a hub') } },
+};
+paths['/delivery/hub/orders/{id}/claim'] = {
+  post: {
+    tags: TAG, summary: 'Take a packed, unassigned order at my checked-in hub (assigns + accepts it: packed -> assigned)', ...bearer(), parameters: [idParam()],
+    responses: { 200: envelope(ref('Order'), 'Order assigned to you'), 400: errorResponse('Not ready, or already yours'), 401: RESPONSES_401, 403: errorResponse('Not checked in at a hub'), 404: RESPONSES_404, 409: errorResponse('Another delivery partner already took it') },
+  },
+};
+paths['/delivery/hub/checkout'] = {
+  post: { tags: TAG, summary: 'End the hub check-in early', ...bearer(), responses: { 200: envelope({ type: 'object', nullable: true }, 'Checked out of the hub'), 401: RESPONSES_401 } },
 };
 paths['/delivery/earnings'] = {
   get: { tags: TAG, summary: 'Wallet balance + transaction history', ...bearer(), responses: { 200: envelope({ type: 'object', properties: { balance: { type: 'number' }, transactions: { type: 'array', items: ref('WalletTransaction') } } }), 401: RESPONSES_401 } },

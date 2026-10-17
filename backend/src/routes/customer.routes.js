@@ -10,6 +10,7 @@ const ordersCtrl = require('../controllers/customer/orders.controller');
 const walletCtrl = require('../controllers/customer/wallet.controller');
 const couponsCtrl = require('../controllers/customer/coupons.controller');
 const reviewsCtrl = require('../controllers/customer/reviews.controller');
+const voipCtrl = require('../controllers/voip/voip.controller');
 const supportCtrl = require('../controllers/common/support.controller');
 
 router.use(authenticate, authorize('customer'));
@@ -53,6 +54,8 @@ router.get('/orders/:id', ordersCtrl.getOrderDetail);
 router.get('/orders/:id/tracking', ordersCtrl.getTracking);
 router.get('/orders/:id/delivery-pin', ordersCtrl.getDeliveryPin);
 router.post('/orders/:id/cancel', ordersCtrl.cancelOrder);
+// Masked in-app call to my delivery partner (services/voip.service.js).
+router.post('/orders/:id/call', voipCtrl.callFromCustomer);
 router.post('/orders/:orderId/rating', reviewsCtrl.submitReview);
 
 // Wallet

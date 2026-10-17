@@ -167,6 +167,22 @@ async function transitionOrder({ order, toStatus, changedBy, note }) {
 
   emitOrderEvent(order._id.toString(), 'order:status', { orderId: order._id, status: toStatus, note });
 
+  // Delivery partner side: flag cold-bag orders on assignment, and keep the partner's trip in step
+  // (join on assignment, close when leaving the hub, pay once all its orders are finished). Never
+  // fails the status change itself. Required lazily (they depend on this module).
+  try {
+    if (toStatus === 'assigned') await require('./coldBag.service').markNeedsColdBag(order);
+    await require('./riderPay.service').onOrderStatus(order, toStatus);
+  } catch (err) {
+    console.error(`Trip/pay update for ${order.orderNumber} (${toStatus}) failed:`, err.message);
+  }
+  // "New order request" card for the partner it was just assigned to (needs the pay quote above).
+  // Not for a hub claim, which is accepted as it's taken.
+  if (toStatus === 'assigned' && order.delivery && !order.deliveryAcceptedAt) {
+    await require('./deliveryRequest.service').pushRequest(order._id)
+      .catch((err) => console.error(`Order request push for ${order.orderNumber} failed:`, err.message));
+  }
+
   const message = STATUS_MESSAGES[toStatus];
   if (message) {
     await notifyUser(order.customer, {
@@ -176,6 +192,11 @@ async function transitionOrder({ order, toStatus, changedBy, note }) {
       data: { orderId: order._id, status: toStatus, ...(pin ? { deliveryPin: pin } : {}) },
     });
   }
+
+  // Auto IVR call for this status, if switched on (services/ivr.service.js). Fire and forget —
+  // a telephony problem must never fail the status change itself. Required lazily (cycle).
+  require('./ivr.service').triggerOrderEvent(order, toStatus)
+    .catch((err) => console.error(`IVR call for ${order.orderNumber} (${toStatus}) failed:`, err.message));
 
   // Only the hub picker(s) — the ones working order.store — ever meet the delivery partner, so
   // only they need the handover code.
@@ -201,7 +222,11 @@ async function transitionOrder({ order, toStatus, changedBy, note }) {
 // Non-hub pickers still need to physically get their portion to the hub (order.store) themselves —
 // that hand-off isn't tracked here, it's on the pickers to coordinate.
 async function advancePickingStatus({ order, changedBy }) {
-  const allCompleted = order.pickTasks.every((t) => t.status === 'completed');
+  // An item left without a picker (e.g. after a picker rejected and nobody else was free) still
+  // has to be picked, so the order isn't packed until an admin assigns it and that's done too.
+  const allCompleted = order.pickTasks.length > 0
+    && order.pickTasks.every((t) => t.status === 'completed')
+    && order.items.every((i) => i.assignedPicker);
   const anyCompleted = order.pickTasks.some((t) => t.status === 'completed');
 
   if (allCompleted && order.orderStatus !== 'packed') {
@@ -211,8 +236,46 @@ async function advancePickingStatus({ order, changedBy }) {
   }
 }
 
+const ONLINE_PAYMENT_METHODS = ['RAZORPAY', 'PAYU', 'PHONEPE'];
+
+// Sends a 'placed' order straight to the pickers — there is no manual accept step. Accepts it,
+// splits it across up to 3 available pickers per store (assignment.service.js#splitOrderAcrossPickers)
+// and moves it to 'picking'. Called when a COD/Wallet order is placed, and for an online order only
+// once it's paid (see payments). No-op for anything not at 'placed' or still awaiting online
+// payment, so calling it twice (e.g. callback + webhook for the same payment) is safe. If no picker
+// is available the order stays 'accepted' with no pickTasks — it shows on the admin Live Orders
+// board as waiting for a picker, to be assigned from the order page.
+async function dispatchToPickers({ order, changedBy }) {
+  if (order.orderStatus !== 'placed') return order;
+  if (ONLINE_PAYMENT_METHODS.includes(order.paymentMethod) && order.paymentStatus !== 'paid') return order;
+
+  // Required lazily, same as ivr.service above.
+  const { splitOrderAcrossPickers } = require('./assignment.service');
+  const { Store } = require('../models');
+
+  await transitionOrder({ order, toStatus: 'accepted', changedBy, note: 'Auto-accepted' });
+
+  const pickerIds = await splitOrderAcrossPickers(order);
+  if (!pickerIds.length) return order;
+
+  await order.save();
+  await transitionOrder({ order, toStatus: 'picking', changedBy, note: `Split across ${pickerIds.length} picker(s)` });
+
+  const stores = await Store.find({ _id: { $in: order.pickTasks.map((t) => t.store) } }, 'name');
+  const storeNameById = new Map(stores.map((s) => [s.id, s.name]));
+  await Promise.all(order.pickTasks.map((task) => notifyUser(task.picker, {
+    title: 'New order assigned',
+    body: `Order ${order.orderNumber} is ready to be picked at ${storeNameById.get(task.store.toString()) || 'your store'}.`,
+    type: 'new_order',
+    data: { orderId: order._id },
+  })));
+  return order;
+}
+
 module.exports = {
   transitionOrder,
+  dispatchToPickers,
+  ONLINE_PAYMENT_METHODS,
   TRANSITIONS,
   ensureHandoverOtp,
   verifyHandoverOtp,

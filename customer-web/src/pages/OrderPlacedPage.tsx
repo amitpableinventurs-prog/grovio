@@ -22,7 +22,11 @@ export default function OrderPlacedPage() {
         <CheckCircle2 size={40} />
       </div>
       <h1 className="text-2xl font-bold text-gray-900">Order Placed Successfully!</h1>
-      <p className="mt-2 text-sm text-gray-500">We've received your order and will start preparing it soon.</p>
+      <p className="mt-2 text-sm text-gray-500">
+        {order.orderStatus === 'placed'
+          ? "We've received your order. The store will confirm it shortly — track it from My Orders."
+          : "We've received your order and will start preparing it soon."}
+      </p>
 
       <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 text-left">
         <div className="flex justify-between text-sm">

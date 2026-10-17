@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Layout, Menu, Avatar, Dropdown, Space, Typography } from 'antd';
+import { Layout, Menu, Avatar, Dropdown, Space, Typography, Badge, Tooltip } from 'antd';
 import {
   DashboardOutlined,
   ShopOutlined,
@@ -20,13 +20,20 @@ import {
   SafetyCertificateOutlined,
   FileSearchOutlined,
   LogoutOutlined,
+  PercentageOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  EnvironmentOutlined,
+  PhoneOutlined,
+  ScheduleOutlined,
+  AudioOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { hasPermission, PERMISSIONS } from '../utils/permissions';
 import { logout as logoutApi } from '../api/auth';
+import { useOrderRealtime } from '../realtime/useOrderRealtime';
+import { useSocketConnected } from '../realtime/socket';
 
 const { Header, Sider, Content } = Layout;
 
@@ -47,6 +54,8 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'delivery', path: '/delivery-partners', label: 'Delivery Partners', icon: <CarOutlined />, permissions: [PERMISSIONS.MANAGE_DELIVERY] },
   { key: 'categories', path: '/categories', label: 'Categories', icon: <AppstoreOutlined />, permissions: [PERMISSIONS.MANAGE_CATALOG] },
   { key: 'products', path: '/products', label: 'Products', icon: <AppstoreOutlined />, permissions: [PERMISSIONS.MANAGE_CATALOG, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
+  { key: 'live-map', path: '/live-map', label: 'Live Map', icon: <EnvironmentOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
+  { key: 'gigs', path: '/gigs', label: 'Gigs', icon: <ScheduleOutlined />, permissions: [PERMISSIONS.MANAGE_DELIVERY] },
   { key: 'orders', path: '/orders', label: 'Orders', icon: <ShoppingCartOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
   { key: 'inventory', path: '/inventory', label: 'Inventory', icon: <DatabaseOutlined />, permissions: [PERMISSIONS.MANAGE_INVENTORY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
   { key: 'coupons', path: '/coupons', label: 'Coupons', icon: <TagsOutlined />, permissions: [PERMISSIONS.MANAGE_PROMOTIONS] },
@@ -54,7 +63,10 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'payments', path: '/payments', label: 'Payments & Refunds', icon: <CreditCardOutlined />, permissions: [PERMISSIONS.MANAGE_PAYMENTS] },
   { key: 'settlements', path: '/settlements', label: 'Settlements', icon: <WalletOutlined />, permissions: [PERMISSIONS.MANAGE_SETTLEMENTS] },
   { key: 'reports', path: '/reports', label: 'Reports', icon: <BarChartOutlined />, permissions: [PERMISSIONS.VIEW_REPORTS] },
+  { key: 'ivr-calls', path: '/ivr-calls', label: 'Call Logs (IVR)', icon: <PhoneOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS] },
+  { key: 'voip-calls', path: '/voip-calls', label: 'Masked Calls', icon: <AudioOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS] },
   { key: 'support', path: '/support-tickets', label: 'Support Tickets', icon: <CustomerServiceOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS] },
+  { key: 'charges', path: '/charges', label: 'Charges', icon: <PercentageOutlined />, permissions: [PERMISSIONS.MANAGE_SETTINGS] },
   { key: 'settings', path: '/settings', label: 'Settings', icon: <SettingOutlined />, permissions: [PERMISSIONS.MANAGE_SETTINGS] },
   { key: 'content-pages', path: '/content-pages', label: 'Content Pages', icon: <FileTextOutlined />, permissions: [PERMISSIONS.MANAGE_SETTINGS] },
   { key: 'admins', path: '/admins', label: 'Admins & Roles', icon: <SafetyCertificateOutlined />, permissions: [PERMISSIONS.MANAGE_ADMINS] },
@@ -79,6 +91,8 @@ export default function AdminLayout() {
   const { user, refreshToken, clear } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const live = useSocketConnected();
+  useOrderRealtime();
   const brandLabel = isStoreManager(user?.permissions) ? 'Grovio Vendor' : 'Grovio Admin';
 
   const visibleItems = useMemo(
@@ -113,13 +127,24 @@ export default function AdminLayout() {
             color: '#fff',
           }}
         >
-          <span className="grovio-logo">{collapsed ? 'G' : brandLabel}</span>
+          {collapsed ? (
+            <span className="grovio-logo-badge"><img src="/brand/grovio-icon.svg" alt="Grovio" /></span>
+          ) : (
+            <span className="grovio-logo" title={brandLabel}>
+              <img src="/brand/grovio-logo-compact-white.svg" alt="Grovio" />
+              <span className="grovio-logo-role">{brandLabel.replace('Grovio ', '')}</span>
+            </span>
+          )}
         </div>
         <Menu
           theme="dark"
           mode="inline"
           selectedKeys={[selectedKey]}
-          items={visibleItems.map((item) => ({ key: item.key, icon: item.icon, label: item.label }))}
+          items={visibleItems.map((item) => ({
+            key: item.key,
+            icon: item.icon,
+            label: item.label,
+          }))}
           onClick={({ key }) => {
             const item = visibleItems.find((i) => i.key === key);
             if (item) navigate(item.path);
@@ -131,22 +156,27 @@ export default function AdminLayout() {
           <span onClick={() => setCollapsed((c) => !c)} style={{ cursor: 'pointer', fontSize: 18 }}>
             {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
           </span>
-          <Dropdown
-            menu={{
-              items: [{ key: 'logout', icon: <LogoutOutlined />, label: 'Logout', onClick: handleLogout }],
-            }}
-            placement="bottomRight"
-          >
-            <Space style={{ cursor: 'pointer' }}>
-              <Avatar icon={<UserOutlined />} />
-              <div style={{ lineHeight: 1.2 }}>
-                <Typography.Text strong style={{ display: 'block' }}>{user?.name}</Typography.Text>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  {roleLabel(user?.permissions)}
-                </Typography.Text>
-              </div>
-            </Space>
-          </Dropdown>
+          <Space size="large">
+            <Tooltip title={live ? 'Receiving order updates in real time' : 'Real-time updates disconnected — reconnecting…'}>
+              <Badge status={live ? 'success' : 'default'} text={live ? 'Live' : 'Offline'} />
+            </Tooltip>
+            <Dropdown
+              menu={{
+                items: [{ key: 'logout', icon: <LogoutOutlined />, label: 'Logout', onClick: handleLogout }],
+              }}
+              placement="bottomRight"
+            >
+              <Space style={{ cursor: 'pointer' }}>
+                <Avatar icon={<UserOutlined />} />
+                <div style={{ lineHeight: 1.2 }}>
+                  <Typography.Text strong style={{ display: 'block' }}>{user?.name}</Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {roleLabel(user?.permissions)}
+                  </Typography.Text>
+                </div>
+              </Space>
+            </Dropdown>
+          </Space>
         </Header>
         <Content style={{ margin: 16 }}>
           <Outlet />

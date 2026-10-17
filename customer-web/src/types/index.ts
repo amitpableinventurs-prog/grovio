@@ -124,11 +124,15 @@ export interface Order {
   statusLogs: StatusLog[];
   itemTotal: number;
   deliveryFee: number;
+  handlingCharge?: number;
+  packingCharge?: number;
+  surcharge?: number;
+  surchargeLabel?: string | null;
   discount: number;
   tax: number;
   grandTotal: number;
   couponCode: string | null;
-  paymentMethod: 'COD' | 'RAZORPAY' | 'WALLET';
+  paymentMethod: PaymentMethod;
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   orderStatus: OrderStatus;
   cancelReason?: string | null;
@@ -165,4 +169,34 @@ export interface PageMeta {
 export interface Paginated<T> {
   items: T[];
   meta: PageMeta;
+}
+
+export type PaymentMethod = 'COD' | 'RAZORPAY' | 'WALLET' | 'PAYU' | 'PHONEPE';
+
+// Live tracking — GET /customer/orders/:id/tracking and the 'delivery:location' socket event.
+export interface Eta {
+  etaMinutes: number;
+  etaAt: string;
+  remainingKm: number | null;
+  approximate: boolean;
+}
+
+export interface OrderTracking {
+  orderNumber: string;
+  orderStatus: OrderStatus;
+  // Never includes a phone number — call in-app instead (voip/voipStore.ts).
+  deliveryPartner?: { _id: string; name: string } | null;
+  hub: { lat: number; lng: number; name: string } | null;
+  drop: { lat: number; lng: number } | null;
+  rider: { lat: number; lng: number; updatedAt: string } | null;
+  eta: Eta | null;
+  arrivedAtDropAt?: string | null;
+}
+
+export interface DeliveryLocationEvent {
+  orderId: string;
+  lat: number;
+  lng: number;
+  updatedAt: string;
+  eta: Eta | null;
 }

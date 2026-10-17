@@ -1,7 +1,7 @@
 import type { OrderStatus } from '../types';
 
 const LABELS: Record<OrderStatus, string> = {
-  placed: 'Placed',
+  placed: 'Awaiting confirmation',
   accepted: 'Accepted',
   rejected: 'Rejected',
   picking: 'Picking',

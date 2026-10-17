@@ -1,8 +1,14 @@
 import { Outlet } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import CallOverlay from '../components/CallOverlay';
+import { useOrderRealtime } from '../realtime/useOrderRealtime';
+import { useVoip } from '../voip/useVoip';
 
 export default function MainLayout() {
+  useOrderRealtime();
+  useVoip();
+
   return (
     <div className="min-h-screen flex flex-col bg-[#f7f8f7]">
       <Header />
@@ -10,6 +16,7 @@ export default function MainLayout() {
         <Outlet />
       </main>
       <Footer />
+      <CallOverlay />
     </div>
   );
 }

@@ -1,0 +1,136 @@
+import { useState } from 'react';
+import { Card, Table, Tag, Button, Input, Space, Alert, Typography, Popconfirm, App as AntApp } from 'antd';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchHubDisplays, createHubDisplay, revokeHubDisplay } from '../api/hubDisplays';
+import type { HubDisplay } from '../types';
+import { formatDateTime } from '../utils/format';
+
+// A screen checks in with the API at least every minute (and its last-seen time is written at most
+// once a minute) — so anything seen within 3 minutes is treated as online.
+const ONLINE_WINDOW_MS = 3 * 60 * 1000;
+
+function screenState(d: HubDisplay) {
+  if (d.revokedAt) return <Tag>Revoked</Tag>;
+  if (d.lastSeenAt && Date.now() - new Date(d.lastSeenAt).getTime() < ONLINE_WINDOW_MS) return <Tag color="green">Online</Tag>;
+  if (!d.lastSeenAt) return <Tag color="gold">Not paired yet</Tag>;
+  return <Tag color="default">Offline</Tag>;
+}
+
+// My Store -> "Hub screens": the TVs/tablets at my store that show /hub-display (live pickup board
+// + single-use check-in QR for delivery partners).
+export default function HubScreens() {
+  const [name, setName] = useState('');
+  const [pairing, setPairing] = useState<{ name: string; url: string } | null>(null);
+  const { message } = AntApp.useApp();
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['hub-displays'],
+    queryFn: fetchHubDisplays,
+    refetchInterval: 60000,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () => createHubDisplay(name.trim()),
+    onSuccess: (res) => {
+      setPairing({ name: res.display.name, url: res.pairingUrl });
+      setName('');
+      queryClient.invalidateQueries({ queryKey: ['hub-displays'] });
+    },
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: (id: string) => revokeHubDisplay(id),
+    onSuccess: () => {
+      message.success('Screen revoked');
+      queryClient.invalidateQueries({ queryKey: ['hub-displays'] });
+    },
+  });
+
+  return (
+    <Card title="Hub screens">
+      <Typography.Paragraph type="secondary">
+        A hub screen shows the orders ready for pickup at this store, buzzes when an order becomes ready, and shows a QR
+        code that delivery partners scan from the Delivery app to check in and pick an order. The QR changes after every scan.
+      </Typography.Paragraph>
+
+      {pairing && (
+        <Alert
+          type="success"
+          showIcon
+          closable
+          onClose={() => setPairing(null)}
+          style={{ marginBottom: 16 }}
+          title={`Open this link on the "${pairing.name}" screen`}
+          description={
+            <>
+              <Typography.Paragraph copyable={{ text: pairing.url }} style={{ wordBreak: 'break-all', marginBottom: 8 }}>
+                <Typography.Text code>{pairing.url}</Typography.Text>
+              </Typography.Paragraph>
+              <Typography.Text type="secondary">
+                This link is shown only once and works like a password for the screen. If it's lost or shared, revoke the
+                screen and add a new one.
+              </Typography.Text>
+            </>
+          }
+        />
+      )}
+
+      <Space.Compact style={{ width: '100%', marginBottom: 16 }}>
+        <Input
+          placeholder="Screen name, e.g. Pickup counter TV"
+          value={name}
+          maxLength={60}
+          onChange={(e) => setName(e.target.value)}
+          onPressEnter={() => name.trim() && createMutation.mutate()}
+        />
+        <Button type="primary" disabled={!name.trim()} loading={createMutation.isPending} onClick={() => createMutation.mutate()}>
+          Add screen
+        </Button>
+      </Space.Compact>
+
+      <Table<HubDisplay>
+        rowKey="_id"
+        size="small"
+        loading={isLoading}
+        dataSource={data}
+        pagination={false}
+        locale={{ emptyText: 'No screens yet' }}
+        columns={[
+          { title: 'Name', dataIndex: 'name' },
+          { title: 'Status', render: (_, d) => screenState(d) },
+          { title: 'Last seen', render: (_, d) => formatDateTime(d.lastSeenAt) },
+          {
+            title: 'Added',
+            render: (_, d) => (
+              <>
+                {formatDateTime(d.createdAt)}
+                {typeof d.createdBy === 'object' && d.createdBy?.name && (
+                  <Typography.Text type="secondary"> · {d.createdBy.name}</Typography.Text>
+                )}
+              </>
+            ),
+          },
+          {
+            title: '',
+            align: 'right',
+            render: (_, d) =>
+              !d.revokedAt && (
+                <Popconfirm
+                  title="Revoke this screen?"
+                  description="It stops working immediately. To use it again, add it as a new screen."
+                  okText="Revoke"
+                  okButtonProps={{ danger: true }}
+                  onConfirm={() => revokeMutation.mutate(d._id)}
+                >
+                  <Button size="small" danger loading={revokeMutation.isPending && revokeMutation.variables === d._id}>
+                    Revoke
+                  </Button>
+                </Popconfirm>
+              ),
+          },
+        ]}
+      />
+    </Card>
+  );
+}

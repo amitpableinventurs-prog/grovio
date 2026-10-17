@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 150" role="img" aria-label="Grovio — Freshness. Faster. Everyday.">
+<g transform="translate(5 12)"><defs>
+    <linearGradient id="gv-g" gradientUnits="userSpaceOnUse" x1="18" y1="22" x2="100" y2="104">
+      <stop offset="0" stop-color="#3DBE4F"/>
+      <stop offset="1" stop-color="#15803D"/>
+    </linearGradient>
+    <linearGradient id="gv-leaf" gradientUnits="userSpaceOnUse" x1="77" y1="43" x2="114" y2="8">
+      <stop offset="0" stop-color="#2E9E3E"/>
+      <stop offset="1" stop-color="#8CCB45"/>
+    </linearGradient>
+  </defs>
+  <!-- G: ring open at the top right, crossbar coming in from the right -->
+  <path d="M 81.4 29.8 A 40 40 0 1 0 98 62" fill="none" stroke="url(#gv-g)" stroke-width="17" stroke-linecap="round"/>
+  <path d="M 98 62 L 73 62" fill="none" stroke="url(#gv-g)" stroke-width="15" stroke-linecap="round"/>
+  <!-- Leaf -->
+  <path d="M 77 41 C 76 22 91 10 114 8 C 114 30 101 43 79 43 Z" fill="url(#gv-leaf)"/>
+  <path d="M 80 40 Q 94 26 108 14" fill="none" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="2" stroke-linecap="round"/>
+  <!-- Cart -->
+  <g fill="none" stroke="#0F3D22" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 25 50 L 33 50 L 40 71 L 59 71"/>
+    <path d="M 35 56 L 58 56"/>
+    <path d="M 37.5 63.5 L 54 63.5"/>
+  </g>
+  <circle cx="43" cy="81" r="4.5" fill="#0F3D22"/>
+  <circle cx="57" cy="81" r="4.5" fill="#0F3D22"/>
+</g>
+<g font-family="Montserrat, Poppins, 'Segoe UI', Arial, sans-serif" font-weight="800" font-size="64" fill="#0F3D22"><text x="168" y="92" text-anchor="middle">G</text><text x="218" y="92" text-anchor="middle">R</text><text x="268" y="92" text-anchor="middle">O</text><text x="316" y="92" text-anchor="middle">V</text><text x="352" y="92" text-anchor="middle">I</text><text x="390" y="92" text-anchor="middle">O</text></g>
+<path d="M 347 42 C 345 32 352 23 362 19 C 363 30 358 39 349 43 Z" fill="#FF8A00"/>
+<g font-family="Poppins, 'Segoe UI', Arial, sans-serif"><rect x="146" y="121" width="24" height="3" rx="1.5" fill="#1A8F3C"/><text x="281" y="128" text-anchor="middle" font-size="18" font-weight="600" textLength="206" lengthAdjust="spacingAndGlyphs" fill="#1A8F3C">Freshness. <tspan fill="#FF8A00">Faster.</tspan> Everyday.</text><rect x="392" y="121" width="24" height="3" rx="1.5" fill="#1A8F3C"/></g>
+</svg>

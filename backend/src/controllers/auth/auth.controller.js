@@ -1,12 +1,11 @@
 const bcrypt = require('bcryptjs');
-const { User, PickerProfile, DeliveryProfile, Wallet, Store } = require('../../models');
+const { User, PickerProfile, DeliveryProfile, Wallet } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const otpService = require('../../services/otp.service');
 const tokenService = require('../../services/token.service');
-const { resolvePhone } = require('../../utils/phone');
-const { PERMISSIONS } = require('../../utils/permissions');
+const { resolveOtpPhone } = require('../../utils/phone');
 
 async function respondWithTokens(res, user, { deviceId, platform } = {}, statusCode = 200, message = 'Success') {
   const { accessToken, refreshToken } = await tokenService.issueTokenPair(user, { deviceId, platform });
@@ -15,53 +14,9 @@ async function respondWithTokens(res, user, { deviceId, platform } = {}, statusC
   return new ApiResponse(statusCode, { accessToken, refreshToken, user: safeUser }, message).send(res);
 }
 
-// ---------- Vendor (store-manager) self-registration ----------
-// Public signup, as an alternative to an admin manually creating one via POST /admin/admins.
-// Produces the exact same kind of account (role: 'admin', MANAGE_OWN_STORE_INVENTORY permission,
-// assignedStore) — just self-initiated. The store starts status: 'inactive', so it never shows up
-// to customers (see customer/catalog.controller.js) until an admin reviews and activates it via
-// PATCH /admin/stores/:id — THAT is the actual approval gate, not the account's permissions.
-const registerVendor = catchAsync(async (req, res) => {
-  const { name, email, password, phone, storeName, address, lat, lng, deviceId, platform } = req.body;
-
-  const existingEmail = await User.findOne({ email });
-  if (existingEmail) throw new ApiError(409, 'Email already registered');
-
-  if (phone) {
-    const existingPhone = await User.findOne({ phone });
-    if (existingPhone) throw new ApiError(409, 'Phone number already registered');
-  }
-
-  const store = await Store.create({
-    name: storeName,
-    address: address || null,
-    lat: lat ?? null,
-    lng: lng ?? null,
-    status: 'inactive',
-  });
-
-  const hashed = await bcrypt.hash(password, 10);
-  const user = await User.create({
-    name,
-    email,
-    phone: phone || undefined,
-    password: hashed,
-    role: 'admin',
-    permissions: [PERMISSIONS.MANAGE_OWN_STORE_INVENTORY],
-    assignedStore: store._id,
-    isVerified: true,
-  });
-
-  const { accessToken, refreshToken } = await tokenService.issueTokenPair(user, { deviceId, platform });
-  const safeUser = user.toObject();
-  delete safeUser.password;
-
-  new ApiResponse(201, { accessToken, refreshToken, user: safeUser, store }, 'Vendor registered successfully. Your store is pending admin approval.').send(res);
-});
-
 // ---------- Admin: email + password ----------
 // (Full/other admin accounts are still created by another admin via POST /admin/admins —
-// registerVendor above is the one public/self-service exception, for store-managers.)
+// vendor/vendorAuth.controller.js#register is the one public/self-service exception, for store-managers.)
 
 const loginWithPassword = catchAsync(async (req, res) => {
   const { email, password, deviceId, platform } = req.body;
@@ -78,17 +33,17 @@ const loginWithPassword = catchAsync(async (req, res) => {
 });
 
 // ---------- Customer / Picker / Delivery: mobile + OTP ----------
-// Accepts either { countryCode, mobile } (what the Flutter apps send) or a
-// single combined { phone } (handy for Swagger/Postman testing) — see utils/phone.js.
+// Takes { phone } — the 10-digit number only, +91 assumed (countryCode optional) — see
+// utils/phone.js#resolveOtpPhone.
 
 const sendOtp = catchAsync(async (req, res) => {
-  const phone = resolvePhone(req.body);
+  const phone = resolveOtpPhone(req.body);
   const result = await otpService.sendOtp(phone);
   new ApiResponse(200, result, 'OTP sent successfully').send(res);
 });
 
 const resendOtp = catchAsync(async (req, res) => {
-  const phone = resolvePhone(req.body);
+  const phone = resolveOtpPhone(req.body);
   const result = await otpService.sendOtp(phone);
   new ApiResponse(200, result, 'OTP resent successfully').send(res);
 });
@@ -101,7 +56,7 @@ const OTP_ERROR_MESSAGES = {
 };
 
 const verifyOtp = catchAsync(async (req, res) => {
-  const phone = resolvePhone(req.body);
+  const phone = resolveOtpPhone(req.body);
   const { role, name, deviceId, platform } = req.body;
   const otp = req.body.otp ?? req.body.code; // `otp` per the app contract; `code` kept as an alias
 
@@ -126,18 +81,18 @@ const verifyOtp = catchAsync(async (req, res) => {
     // land in {Picker,Delivery}Profile.status='pending', just like an admin-created one. Neither
     // can actually work (accept jobs / get assigned pick-lists) until an admin approves them —
     // see PATCH /admin/delivery-partners/:id/status and admin/pickers.controller.js.
+    // A delivery partner's vehicle and KYC are collected after signup, one app screen at a time
+    // (/delivery/onboarding/* — see delivery/onboarding.controller.js). Vehicle details are still
+    // accepted here for older clients that send them with the OTP.
     let vehicleType, vehicleNumber, licenseNumber;
     if (effectiveRole === 'delivery') {
       ({ vehicleType, vehicleNumber, licenseNumber } = req.body);
-      if (!vehicleType || !vehicleNumber || !licenseNumber) {
-        throw new ApiError(400, 'vehicleType, vehicleNumber and licenseNumber are required to register as a delivery partner');
-      }
     }
 
     // A picker's KYC (ID proof type/number, address, emergency contact, and the actual document
     // photo) isn't collected here — the app's onboarding flow gathers it afterward in separate
     // steps (profile screen, then document upload) via PUT /auth/me and
-    // PATCH /picker/profile — see picker.controller.js#updateProfile. Accepted here too, purely
+    // PATCH /picker/kyc-upload — see picker.controller.js#updateProfile. Accepted here too, purely
     // for backward compatibility with a client that still wants to submit it all in one call.
     let idProofType, idProofNumber, address, emergencyContactName, emergencyContactPhone;
     if (effectiveRole === 'picker') {
@@ -232,4 +187,4 @@ const updateMe = catchAsync(async (req, res) => {
   new ApiResponse(200, safeUser, 'Profile updated').send(res);
 });
 
-module.exports = { registerVendor, loginWithPassword, sendOtp, resendOtp, verifyOtp, refresh, logout, logoutAll, me, updateMe };
+module.exports = { loginWithPassword, sendOtp, resendOtp, verifyOtp, refresh, logout, logoutAll, me, updateMe };

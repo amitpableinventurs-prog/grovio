@@ -6,6 +6,7 @@ const paymentService = require('../../services/payment.service');
 const { creditWallet } = require('../../services/payment.service');
 const { notifyUser } = require('../../services/notification.service');
 const { getSetting } = require('../../services/settings.service');
+const { dispatchToPickers } = require('../../services/order.service');
 
 // POST /payments/razorpay/create  { orderId }
 const createRazorpayOrder = catchAsync(async (req, res) => {
@@ -38,6 +39,8 @@ const verifyRazorpayPayment = catchAsync(async (req, res) => {
 
   order.paymentStatus = 'paid';
   await order.save();
+  // Paid — now it can go to the pickers (no-op if the webhook already did this).
+  await dispatchToPickers({ order, changedBy: order.customer });
 
   const payment = await Payment.findOne({ order: order._id, gatewayOrderId: razorpayOrderId });
   if (payment) {
@@ -132,6 +135,7 @@ const razorpayWebhook = catchAsync(async (req, res) => {
         if (order && order.paymentStatus !== 'paid') {
           order.paymentStatus = 'paid';
           await order.save();
+          await dispatchToPickers({ order, changedBy: order.customer });
           await notifyUser(order.customer, {
             title: 'Payment received',
             body: `Payment for order ${order.orderNumber} was successful.`,

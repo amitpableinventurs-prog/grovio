@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/svg+xml" href="/brand/grovio-icon.svg">
 <title>Become a Grovio Vendor</title>
 <style>
   :root {
@@ -261,8 +262,7 @@
   <div class="shell">
     <div class="panel">
       <div class="brand-mark">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-        Grovio
+        <img src="/brand/grovio-logo-white.svg" alt="Grovio — Freshness. Faster. Everyday." style="height:64px;width:auto;display:block">
       </div>
 
       <h1>Grow your store with Grovio</h1>
@@ -357,7 +357,7 @@
         </div>
         <h2>You're registered!</h2>
         <p>Your account and store have been created. The store is pending admin review before it goes live to customers.</p>
-        <p class="next-step">Open the Grovio Admin Panel and log in with the email and password you just set.</p>
+        <p class="next-step">Open the Grovio Vendor Panel and log in with the email and password you just set.</p>
       </div>
     </div>
   </div>
@@ -415,7 +415,7 @@
 
       try {
         // Served from the same backend/Express origin, so a relative path avoids any CORS setup.
-        const res = await fetch('/api/v1/auth/register-vendor', {
+        const res = await fetch('/api/v1/vendor/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),

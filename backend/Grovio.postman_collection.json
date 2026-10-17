@@ -398,7 +398,7 @@
             "auth": null,
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\"\n}",
+              "raw": "{\n  \"phone\": \"9876543210\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -431,7 +431,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -475,7 +475,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -532,7 +532,7 @@
             "auth": null,
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\"\n}",
+              "raw": "{\n  \"phone\": \"9876543210\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -565,7 +565,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -609,7 +609,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -669,7 +669,7 @@
             "auth": null,
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"otp\": \"1234\",\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\",\n  \"role\": \"delivery\",\n  \"name\": \"Test Customer\",\n  \"deviceId\": \"string\",\n  \"platform\": \"ios\"\n}",
+              "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"role\": \"delivery\",\n  \"name\": \"Test Customer\",\n  \"deviceId\": \"string\",\n  \"platform\": \"ios\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -702,7 +702,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"otp\": \"1234\",\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\",\n  \"role\": \"delivery\",\n  \"name\": \"Test Customer\",\n  \"deviceId\": \"string\",\n  \"platform\": \"ios\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"role\": \"delivery\",\n  \"name\": \"Test Customer\",\n  \"deviceId\": \"string\",\n  \"platform\": \"ios\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -746,7 +746,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"otp\": \"1234\",\n  \"countryCode\": \"+91\",\n  \"mobile\": \"9876543210\",\n  \"phone\": \"+919876543210\",\n  \"role\": \"delivery\",\n  \"name\": \"Test Customer\",\n  \"deviceId\": \"string\",\n  \"platform\": \"ios\"\n}",
+                  "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"role\": \"delivery\",\n  \"name\": \"Test Customer\",\n  \"deviceId\": \"string\",\n  \"platform\": \"ios\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -763,6 +763,1705 @@
                 }
               ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Incorrect OTP. Please try again.\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "8fde0cad-87f5-4d7d-87ea-d33c94809cc1",
+          "name": "Picker app — send login/signup OTP",
+          "request": {
+            "name": "Picker app — send login/signup OTP",
+            "description": {
+              "content": "Same OTP flow as /auth/send-otp, but only for picker accounts: a number already registered as a customer, delivery partner or admin gets 409, and a disabled picker gets 403, before any SMS is sent.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "auth",
+                "picker",
+                "send-otp"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"9876543210\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": null
+          },
+          "response": [
+            {
+              "id": "2b4c8336-6276-4258-b3b3-daaad6297c5f",
+              "name": "OTP sent successfully",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "send-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP sent successfully\",\n  \"data\": {\n    \"sent\": false,\n    \"isRegistered\": false,\n    \"resendCooldownSeconds\": 30,\n    \"debugOtp\": \"1234\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "9bc46fd0-d47a-441a-b7da-0ce286560022",
+              "name": "Your account has been disabled",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "send-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Your account has been disabled\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "a9fe111b-4425-4704-8c31-16df6bac2675",
+              "name": "This number is already registered with a different Grovio account",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "send-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"This number is already registered with a different Grovio account\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "386adc2f-5ecb-4bfa-84a6-81f3c68b07a9",
+              "name": "Please wait Ns before requesting another OTP",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "send-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Too Many Requests",
+              "code": 429,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Please wait Ns before requesting another OTP\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "4984128f-b7b3-4feb-a16b-faeec300ac55",
+          "name": "Picker app — resend OTP (same body/behavior as send-otp, cooldown applies)",
+          "request": {
+            "name": "Picker app — resend OTP (same body/behavior as send-otp, cooldown applies)",
+            "description": {},
+            "url": {
+              "path": [
+                "auth",
+                "picker",
+                "resend-otp"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"9876543210\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": null
+          },
+          "response": [
+            {
+              "id": "b83d4a8e-b60a-4218-ba41-07e3d0f96975",
+              "name": "OTP resent successfully",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "resend-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP resent successfully\",\n  \"data\": {\n    \"sent\": true,\n    \"isRegistered\": true,\n    \"resendCooldownSeconds\": 30,\n    \"debugOtp\": \"1234\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "5970e296-bb1c-4689-a5d3-7984fb918753",
+              "name": "This number is already registered with a different Grovio account",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "resend-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"This number is already registered with a different Grovio account\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "c5e1a841-eb41-4e9d-a9c2-f21ea22ca0d1",
+              "name": "Please wait Ns before requesting another OTP",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "resend-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"9876543210\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Too Many Requests",
+              "code": 429,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Please wait Ns before requesting another OTP\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "f3c3bcb2-31ce-4457-ac03-dd13dec14790",
+          "name": "Picker app — verify OTP (logs in, or creates a pending picker on first verification)",
+          "request": {
+            "name": "Picker app — verify OTP (logs in, or creates a pending picker on first verification)",
+            "description": {
+              "content": "A new number creates a picker account with a PickerProfile in `status: \"pending\"`. Use `onboarding.nextStep` to route: `profile` → PUT /auth/me (name/email/gender/dateOfBirth), `kyc` → PATCH /picker/profile (ID proof + document), `pending_approval` → waiting screen until an admin approves via PATCH /admin/pickers/{id}/status, `home` → approved, `blocked` → contact support. On a wrong/expired/exhausted OTP this returns 400 with `errors: [{ reason, attemptsLeft }]` (`invalid | expired | max_attempts | not_found`). Token refresh uses the shared /auth/refresh; sign out with /auth/picker/logout.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "auth",
+                "picker",
+                "verify-otp"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"deviceId\": \"picker-device-1\",\n  \"platform\": \"android\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": null
+          },
+          "response": [
+            {
+              "id": "c944889d-e2b9-4d30-adb5-83fcab9a3262",
+              "name": "Login successful",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "verify-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"name\": \"string\",\n  \"deviceId\": \"string\",\n  \"platform\": \"android\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"accessToken\": \"string\",\n    \"refreshToken\": \"string\",\n    \"isNewUser\": false,\n    \"user\": {\n      \"_id\": \"66f1a2b3c4d5e6f789012345\",\n      \"name\": \"Test Customer\",\n      \"email\": \"admin@grovio.com\",\n      \"phone\": \"8880002222\",\n      \"role\": \"vendor\",\n      \"gender\": \"male\",\n      \"dateOfBirth\": \"1969-11-09\",\n      \"profileImage\": \"string\",\n      \"fcmToken\": \"string\",\n      \"isActive\": true,\n      \"isVerified\": true,\n      \"createdAt\": \"2026-09-15T10:05:56.144Z\",\n      \"updatedAt\": \"2026-09-15T10:05:56.144Z\"\n    },\n    \"pickerProfile\": {\n      \"_id\": \"66f1a2b3c4d5e6f789012345\",\n      \"user\": \"66f1a2b3c4d5e6f789012345\",\n      \"store\": \"66f1a2b3c4d5e6f789012345\",\n      \"status\": \"blocked\",\n      \"isAvailable\": false,\n      \"employeeId\": \"string\",\n      \"address\": \"string\",\n      \"idProofType\": \"Aadhaar\",\n      \"idProofNumber\": \"string\",\n      \"idProofDocument\": \"string\",\n      \"emergencyContactName\": \"string\",\n      \"emergencyContactPhone\": \"string\",\n      \"joiningDate\": \"2026-09-15T10:05:56.144Z\",\n      \"shift\": \"string\"\n    },\n    \"onboarding\": {\n      \"status\": \"pending\",\n      \"profileComplete\": true,\n      \"kycComplete\": false,\n      \"nextStep\": \"profile\"\n    }\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "293c68a9-26c9-406c-910c-d65ba073c71e",
+              "name": "Incorrect OTP",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "verify-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"name\": \"string\",\n  \"deviceId\": \"string\",\n  \"platform\": \"android\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Incorrect OTP\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "d178d221-b602-4ae1-92bd-553a4b0ef799",
+              "name": "Your account has been disabled",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "verify-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"name\": \"string\",\n  \"deviceId\": \"string\",\n  \"platform\": \"android\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Your account has been disabled\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "945de633-725c-4dad-8aed-df93a53199f4",
+              "name": "This number is already registered with a different Grovio account",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "verify-otp"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"1234\",\n  \"name\": \"string\",\n  \"deviceId\": \"string\",\n  \"platform\": \"android\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"This number is already registered with a different Grovio account\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "352494a9-7d63-4346-aae5-57d59f959961",
+          "name": "Picker app — current picker, profile and onboarding step (for splash-screen routing)",
+          "request": {
+            "name": "Picker app — current picker, profile and onboarding step (for splash-screen routing)",
+            "description": {},
+            "url": {
+              "path": [
+                "auth",
+                "picker",
+                "me"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "18524403-710b-4db2-b455-9b546b694cc8",
+              "name": "Success",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "me"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Success\",\n  \"data\": {\n    \"user\": {\n      \"_id\": \"66f1a2b3c4d5e6f789012345\",\n      \"name\": \"Test Customer\",\n      \"email\": \"admin@grovio.com\",\n      \"phone\": \"8880002222\",\n      \"role\": \"customer\",\n      \"gender\": \"other\",\n      \"dateOfBirth\": \"1982-10-18\",\n      \"profileImage\": \"string\",\n      \"fcmToken\": \"string\",\n      \"isActive\": true,\n      \"isVerified\": true,\n      \"createdAt\": \"2026-09-15T10:05:56.144Z\",\n      \"updatedAt\": \"2026-09-15T10:05:56.144Z\"\n    },\n    \"pickerProfile\": {\n      \"_id\": \"66f1a2b3c4d5e6f789012345\",\n      \"user\": \"66f1a2b3c4d5e6f789012345\",\n      \"store\": \"66f1a2b3c4d5e6f789012345\",\n      \"status\": \"blocked\",\n      \"isAvailable\": true,\n      \"employeeId\": \"string\",\n      \"address\": \"string\",\n      \"idProofType\": \"Aadhaar\",\n      \"idProofNumber\": \"string\",\n      \"idProofDocument\": \"string\",\n      \"emergencyContactName\": \"string\",\n      \"emergencyContactPhone\": \"string\",\n      \"joiningDate\": \"2026-09-15T10:05:56.144Z\",\n      \"shift\": \"string\"\n    },\n    \"onboarding\": {\n      \"status\": \"pending\",\n      \"profileComplete\": true,\n      \"kycComplete\": false,\n      \"nextStep\": \"profile\"\n    }\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "75c5aef0-79be-44eb-9042-2daf775f0b08",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "me"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "1326de8f-5541-4814-9335-02dae1671bae",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "me"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "6e03919d-3b53-4c86-8c84-eefd40759793",
+          "name": "Picker app — Register step: save name, email, gender and date of birth",
+          "request": {
+            "name": "Picker app — Register step: save name, email, gender and date of birth",
+            "description": {
+              "content": "The \"Register — Tell us a bit about you\" screen shown after OTP signup (`onboarding.nextStep === \"profile\"`). The mobile number on that screen is read-only: show `user.phone` from verify-otp / GET /auth/picker/me. It is not part of this body. `dateOfBirth` is `DD/MM/YYYY` (ISO `YYYY-MM-DD` also accepted); the picker must be at least 18. `gender` is case-insensitive. Validation errors return 422 with `errors: [{ field, message }]`, so each message can be shown under its input. On success `onboarding.nextStep` becomes `kyc` (→ PATCH /picker/profile). Can be called again to correct details.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "auth",
+                "picker",
+                "register"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ravi Kumar\",\n  \"email\": \"ravi.kumar@example.com\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"15/08/1998\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "55fd3ca1-638b-4759-8968-ee2b2771f3a1",
+              "name": "Profile saved",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "register"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ravi Kumar\",\n  \"email\": \"ravi.kumar@example.com\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"15/08/1998\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Profile saved\",\n  \"data\": {\n    \"user\": {\n      \"_id\": \"66f1a2b3c4d5e6f789012345\",\n      \"name\": \"Test Customer\",\n      \"email\": \"admin@grovio.com\",\n      \"phone\": \"8880002222\",\n      \"role\": \"vendor\",\n      \"gender\": \"male\",\n      \"dateOfBirth\": \"1957-11-27\",\n      \"profileImage\": \"string\",\n      \"fcmToken\": \"string\",\n      \"isActive\": true,\n      \"isVerified\": true,\n      \"createdAt\": \"2026-09-15T10:05:56.144Z\",\n      \"updatedAt\": \"2026-09-15T10:05:56.144Z\"\n    },\n    \"pickerProfile\": {\n      \"_id\": \"66f1a2b3c4d5e6f789012345\",\n      \"user\": \"66f1a2b3c4d5e6f789012345\",\n      \"store\": \"66f1a2b3c4d5e6f789012345\",\n      \"status\": \"blocked\",\n      \"isAvailable\": false,\n      \"employeeId\": \"string\",\n      \"address\": \"string\",\n      \"idProofType\": \"Aadhaar\",\n      \"idProofNumber\": \"string\",\n      \"idProofDocument\": \"string\",\n      \"emergencyContactName\": \"string\",\n      \"emergencyContactPhone\": \"string\",\n      \"joiningDate\": \"2026-09-15T10:05:56.144Z\",\n      \"shift\": \"string\"\n    },\n    \"onboarding\": {\n      \"status\": \"blocked\",\n      \"profileComplete\": true,\n      \"kycComplete\": false,\n      \"nextStep\": \"profile\"\n    }\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "e8310000-80a6-40c6-9072-6d98e35c6afc",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "register"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ravi Kumar\",\n  \"email\": \"ravi.kumar@example.com\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"15/08/1998\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "e00e57ff-b4fb-455d-8051-5c99177146fc",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "register"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ravi Kumar\",\n  \"email\": \"ravi.kumar@example.com\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"15/08/1998\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "45ba5916-a365-4687-aad9-dc9364b4c528",
+              "name": "This email is already used by another account",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "register"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ravi Kumar\",\n  \"email\": \"ravi.kumar@example.com\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"15/08/1998\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"This email is already used by another account\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "5691a106-1d16-47d4-86ae-6d674cd4efbc",
+              "name": "Validation failed",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "register"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ravi Kumar\",\n  \"email\": \"ravi.kumar@example.com\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"15/08/1998\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "d8e252fd-b060-4174-ade4-414a80982622",
+          "name": "Picker app — log out this device",
+          "request": {
+            "name": "Picker app — log out this device",
+            "description": {
+              "content": "Revokes the given refresh token (must belong to the logged-in picker), sets the picker offline and unavailable so no new pick jobs are assigned, and clears the push token. The app should then discard both tokens.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "auth",
+                "picker",
+                "logout"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"<refreshToken from verify-otp>\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "125ba687-2684-4c03-8a08-f56e1e7407c6",
+              "name": "Logged out",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "logout"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Logged out\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "edd8c138-0feb-42b9-a512-b6edfa8663e0",
+              "name": "Invalid or already-revoked refresh token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "logout"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid or already-revoked refresh token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "4135504e-04f1-4c01-a918-e673320cc972",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "logout"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "5a540505-bae1-4134-ace9-e23803aaf94c",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "logout"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "feeadbb9-0694-4dc7-ae2b-e2b516fa5f26",
+          "name": "Picker app — log out from all devices",
+          "request": {
+            "name": "Picker app — log out from all devices",
+            "description": {
+              "content": "Revokes every refresh token for this picker, sets them offline and unavailable, and clears the push token.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "auth",
+                "picker",
+                "logout-all"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "0abde677-a21b-421a-8c53-4d1772dac31a",
+              "name": "Logged out from all devices",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "logout-all"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Logged out from all devices\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "2f9e54a5-9b86-46a4-be95-40c51f240351",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "logout-all"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "e80406a5-2278-4afa-84a4-50c838005424",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "picker",
+                    "logout-all"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "POST",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             }
@@ -11479,6 +13178,1151 @@
           "protocolProfileBehavior": {
             "disableBodyPruning": true
           }
+        },
+        {
+          "id": "935a5669-f516-48e8-9a26-c7471a011605",
+          "name": "Accept an incoming (placed) order — used by the Live Orders board; splits it to pickers",
+          "request": {
+            "name": "Accept an incoming (placed) order — used by the Live Orders board; splits it to pickers",
+            "description": {},
+            "url": {
+              "path": [
+                "admin",
+                "orders",
+                ":id",
+                "accept"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "66f1a2b3c4d5e6f789012345",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) Resource ID (Mongo ObjectId)",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PATCH",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "d07d33af-39df-4ab6-9219-dded0ec9c0e6",
+              "name": "Order accepted",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "accept"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Order accepted\",\n  \"data\": {\n    \"_id\": \"66f1a2b3c4d5e6f789012345\",\n    \"orderNumber\": \"GRV-MU2IAXWQ-5201\",\n    \"customer\": \"66f1a2b3c4d5e6f789012345\",\n    \"vendor\": \"66f1a2b3c4d5e6f789012345\",\n    \"store\": \"66f1a2b3c4d5e6f789012345\",\n    \"address\": \"66f1a2b3c4d5e6f789012345\",\n    \"pickTasks\": [\n      {\n        \"_id\": \"66f1a2b3c4d5e6f789012345\",\n        \"picker\": \"66f1a2b3c4d5e6f789012345\",\n        \"store\": \"string\",\n        \"status\": \"picking\",\n        \"startedAt\": \"2026-09-15T10:05:56.144Z\",\n        \"completedAt\": \"2026-09-15T10:05:56.144Z\"\n      },\n      {\n        \"_id\": \"66f1a2b3c4d5e6f789012345\",\n        \"picker\": \"66f1a2b3c4d5e6f789012345\",\n        \"store\": \"string\",\n        \"status\": \"completed\",\n        \"startedAt\": \"2026-09-15T10:05:56.144Z\",\n        \"completedAt\": \"2026-09-15T10:05:56.144Z\"\n      }\n    ],\n    \"delivery\": \"string\",\n    \"deliveryAcceptedAt\": \"2026-09-15T10:05:56.144Z\",\n    \"pickerHandoverAt\": \"2026-09-15T10:05:56.144Z\",\n    \"arrivedAtPickupAt\": \"2026-09-15T10:05:56.144Z\",\n    \"arrivedAtDropAt\": \"2026-09-15T10:05:56.144Z\",\n    \"failureReason\": \"string\",\n    \"items\": [\n      {\n        \"_id\": \"66f1a2b3c4d5e6f789012345\",\n        \"product\": \"66f1a2b3c4d5e6f789012345\",\n        \"pickupStore\": \"string\",\n        \"variantId\": \"string\",\n        \"variantLabel\": \"string\",\n        \"nameSnapshot\": \"Fresh Apples\",\n        \"price\": 120,\n        \"qty\": 2,\n        \"pickedQty\": 5012,\n        \"assignedPicker\": \"string\",\n        \"isAvailable\": true,\n        \"substituteProduct\": \"string\",\n        \"substituteNote\": \"string\"\n      },\n      {\n        \"_id\": \"66f1a2b3c4d5e6f789012345\",\n        \"product\": \"66f1a2b3c4d5e6f789012345\",\n        \"pickupStore\": \"string\",\n        \"variantId\": \"string\",\n        \"variantLabel\": \"string\",\n        \"nameSnapshot\": \"Fresh Apples\",\n        \"price\": 120,\n        \"qty\": 2,\n        \"pickedQty\": 7404,\n        \"assignedPicker\": \"string\",\n        \"isAvailable\": true,\n        \"substituteProduct\": \"string\",\n        \"substituteNote\": \"string\"\n      }\n    ],\n    \"statusLogs\": [\n      {\n        \"status\": \"accepted\",\n        \"changedBy\": \"string\",\n        \"note\": \"string\",\n        \"createdAt\": \"2026-09-15T10:05:56.144Z\"\n      },\n      {\n        \"status\": \"accepted\",\n        \"changedBy\": \"string\",\n        \"note\": \"string\",\n        \"createdAt\": \"2026-09-15T10:05:56.144Z\"\n      }\n    ],\n    \"itemTotal\": 120,\n    \"deliveryFee\": 25,\n    \"handlingCharge\": 5,\n    \"packingCharge\": 0,\n    \"surcharge\": 0,\n    \"surchargeLabel\": \"Rain surcharge\",\n    \"discount\": 0,\n    \"tax\": 0,\n    \"grandTotal\": 120,\n    \"couponCode\": \"string\",\n    \"paymentMethod\": \"COD\",\n    \"paymentStatus\": \"refunded\",\n    \"orderStatus\": \"picked_up\",\n    \"cancelReason\": \"string\",\n    \"placedAt\": \"2026-09-15T10:05:56.144Z\",\n    \"deliveredAt\": \"2026-09-15T10:05:56.144Z\",\n    \"settled\": true,\n    \"createdAt\": \"2026-09-15T10:05:56.144Z\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "dd594e50-d729-4226-b3b1-80bf0010985c",
+              "name": "Not in placed state, or an online order still waiting for payment",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "accept"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Not in placed state, or an online order still waiting for payment\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "03a207b2-0d7f-4d10-8d06-0806645bb6e2",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "accept"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "db783f47-1213-482a-8425-c7131ac827fc",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "accept"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "8a907c8b-557f-485d-8c83-5fcb93902df3",
+              "name": "Not found",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "accept"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Not found\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "fbe59f47-32f3-43f1-83a3-8433447f0a0f",
+          "name": "Reject an incoming (placed) order — refunds to the customer wallet if already paid",
+          "request": {
+            "name": "Reject an incoming (placed) order — refunds to the customer wallet if already paid",
+            "description": {},
+            "url": {
+              "path": [
+                "admin",
+                "orders",
+                ":id",
+                "reject"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "66f1a2b3c4d5e6f789012345",
+                  "key": "id",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) Resource ID (Mongo ObjectId)",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PATCH",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Items out of stock\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "be312b33-ab65-47eb-bd35-afec00d9b907",
+              "name": "Order rejected",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "reject"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Store closing early\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Order rejected\",\n  \"data\": {\n    \"_id\": \"66f1a2b3c4d5e6f789012345\",\n    \"orderNumber\": \"GRV-MU2IAXWQ-5201\",\n    \"customer\": \"66f1a2b3c4d5e6f789012345\",\n    \"vendor\": \"66f1a2b3c4d5e6f789012345\",\n    \"store\": \"66f1a2b3c4d5e6f789012345\",\n    \"address\": \"66f1a2b3c4d5e6f789012345\",\n    \"pickTasks\": [\n      {\n        \"_id\": \"66f1a2b3c4d5e6f789012345\",\n        \"picker\": \"66f1a2b3c4d5e6f789012345\",\n        \"store\": \"string\",\n        \"status\": \"picking\",\n        \"startedAt\": \"2026-09-15T10:05:56.144Z\",\n        \"completedAt\": \"2026-09-15T10:05:56.144Z\"\n      },\n      {\n        \"_id\": \"66f1a2b3c4d5e6f789012345\",\n        \"picker\": \"66f1a2b3c4d5e6f789012345\",\n        \"store\": \"string\",\n        \"status\": \"picking\",\n        \"startedAt\": \"2026-09-15T10:05:56.144Z\",\n        \"completedAt\": \"2026-09-15T10:05:56.144Z\"\n      }\n    ],\n    \"delivery\": \"string\",\n    \"deliveryAcceptedAt\": \"2026-09-15T10:05:56.144Z\",\n    \"pickerHandoverAt\": \"2026-09-15T10:05:56.144Z\",\n    \"arrivedAtPickupAt\": \"2026-09-15T10:05:56.144Z\",\n    \"arrivedAtDropAt\": \"2026-09-15T10:05:56.144Z\",\n    \"failureReason\": \"string\",\n    \"items\": [\n      {\n        \"_id\": \"66f1a2b3c4d5e6f789012345\",\n        \"product\": \"66f1a2b3c4d5e6f789012345\",\n        \"pickupStore\": \"string\",\n        \"variantId\": \"string\",\n        \"variantLabel\": \"string\",\n        \"nameSnapshot\": \"Fresh Apples\",\n        \"price\": 120,\n        \"qty\": 2,\n        \"pickedQty\": 2027,\n        \"assignedPicker\": \"string\",\n        \"isAvailable\": true,\n        \"substituteProduct\": \"string\",\n        \"substituteNote\": \"string\"\n      },\n      {\n        \"_id\": \"66f1a2b3c4d5e6f789012345\",\n        \"product\": \"66f1a2b3c4d5e6f789012345\",\n        \"pickupStore\": \"string\",\n        \"variantId\": \"string\",\n        \"variantLabel\": \"string\",\n        \"nameSnapshot\": \"Fresh Apples\",\n        \"price\": 120,\n        \"qty\": 2,\n        \"pickedQty\": 2170,\n        \"assignedPicker\": \"string\",\n        \"isAvailable\": false,\n        \"substituteProduct\": \"string\",\n        \"substituteNote\": \"string\"\n      }\n    ],\n    \"statusLogs\": [\n      {\n        \"status\": \"accepted\",\n        \"changedBy\": \"string\",\n        \"note\": \"string\",\n        \"createdAt\": \"2026-09-15T10:05:56.144Z\"\n      },\n      {\n        \"status\": \"accepted\",\n        \"changedBy\": \"string\",\n        \"note\": \"string\",\n        \"createdAt\": \"2026-09-15T10:05:56.144Z\"\n      }\n    ],\n    \"itemTotal\": 120,\n    \"deliveryFee\": 25,\n    \"handlingCharge\": 5,\n    \"packingCharge\": 0,\n    \"surcharge\": 0,\n    \"surchargeLabel\": \"Rain surcharge\",\n    \"discount\": 0,\n    \"tax\": 0,\n    \"grandTotal\": 120,\n    \"couponCode\": \"string\",\n    \"paymentMethod\": \"COD\",\n    \"paymentStatus\": \"pending\",\n    \"orderStatus\": \"rejected\",\n    \"cancelReason\": \"string\",\n    \"placedAt\": \"2026-09-15T10:05:56.144Z\",\n    \"deliveredAt\": \"2026-09-15T10:05:56.144Z\",\n    \"settled\": true,\n    \"createdAt\": \"2026-09-15T10:05:56.144Z\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "a56a5c3c-8d81-4dbb-9a44-9a179010c41e",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "reject"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Store closing early\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "5baeebec-c7b5-40a4-96da-37f6c15f479b",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "reject"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Store closing early\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "69459959-1e28-4ba1-99bc-75f51157a4b6",
+              "name": "Not found",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "orders",
+                    ":id",
+                    "reject"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "description": {
+                        "content": "(Required) Resource ID (Mongo ObjectId)",
+                        "type": "text/plain"
+                      },
+                      "type": "any",
+                      "value": "66f1a2b3c4d5e6f789012345",
+                      "key": "id"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Store closing early\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Not found\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "34953ed4-af84-45a1-9d91-e6a42714eff4",
+          "name": "Live Orders board settings",
+          "request": {
+            "name": "Live Orders board settings",
+            "description": {},
+            "url": {
+              "path": [
+                "admin",
+                "order-settings"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "e1a91a47-2ecc-4d5f-97ed-8713bcbceba7",
+              "name": "Success",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-settings"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Success\",\n  \"data\": {\n    \"autoAcceptOrders\": false\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "e5de31d0-80bf-4255-bf0d-e2dd8154e555",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-settings"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "9380e678-2818-4f8b-b836-871f3e02517a",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-settings"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "be2c90c5-1330-4157-82e7-136f3a83bfb8",
+          "name": "Turn auto-accept on/off (off = orders wait on the Live Orders board)",
+          "request": {
+            "name": "Turn auto-accept on/off (off = orders wait on the Live Orders board)",
+            "description": {},
+            "url": {
+              "path": [
+                "admin",
+                "order-settings"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"autoAcceptOrders\": false\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "e682da3e-a3d9-43c1-b25c-2a94999399d0",
+              "name": "Success",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-settings"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"autoAcceptOrders\": false\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Success\",\n  \"data\": {\n    \"autoAcceptOrders\": false\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "c8905eab-08be-43f7-ac9f-e28a73bf7604",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-settings"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"autoAcceptOrders\": false\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "537dee97-378a-4e79-a60b-ec97ef4f05e7",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-settings"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"autoAcceptOrders\": false\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "876e66bd-efc9-43d3-b620-3eb8e4c20083",
+              "name": "Validation failed",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "order-settings"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"autoAcceptOrders\": false\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
         }
       ],
       "event": []
@@ -13571,6 +16415,466 @@
                 }
               ],
               "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "035a2280-3eee-467d-8cf2-ab2c296229ba",
+          "name": "Get order charges — delivery, handling, packing, surcharge",
+          "request": {
+            "name": "Get order charges — delivery, handling, packing, surcharge",
+            "description": {
+              "content": "Charges are applied once per order at checkout. Each is a fixed ₹ amount or a % of the item total (before coupon discount).",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "admin",
+                "charges"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "36706bbe-2956-4c84-ac3b-6e6ec709b0b2",
+              "name": "Success",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "charges"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Success\",\n  \"data\": {\n    \"delivery\": {\n      \"enabled\": false,\n      \"type\": \"percent\",\n      \"value\": 9716.465728623092,\n      \"freeAbove\": 1264.4249573181899\n    },\n    \"handling\": {\n      \"enabled\": true,\n      \"type\": \"fixed\",\n      \"value\": 9352.279252074923\n    },\n    \"packing\": {\n      \"enabled\": false,\n      \"type\": \"fixed\",\n      \"value\": 9749.733330012677\n    },\n    \"surcharge\": {\n      \"enabled\": true,\n      \"type\": \"fixed\",\n      \"value\": 5274.043212886588,\n      \"label\": \"Rain surcharge\"\n    }\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "e6984db7-0a75-4b51-b211-432600df5718",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "charges"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "1d55d2f2-d5be-4bf7-86d9-5445bb2ca2d9",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "charges"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "f7454fea-808e-457e-b2d2-54c6e0c01ef4",
+          "name": "Save order charges (applies to new checkouts only)",
+          "request": {
+            "name": "Save order charges (applies to new checkouts only)",
+            "description": {},
+            "url": {
+              "path": [
+                "admin",
+                "charges"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"delivery\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 30,\n    \"freeAbove\": 499\n  },\n  \"handling\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 5\n  },\n  \"packing\": {\n    \"enabled\": true,\n    \"type\": \"percent\",\n    \"value\": 2\n  },\n  \"surcharge\": {\n    \"enabled\": false,\n    \"type\": \"fixed\",\n    \"value\": 20,\n    \"label\": \"Rain surcharge\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "4b695368-5ac2-4b54-bedb-4529ae6eaf1c",
+              "name": "Charges saved",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "charges"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"delivery\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 30,\n    \"freeAbove\": 499\n  },\n  \"handling\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 5\n  },\n  \"packing\": {\n    \"enabled\": true,\n    \"type\": \"percent\",\n    \"value\": 2\n  },\n  \"surcharge\": {\n    \"enabled\": false,\n    \"type\": \"fixed\",\n    \"value\": 20,\n    \"label\": \"Rain surcharge\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Charges saved\",\n  \"data\": {\n    \"delivery\": {\n      \"enabled\": true,\n      \"type\": \"percent\",\n      \"value\": 8731.321451804533,\n      \"freeAbove\": 9614.911277076435\n    },\n    \"handling\": {\n      \"enabled\": false,\n      \"type\": \"fixed\",\n      \"value\": 748.8535622453929\n    },\n    \"packing\": {\n      \"enabled\": true,\n      \"type\": \"percent\",\n      \"value\": 9331.30631242395\n    },\n    \"surcharge\": {\n      \"enabled\": false,\n      \"type\": \"fixed\",\n      \"value\": 5424.224237788304,\n      \"label\": \"Rain surcharge\"\n    }\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "d0b12c19-798c-410b-8121-c02565b350b8",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "charges"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"delivery\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 30,\n    \"freeAbove\": 499\n  },\n  \"handling\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 5\n  },\n  \"packing\": {\n    \"enabled\": true,\n    \"type\": \"percent\",\n    \"value\": 2\n  },\n  \"surcharge\": {\n    \"enabled\": false,\n    \"type\": \"fixed\",\n    \"value\": 20,\n    \"label\": \"Rain surcharge\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "c58fc784-4b7f-4c23-b524-3696a6af5b53",
+              "name": "Forbidden — wrong role or missing admin permission",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "charges"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"delivery\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 30,\n    \"freeAbove\": 499\n  },\n  \"handling\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 5\n  },\n  \"packing\": {\n    \"enabled\": true,\n    \"type\": \"percent\",\n    \"value\": 2\n  },\n  \"surcharge\": {\n    \"enabled\": false,\n    \"type\": \"fixed\",\n    \"value\": 20,\n    \"label\": \"Rain surcharge\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Forbidden — wrong role or missing admin permission\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "c5799886-548d-42ad-adcb-21f4d570007d",
+              "name": "Validation failed",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "admin",
+                    "charges"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"delivery\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 30,\n    \"freeAbove\": 499\n  },\n  \"handling\": {\n    \"enabled\": true,\n    \"type\": \"fixed\",\n    \"value\": 5\n  },\n  \"packing\": {\n    \"enabled\": true,\n    \"type\": \"percent\",\n    \"value\": 2\n  },\n  \"surcharge\": {\n    \"enabled\": false,\n    \"type\": \"fixed\",\n    \"value\": 20,\n    \"label\": \"Rain surcharge\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+              "code": 422,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\"\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             }
@@ -29784,6 +33088,427 @@
                 ],
                 "method": "GET",
                 "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Not found\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            }
+          ],
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "4aa352e2-1db2-4d4d-bca4-70ec0e41fe5c",
+          "name": "KYC upload — ID proof type/number/document, address, emergency contact (multipart)",
+          "request": {
+            "name": "KYC upload — ID proof type/number/document, address, emergency contact (multipart)",
+            "description": {
+              "content": "The onboarding flow's \"Upload document\" step (`onboarding.nextStep === \"kyc\"`). Once `idProofType`, `idProofNumber` and the `idProofDocument` file are all saved, `nextStep` becomes `pending_approval`. Any field can be updated again later; send only the fields that change.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "picker",
+                "kyc-upload"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PATCH",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "description": {
+                    "content": "",
+                    "type": "text/plain"
+                  },
+                  "key": "idProofType",
+                  "value": "Aadhaar",
+                  "type": "text"
+                },
+                {
+                  "description": {
+                    "content": "",
+                    "type": "text/plain"
+                  },
+                  "key": "idProofNumber",
+                  "value": "1234-5678-9012",
+                  "type": "text"
+                },
+                {
+                  "description": {
+                    "content": "ID proof photo — jpg/png/webp, max 5MB",
+                    "type": "text/plain"
+                  },
+                  "key": "idProofDocument",
+                  "type": "file"
+                },
+                {
+                  "description": {
+                    "content": "",
+                    "type": "text/plain"
+                  },
+                  "key": "address",
+                  "value": "string",
+                  "type": "text"
+                },
+                {
+                  "description": {
+                    "content": "",
+                    "type": "text/plain"
+                  },
+                  "key": "emergencyContactName",
+                  "value": "string",
+                  "type": "text"
+                },
+                {
+                  "description": {
+                    "content": "",
+                    "type": "text/plain"
+                  },
+                  "key": "emergencyContactPhone",
+                  "value": "string",
+                  "type": "text"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearerToken}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "id": "99afdcae-c1d0-495b-b55c-2d7cd7a51ea1",
+              "name": "Profile updated",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "picker",
+                    "kyc-upload"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "multipart/form-data"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofType",
+                      "value": "Aadhaar",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofNumber",
+                      "value": "1234-5678-9012",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "ID proof photo — jpg/png/webp, max 5MB",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofDocument",
+                      "type": "file"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "address",
+                      "value": "string",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "emergencyContactName",
+                      "value": "string",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "emergencyContactPhone",
+                      "value": "string",
+                      "type": "text"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Profile updated\",\n  \"data\": {\n    \"_id\": \"66f1a2b3c4d5e6f789012345\",\n    \"user\": \"66f1a2b3c4d5e6f789012345\",\n    \"store\": \"66f1a2b3c4d5e6f789012345\",\n    \"status\": \"pending\",\n    \"isAvailable\": false,\n    \"employeeId\": \"string\",\n    \"address\": \"string\",\n    \"idProofType\": \"Aadhaar\",\n    \"idProofNumber\": \"string\",\n    \"idProofDocument\": \"string\",\n    \"emergencyContactName\": \"string\",\n    \"emergencyContactPhone\": \"string\",\n    \"joiningDate\": \"2026-09-15T10:05:56.144Z\",\n    \"shift\": \"string\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "0d98782b-677d-4840-b29c-ec3871571dbd",
+              "name": "Missing/invalid/expired access token",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "picker",
+                    "kyc-upload"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "multipart/form-data"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofType",
+                      "value": "Aadhaar",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofNumber",
+                      "value": "1234-5678-9012",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "ID proof photo — jpg/png/webp, max 5MB",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofDocument",
+                      "type": "file"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "address",
+                      "value": "string",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "emergencyContactName",
+                      "value": "string",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "emergencyContactPhone",
+                      "value": "string",
+                      "type": "text"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Missing/invalid/expired access token\"\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "c30d27cf-5009-4659-8cbd-e5d5b775f26f",
+              "name": "Not found",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "picker",
+                    "kyc-upload"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "multipart/form-data"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": {
+                      "content": "Added as a part of security scheme: bearer",
+                      "type": "text/plain"
+                    },
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "method": "PATCH",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofType",
+                      "value": "Aadhaar",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofNumber",
+                      "value": "1234-5678-9012",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "ID proof photo — jpg/png/webp, max 5MB",
+                        "type": "text/plain"
+                      },
+                      "key": "idProofDocument",
+                      "type": "file"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "address",
+                      "value": "string",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "emergencyContactName",
+                      "value": "string",
+                      "type": "text"
+                    },
+                    {
+                      "description": {
+                        "content": "",
+                        "type": "text/plain"
+                      },
+                      "key": "emergencyContactPhone",
+                      "value": "string",
+                      "type": "text"
+                    }
+                  ]
+                }
               },
               "status": "Not Found",
               "code": 404,

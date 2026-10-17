@@ -39,8 +39,13 @@ async function rotateRefreshToken(tokenDoc, user) {
   return issueTokenPair(user, { deviceId: tokenDoc.deviceId, platform: tokenDoc.platform });
 }
 
-async function revokeRefreshToken(rawToken) {
-  await RefreshToken.updateOne({ tokenHash: hashToken(rawToken), revokedAt: null }, { revokedAt: new Date() });
+// Pass `userId` to only revoke the token if it belongs to that user. Returns whether a live token
+// was actually revoked.
+async function revokeRefreshToken(rawToken, userId = null) {
+  const filter = { tokenHash: hashToken(rawToken), revokedAt: null };
+  if (userId) filter.user = userId;
+  const result = await RefreshToken.updateOne(filter, { revokedAt: new Date() });
+  return result.modifiedCount > 0;
 }
 
 async function revokeAllForUser(userId) {

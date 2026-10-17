@@ -85,19 +85,38 @@ paths['/customer/addresses/{id}'] = {
 paths['/customer/checkout/summary'] = {
   post: {
     tags: TAG_ORDERS, summary: 'Server-side recalculation of totals before placing the order (no side effects)', ...bearer(),
-    requestBody: jsonBody({ couponCode: { type: 'string', description: 'Optional override of the cart\'s applied coupon' } }),
+    requestBody: jsonBody({
+      couponCode: { type: 'string', description: 'Optional override of the cart\'s applied coupon' },
+      addressId: { type: 'string', description: 'Optional — also checks that every store in the cart delivers there (serviceArea)' },
+    }),
     responses: {
       200: envelope({
         type: 'object',
         properties: {
+          serviceArea: {
+            type: 'object', nullable: true, description: 'Only with addressId. Placing an order to an address outside a store\'s delivery radius is rejected.',
+            properties: { serviceable: { type: 'boolean' }, unverified: { type: 'boolean', description: 'A store or the address has no coordinates' }, outside: { type: 'array', items: { type: 'object' } } },
+          },
+          paymentOptions: {
+            type: 'array', description: 'Payment methods switched on in Admin > Settings, in display order',
+            items: { type: 'object', properties: { method: { type: 'string', enum: ['COD', 'WALLET', 'RAZORPAY', 'PHONEPE', 'PAYU'] }, label: { type: 'string' }, description: { type: 'string' } } },
+          },
           stores: {
             type: 'array',
-            description: 'Per-store breakdown — a cart spanning multiple stores places one order per store, each priced here separately',
+            description: 'Per-store item breakdown. A multi-store cart is still ONE order; charges apply once per order (top-level fields).',
             items: { type: 'object', properties: {
-              storeId: { type: 'string' }, storeName: { type: 'string' }, itemTotal: { type: 'number' }, deliveryFee: { type: 'number' }, discount: { type: 'number' }, grandTotal: { type: 'number' },
+              storeId: { type: 'string' }, storeName: { type: 'string' }, itemTotal: { type: 'number' }, discount: { type: 'number' },
             } },
           },
-          itemTotal: { type: 'number' }, deliveryFee: { type: 'number' }, discount: { type: 'number' }, tax: { type: 'number' }, grandTotal: { type: 'number' }, couponCode: { type: 'string', nullable: true },
+          itemTotal: { type: 'number' },
+          deliveryFee: { type: 'number', description: '0 when free delivery applies' },
+          freeDeliveryAbove: { type: 'number', nullable: true, description: 'Item total at which delivery becomes free; null = no free delivery. Show "Add ₹X more for free delivery" while freeDeliveryApplied is false' },
+          freeDeliveryApplied: { type: 'boolean' },
+          handlingCharge: { type: 'number' },
+          packingCharge: { type: 'number' },
+          surcharge: { type: 'number' },
+          surchargeLabel: { type: 'string', nullable: true, example: 'Rain surcharge', description: 'Show as the bill line name when surcharge > 0' },
+          discount: { type: 'number' }, tax: { type: 'number' }, grandTotal: { type: 'number' }, couponCode: { type: 'string', nullable: true },
           walletBalance: { type: 'number', description: 'Current Grovio Wallet balance — use to show/enable a "Pay with Wallet" option' },
           walletSufficient: { type: 'boolean', description: 'walletBalance >= grandTotal' },
         },
@@ -110,7 +129,7 @@ paths['/customer/orders'] = {
   post: {
     tags: TAG_ORDERS, summary: 'Place an order from the current cart', ...bearer(),
     description: 'A cart spanning multiple stores becomes a single order consolidated at a hub store (see checkoutSummary for the per-store cost breakdown) — picking is still split per store, with non-hub stores\' pickers handing their portion off at the hub before the order is packed. paymentMethod: "WALLET" debits the Grovio Wallet immediately and the order is created already paid — check checkoutSummary\'s walletBalance/walletSufficient first to avoid offering it when the balance is too low.',
-    requestBody: jsonBody({ addressId: { type: 'string' }, paymentMethod: { type: 'string', enum: ['COD', 'RAZORPAY', 'WALLET'], default: 'COD' } }, ['addressId']),
+    requestBody: jsonBody({ addressId: { type: 'string' }, paymentMethod: { type: 'string', enum: ['COD', 'RAZORPAY', 'WALLET', 'PAYU', 'PHONEPE'], default: 'COD' } }, ['addressId']),
     responses: { 201: envelope(ref('Order'), 'Order placed successfully'), 400: errorResponse('Cart empty / item out of stock / store closed / Insufficient wallet balance'), 401: RESPONSES_401 },
   },
   get: { tags: TAG_ORDERS, summary: 'My order history', ...bearer(), parameters: [...PAGE_QS, q('status')], responses: { 200: envelope(paginated(ref('Order'))), 401: RESPONSES_401 } },

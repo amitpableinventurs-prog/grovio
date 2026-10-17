@@ -22,6 +22,9 @@ const pickerProfileSchema = new Schema({
   currentLng: { type: Number, default: null },
   locationUpdatedAt: { type: Date, default: null },
   onlineStatus: { type: String, enum: ['online', 'offline'], default: 'offline' },
+  // This picker's own pay rates: only the parts that differ from their store's / the default
+  // policy (services/pickerPay.service.js). null = none.
+  payPolicy: { type: Schema.Types.Mixed, default: null },
 }, { timestamps: true });
 
 module.exports = model('PickerProfile', pickerProfileSchema);

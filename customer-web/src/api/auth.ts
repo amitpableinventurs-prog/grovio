@@ -8,6 +8,7 @@ interface AuthSession {
   isNewUser?: boolean;
 }
 
+// `phone` is the 10-digit number only — the backend assumes +91.
 export function sendOtp(phone: string) {
   return unwrap<{ sent: boolean; resendCooldownSeconds: number; debugOtp?: string }>(
     apiClient.post('/auth/send-otp', { phone })

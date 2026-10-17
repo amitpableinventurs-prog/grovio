@@ -12,6 +12,7 @@ import {
   InputNumber,
   Upload,
   Popconfirm,
+  Checkbox,
   App as AntApp,
 } from 'antd';
 import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
@@ -34,6 +35,8 @@ interface ProductFormValues {
   discountPrice?: number;
   stockQty: number;
   sku?: string;
+  requiresColdBag?: boolean;
+  weightKg?: number | null;
 }
 
 export default function ProductsPage() {
@@ -119,6 +122,8 @@ export default function ProductsPage() {
       discountPrice: product.discountPrice || undefined,
       stockQty: product.stockQty,
       sku: product.sku || undefined,
+      requiresColdBag: !!product.requiresColdBag,
+      weightKg: product.weightKg ?? undefined,
     });
     setFileList([]);
     setModalOpen(true);
@@ -128,6 +133,8 @@ export default function ProductsPage() {
     const formData = new FormData();
     Object.entries(values).forEach(([key, value]) => {
       if (value !== undefined && value !== null) formData.append(key, String(value));
+      // Cleared on edit: '' sets it back to unknown.
+      else if (key === 'weightKg' && editing) formData.append(key, '');
     });
     fileList.forEach((f) => {
       if (f.originFileObj) formData.append('images', f.originFileObj);
@@ -289,6 +296,14 @@ export default function ProductsPage() {
               <InputNumber min={0} style={{ width: '100%' }} />
             </Form.Item>
           </Space>
+
+          <Form.Item name="weightKg" label="Weight per unit (kg)" extra="For the delivery partner's heavy-load bonus (orders of 10 kg+). Leave blank if not known.">
+            <InputNumber min={0} step={0.1} style={{ width: 200 }} placeholder="e.g. 1 or 0.5" />
+          </Form.Item>
+
+          <Form.Item name="requiresColdBag" valuePropName="checked" initialValue={false} extra="Ice cream, meat, frozen snacks… Orders with it must go in a cold bag, scanned at pickup and returned to the store.">
+            <Checkbox>Frozen item — needs a cold bag</Checkbox>
+          </Form.Item>
 
           <Form.Item label="Images">
             <Upload

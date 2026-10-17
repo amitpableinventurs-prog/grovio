@@ -23,7 +23,31 @@ const statusParam = { name: 'status', in: 'query', schema: { type: 'string' }, d
 
 // ---------- Dashboard ----------
 paths['/admin/dashboard'] = {
-  get: { tags: TAG_DASH, summary: 'Platform KPIs: GMV, AOV, orders, active stores/pickers/delivery partners', ...bearer(), responses: { 200: envelope(ref('DashboardStats')), 401: RESPONSES_401 } },
+  get: {
+    tags: TAG_DASH,
+    summary: 'Dashboard: KPIs for a range vs the previous period (same elapsed time), GMV trend, orders by hour, payment mix, top products/stores, live pipeline, operations. Store managers see their store only. Days are counted in DASHBOARD_TZ (default Asia/Kolkata).',
+    ...bearer(),
+    parameters: [q('range', 'today | 7d | 30d | 90d (default 30d)')],
+    responses: {
+      200: envelope({
+        allOf: [ref('DashboardStats')],
+        type: 'object',
+        properties: {
+          range: { type: 'string' }, granularity: { type: 'string', enum: ['hour', 'day'] },
+          current: { type: 'object', description: 'orders, gmv, averageOrderValue, delivered, cancelled, cancellationRate, newCustomers' },
+          previous: { type: 'object', description: 'Same fields for the previous period' },
+          trend: { type: 'array', items: { type: 'object', properties: { bucket: { type: 'string' }, orders: { type: 'integer' }, gmv: { type: 'number' } } } },
+          ordersByHour: { type: 'array', items: { type: 'object', properties: { hour: { type: 'integer' }, orders: { type: 'integer' } } } },
+          paymentMix: { type: 'array', items: { type: 'object' } },
+          topProducts: { type: 'array', items: { type: 'object' } },
+          topStores: { type: 'array', items: { type: 'object' } },
+          pipeline: { type: 'array', items: { type: 'object', properties: { key: { type: 'string' }, label: { type: 'string' }, count: { type: 'integer' } } } },
+          operations: { type: 'object' },
+        },
+      }),
+      401: RESPONSES_401,
+    },
+  },
 };
 
 // ---------- Users by role ----------
@@ -31,16 +55,16 @@ function userListPath(role, description) {
   return {
     get: {
       tags: TAG_USERS, summary: `List ${role}s`, description, ...bearer(),
-      parameters: [...PAGE_QS, q('search', 'Search by name/phone'), statusParam],
+      parameters: [...PAGE_QS, q('search', 'Search by name, phone or email'), statusParam],
       responses: { 200: envelope(paginated(ref('UserWithProfile'))), 401: RESPONSES_401, 403: RESPONSES_403 },
     },
   };
 }
 paths['/admin/vendors'] = userListPath('vendor', 'Requires manage_vendors permission');
 paths['/admin/customers'] = userListPath('customer', 'Requires manage_orders or view_reports permission');
-paths['/admin/pickers'] = userListPath('picker', 'Requires manage_pickers permission');
+paths['/admin/pickers'] = userListPath('picker', 'Requires manage_pickers permission. Each item also carries `onboarding: { status, profileComplete, kycComplete, nextStep }` — the same object the Picker app gets — so a pending picker can be checked for a complete Register step and KYC upload before approval.');
 paths['/admin/pickers'].post = {
-  tags: TAG_USERS, summary: 'Onboard a picker directly (admin-only — pickers never self-register)', ...bearer(),
+  tags: TAG_USERS, summary: 'Onboard a picker directly (created already approved; pickers can also self-register in the app)', ...bearer(),
   requestBody: formBody({
     name: { type: 'string' }, phone: { type: 'string' }, email: { type: 'string' }, employeeId: { type: 'string' },
     address: { type: 'string' }, idProofType: { type: 'string' }, idProofNumber: { type: 'string' },
@@ -69,13 +93,14 @@ paths['/admin/delivery-partners'].post = {
   requestBody: jsonBody({
     name: { type: 'string' }, phone: { type: 'string' }, email: { type: 'string' },
     vehicleType: { type: 'string' }, vehicleNumber: { type: 'string' }, licenseNumber: { type: 'string' },
+    bankDetails: { type: 'object', properties: { accountHolderName: { type: 'string', example: 'Ravi Kumar' }, accountNumber: { type: 'string', example: '123456789012', description: '9–18 digits' }, ifsc: { type: 'string', example: 'SBIN0001234' }, bankName: { type: 'string', example: 'State Bank of India' } } },
   }, ['name', 'phone']),
   responses: { 201: envelope({ type: 'object', properties: { user: ref('User'), deliveryProfile: ref('DeliveryProfile') } }, 'Delivery partner created'), 409: errorResponse('A user with this mobile number already exists'), 401: RESPONSES_401 },
 };
 paths['/admin/delivery-partners/{id}'] = {
   put: {
     tags: TAG_USERS, summary: 'Full edit of a delivery partner', ...bearer(), parameters: [idParam('id', 'Delivery USER ID')],
-    requestBody: jsonBody({ name: { type: 'string' }, email: { type: 'string' }, vehicleType: { type: 'string' }, vehicleNumber: { type: 'string' }, licenseNumber: { type: 'string' } }),
+    requestBody: jsonBody({ name: { type: 'string' }, email: { type: 'string' }, vehicleType: { type: 'string' }, vehicleNumber: { type: 'string' }, licenseNumber: { type: 'string' }, bankDetails: { type: 'object', properties: { accountHolderName: { type: 'string', example: 'Ravi Kumar' }, accountNumber: { type: 'string', example: '123456789012', description: '9–18 digits' }, ifsc: { type: 'string', example: 'SBIN0001234' }, bankName: { type: 'string', example: 'State Bank of India' } } } }),
     responses: { 200: envelope({ type: 'object', properties: { user: ref('User'), deliveryProfile: ref('DeliveryProfile') } }, 'Delivery partner updated'), 401: RESPONSES_401, 404: RESPONSES_404 },
   },
   delete: {
@@ -144,6 +169,34 @@ paths['/admin/stores/{id}'] = {
     tags: TAG_STORES, summary: 'Update a store\'s zone/timings/status', ...bearer(), parameters: [idParam()],
     requestBody: jsonBody({ zoneId: { type: 'string' }, status: { type: 'string', enum: ['active', 'inactive'] }, openTime: { type: 'string' }, closeTime: { type: 'string' } }),
     responses: { 200: envelope(ref('Store'), 'Store updated'), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
+};
+
+const HUB_DISPLAY = {
+  type: 'object',
+  properties: {
+    _id: { type: 'string' }, store: { type: 'string' }, name: { type: 'string', example: 'Pickup counter TV' },
+    lastSeenAt: { type: 'string', format: 'date-time', nullable: true }, revokedAt: { type: 'string', format: 'date-time', nullable: true },
+    createdAt: { type: 'string', format: 'date-time' },
+  },
+};
+paths['/admin/stores/{id}/hub-displays'] = {
+  get: {
+    tags: TAG_STORES, summary: 'List this store\'s hub screens (/hub-display), revoked ones included', ...bearer(), parameters: [idParam()],
+    responses: { 200: envelope({ type: 'array', items: HUB_DISPLAY }), 401: RESPONSES_401, 403: RESPONSES_403 },
+  },
+  post: {
+    tags: TAG_STORES,
+    summary: 'Add a hub screen — returns its one-time pairing link (<PUBLIC_BASE_URL>/hub-display/#key=...); the key is never shown again',
+    ...bearer(), parameters: [idParam()],
+    requestBody: jsonBody({ name: { type: 'string', example: 'Pickup counter TV' } }, ['name']),
+    responses: { 201: envelope({ type: 'object', properties: { display: HUB_DISPLAY, pairingUrl: { type: 'string' } } }, 'Hub screen created'), 400: errorResponse('name is required'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
+  },
+};
+paths['/admin/hub-displays/{id}'] = {
+  delete: {
+    tags: TAG_STORES, summary: 'Revoke a hub screen — its key and QR stop working and its live connection is dropped', ...bearer(), parameters: [idParam()],
+    responses: { 200: envelope(HUB_DISPLAY, 'Hub screen revoked'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
   },
 };
 
@@ -298,6 +351,50 @@ paths['/admin/banners/{id}'] = {
 };
 
 // ---------- Settings ----------
+const ChargeConfig = {
+  type: 'object',
+  properties: {
+    delivery: { type: 'object', properties: {
+      enabled: { type: 'boolean' },
+      type: { type: 'string', enum: ['fixed', 'percent'], description: 'fixed = ₹ amount, percent = % of item total' },
+      value: { type: 'number' },
+      freeAbove: { type: 'number', description: 'Waive delivery when item total ≥ this. 0 = never free' },
+    } },
+    handling: { type: 'object', properties: {
+      enabled: { type: 'boolean' },
+      type: { type: 'string', enum: ['fixed', 'percent'], description: 'fixed = ₹ amount, percent = % of item total' },
+      value: { type: 'number' },
+    } },
+    packing: { type: 'object', properties: {
+      enabled: { type: 'boolean' },
+      type: { type: 'string', enum: ['fixed', 'percent'], description: 'fixed = ₹ amount, percent = % of item total' },
+      value: { type: 'number' },
+    } },
+    surcharge: { type: 'object', properties: {
+      enabled: { type: 'boolean' },
+      type: { type: 'string', enum: ['fixed', 'percent'], description: 'fixed = ₹ amount, percent = % of item total' },
+      value: { type: 'number' },
+      label: { type: 'string', example: 'Rain surcharge', description: 'Shown to customers' },
+    } },
+  },
+};
+paths['/admin/charges'] = {
+  get: {
+    tags: TAG_SETTINGS, summary: 'Get order charges — delivery, handling, packing, surcharge', ...bearer(),
+    description: 'Charges are applied once per order at checkout. Each is a fixed ₹ amount or a % of the item total (before coupon discount).',
+    responses: { 200: envelope(ChargeConfig), 401: RESPONSES_401, 403: RESPONSES_403 },
+  },
+  put: {
+    tags: TAG_SETTINGS, summary: 'Save order charges (applies to new checkouts only)', ...bearer(),
+    requestBody: { required: true, content: { 'application/json': { schema: ChargeConfig, example: {
+      delivery: { enabled: true, type: 'fixed', value: 30, freeAbove: 499 },
+      handling: { enabled: true, type: 'fixed', value: 5 },
+      packing: { enabled: true, type: 'percent', value: 2 },
+      surcharge: { enabled: false, type: 'fixed', value: 20, label: 'Rain surcharge' },
+    } } } },
+    responses: { 200: envelope(ChargeConfig, 'Charges saved'), 401: RESPONSES_401, 403: RESPONSES_403, 422: RESPONSES_422 },
+  },
+};
 paths['/admin/settings'] = {
   get: {
     tags: TAG_SETTINGS,
@@ -375,6 +472,7 @@ paths['/admin/support-tickets'] = {
   get: { tags: TAG_SUPPORT, summary: 'List all support tickets', ...bearer(), parameters: [...PAGE_QS, statusParam], responses: { 200: envelope(paginated(ref('SupportTicket'))), 401: RESPONSES_401 } },
 };
 paths['/admin/support-tickets/{id}'] = {
+  get: { tags: TAG_SUPPORT, summary: 'A ticket with its conversation', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('SupportTicket')), 401: RESPONSES_401, 404: RESPONSES_404 } },
   patch: { tags: TAG_SUPPORT, summary: 'Reply to / change status of a ticket', ...bearer(), parameters: [idParam()], requestBody: jsonBody({ adminReply: { type: 'string' }, status: { type: 'string', enum: ['open', 'in_progress', 'resolved', 'closed'] } }), responses: { 200: envelope(ref('SupportTicket'), 'Ticket updated'), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
 
@@ -408,7 +506,7 @@ paths['/admin/inventory/import'] = {
 
 // ---------- Payments / Refunds ----------
 paths['/admin/payments'] = {
-  get: { tags: TAG_PAYMENTS, summary: 'List all payment records', ...bearer(), parameters: [...PAGE_QS, statusParam, q('method'), q('instrument', 'card | upi | netbanking | wallet | emi — only meaningful for method=RAZORPAY'), q('purpose', 'order | wallet_topup')], responses: { 200: envelope(paginated(ref('Payment'))), 401: RESPONSES_401 } },
+  get: { tags: TAG_PAYMENTS, summary: 'List all payment records', ...bearer(), parameters: [...PAGE_QS, statusParam, q('method'), q('instrument', 'card | upi | netbanking | wallet | emi — online gateways only'), q('purpose', 'order | wallet_topup')], responses: { 200: envelope(paginated(ref('Payment'))), 401: RESPONSES_401 } },
 };
 paths['/admin/payments/cod-reconciliation'] = {
   get: {

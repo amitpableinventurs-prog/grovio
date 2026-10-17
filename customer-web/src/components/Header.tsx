@@ -1,7 +1,7 @@
 import { type FormEvent, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Menu, Search, ShoppingBag, ShoppingCart, X, Zap } from 'lucide-react';
+import { Menu, Search, ShoppingBag, X, Zap } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useCart } from '../hooks/useCart';
 import { listCategories } from '../api/catalog';
@@ -49,9 +49,8 @@ export default function Header() {
             {menuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
 
-          <Link to="/" className="flex items-center gap-1.5 shrink-0">
-            <ShoppingCart size={26} className="text-brand-600" strokeWidth={2.2} />
-            <span className="text-xl font-extrabold text-brand-700">Grovio</span>
+          <Link to="/" className="flex shrink-0 items-center" aria-label="Grovio home">
+            <img src="/brand/grovio-logo-compact.svg" alt="Grovio" className="h-8 w-auto sm:h-9" />
           </Link>
 
           <form onSubmit={handleSearch} className="flex-1 max-w-xl hidden sm:block">

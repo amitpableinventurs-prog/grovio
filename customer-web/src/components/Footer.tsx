@@ -1,14 +1,13 @@
 import { Link } from 'react-router-dom';
-import { Globe, Mail, MapPin, MessageCircle, Phone, Send, ShoppingCart } from 'lucide-react';
+import { Globe, Mail, MapPin, MessageCircle, Phone, Send } from 'lucide-react';
 
 export default function Footer() {
   return (
     <footer className="border-t border-gray-200 bg-white">
       <div className="mx-auto max-w-6xl px-4 py-10 grid gap-8 sm:grid-cols-2 md:grid-cols-4">
         <div>
-          <Link to="/" className="flex items-center gap-1.5">
-            <ShoppingCart size={24} className="text-brand-600" strokeWidth={2.2} />
-            <span className="text-xl font-extrabold text-brand-700">Grovio</span>
+          <Link to="/" className="inline-flex items-center" aria-label="Grovio home">
+            <img src="/brand/grovio-logo.svg" alt="Grovio — Freshness. Faster. Everyday." className="h-14 w-auto" />
           </Link>
           <p className="mt-3 text-sm text-gray-500 max-w-xs">
             Quick groceries, delivered fast. Fresh fruits, vegetables, dairy and household essentials at your doorstep in minutes.
