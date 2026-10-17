@@ -35,6 +35,9 @@ const pickTaskSchema = new Schema({
   // 'completed' here means picked + packed + the picker pressed "Ready for Pickup" — there is no
   // scan-verified picking step.
   status: { type: String, enum: ['assigned', 'picking', 'completed'], default: 'assigned' },
+  // Set when the picker presses "Accept" (POST /picker/jobs/:id/accept) — or implicitly on start.
+  // Until then they may reject it instead and their items go to another picker.
+  acceptedAt: { type: Date, default: null },
   startedAt: { type: Date, default: null },
   completedAt: { type: Date, default: null },
   // Picker pay for this portion, set on completion (services/pickerPay.service.js#payTask).

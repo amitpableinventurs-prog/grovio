@@ -392,7 +392,8 @@ Checkout offers COD, Wallet, Razorpay, PhonePe and PayU. Each can be switched on
 ### /picker (picker role)
 - `GET /picker/profile`, `PATCH /picker/kyc-upload` (multipart KYC upload), `PATCH /picker/availability`
 - `GET /picker/jobs`, `GET /picker/jobs/:id`
-- `POST /picker/jobs/:id/start`
+- `POST /picker/jobs/:id/accept` / `POST /picker/jobs/:id/reject` — `{ reason? }`. A new job offers both. Reject (only before accepting or starting) hands the picker's items to another available picker at the same store, or a teammate already on the order. If nobody is free, they wait for an admin. Each pickTask carries `acceptedAt`.
+- `POST /picker/jobs/:id/start` (also accepts the job if not yet accepted)
 - `PATCH /picker/jobs/:id/items/:itemId` — `{ pickedQty, isAvailable, substituteProductId, substituteNote }`
 - `POST /picker/jobs/:id/substitutions` — `{ itemId, substituteProductId, substituteNote }`
 - `POST /picker/jobs/:id/complete` (packs the order, best-effort auto-assigns delivery)

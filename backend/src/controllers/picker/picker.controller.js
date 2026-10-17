@@ -167,9 +167,25 @@ const getJobDetail = catchAsync(async (req, res) => {
   new ApiResponse(200, order).send(res);
 });
 
+// POST /picker/jobs/:id/accept -> the picker takes on their part of this order (the other choice
+// being POST /picker/jobs/:id/reject). Once accepted it can't be rejected any more. Accepting
+// twice is a no-op.
+const acceptJob = catchAsync(async (req, res) => {
+  const order = await findAssignedJob(req);
+  const task = myPickTask(order, req.user.id);
+  if (!task) throw new ApiError(404, 'Job not found or not assigned to you');
+  if (!REJECTABLE_STATUSES.includes(order.orderStatus)) throw new ApiError(400, `This order can no longer be accepted (status: ${order.orderStatus})`);
+  if (!task.acceptedAt) {
+    task.acceptedAt = new Date();
+    await order.save();
+  }
+  new ApiResponse(200, order, 'Order accepted').send(res);
+});
+
 // POST /picker/jobs/:id/start -> marks THIS picker's own pickTask 'picking' (the order itself is
 // already 'picking'/'partially_picked' from the moment it was split — see
 // assignment.service.js#splitOrderAcrossPickers — so there's no order-level transition here).
+// Starting also counts as accepting, for app builds that don't show an Accept button.
 const startPicking = catchAsync(async (req, res) => {
   const order = await findAssignedJob(req);
   const task = myPickTask(order, req.user.id);
@@ -177,6 +193,7 @@ const startPicking = catchAsync(async (req, res) => {
   if (task.status === 'assigned') {
     task.status = 'picking';
     task.startedAt = new Date();
+    task.acceptedAt = task.acceptedAt || task.startedAt;
     await order.save();
   }
   new ApiResponse(200, order, 'Started picking').send(res);
@@ -276,8 +293,8 @@ const getHandoverQr = catchAsync(async (req, res) => {
 // pickup. Once every picker on the order has done the same, it rolls up to 'packed' ("fully
 // ready for pickup" — see order.service.js#advancePickingStatus) and a delivery partner is
 // auto-assigned.
-// POST /picker/jobs/:id/reject { reason } -> turn down my part of this order, before I've started
-// picking it. My items go to another picker at my store (assignment.service.js#reassignPickerItems);
+// POST /picker/jobs/:id/reject { reason } -> turn down my part of this order, before I've accepted
+// or started it. My items go to another picker at my store (assignment.service.js#reassignPickerItems);
 // if nobody is free they wait for an admin. The order then drops off my job list, and I'm never
 // offered it again.
 const REJECTABLE_STATUSES = ['accepted', 'picking', 'partially_picked'];
@@ -288,6 +305,7 @@ const rejectJob = catchAsync(async (req, res) => {
   if (!REJECTABLE_STATUSES.includes(order.orderStatus)) throw new ApiError(400, `This order can no longer be rejected (status: ${order.orderStatus})`);
   if (task.status === 'completed') throw new ApiError(400, 'You have already completed your portion of this order');
   if (task.status === 'picking') throw new ApiError(400, 'You have already started picking this order. Finish it, or ask your store manager to reassign it.');
+  if (task.acceptedAt) throw new ApiError(400, 'You have already accepted this order. Finish it, or ask your store manager to reassign it.');
 
   const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 200) || null : null;
   const store = task.store;
@@ -364,6 +382,7 @@ module.exports = {
   listHistory,
   getPerformance,
   getJobDetail,
+  acceptJob,
   startPicking,
   updateJobItem,
   recordSubstitution,

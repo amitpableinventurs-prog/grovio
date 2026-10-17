@@ -19,8 +19,10 @@ router.get('/location', ctrl.getLocation);
 
 router.get('/jobs', ctrl.listJobs);
 router.get('/jobs/:id', ctrl.getJobDetail);
+// A new job offers Accept or Reject.
+router.post('/jobs/:id/accept', ctrl.acceptJob);
 router.post('/jobs/:id/start', ctrl.startPicking);
-// Turn down my part of an order before starting it; my items go to another picker.
+// Turn down my part of an order before accepting/starting it; my items go to another picker.
 router.post('/jobs/:id/reject', ctrl.rejectJob);
 router.patch('/jobs/:id/items/:itemId', ctrl.updateJobItem);
 router.post('/jobs/:id/substitutions', ctrl.recordSubstitution);
