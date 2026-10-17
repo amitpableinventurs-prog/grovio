@@ -47,7 +47,7 @@ A **Vendor** is the business entity (owner account, documents, overall commissio
 
 ## Auth
 
-- **Admin & Vendor**: `POST /api/v1/auth/login` (email + password). Vendors self-register via `POST /api/v1/auth/register-vendor` (creates the Vendor business + their first Store) and need admin approval before they can log in.
+- **Admin & Vendor**: `POST /api/v1/auth/login` (email + password). Vendors self-register via `POST /api/v1/vendor/auth/register` (creates the store-manager account and an `inactive` store that an admin approves) and sign in to the Vendor Panel with `POST /api/v1/vendor/auth/login`.
 - **Customer / Picker / Delivery**: `POST /api/v1/auth/send-otp` / `resend-otp` → `POST /api/v1/auth/verify-otp`. Send `{ phone }` with the 10-digit number only (e.g. `"9876543210"`). `+91` is assumed; `countryCode` is optional and only needed for a non-Indian number. `verify-otp` takes `otp` (an alias `code` also works) and an optional `role` (defaults to `customer` — the Customer app never sends it; Picker/Delivery pass their own role explicitly on first signup only). The response's **`isNewUser`** flag is the single source of truth for whether the client should show a "create your profile" screen before Home. In dev, the OTP is logged to the console and returned in the response as `debugOtp` (`OTP_DEBUG_MODE=true`); set `OTP_FIXED_CODE` (e.g. `1234`) to always issue that exact code instead of a random one.
   - **Resend cooldown**: server-enforced, not just a UI timer — repeat `send-otp`/`resend-otp` calls within `OTP_RESEND_COOLDOWN_SECONDS` (default 30) get `429` with `{ retryAfter }`.
   - **Picker app** uses the dedicated `POST /auth/picker/send-otp` / `resend-otp` / `verify-otp` with the same `{ phone }` body (no `role`). Before an OTP is sent or consumed, they reject a number registered under another role (409) and a disabled picker (403). On first signup they create a `pending` PickerProfile. They return `pickerProfile` plus `onboarding: { status, profileComplete, kycComplete, nextStep }`, where `nextStep` is `profile` (POST /auth/picker/register) → `kyc` (PATCH /picker/kyc-upload) → `pending_approval` → `home` (or `blocked`). `GET /auth/picker/me` returns the same for splash-screen routing. The Register screen submits `POST /auth/picker/register { name, email, gender, dateOfBirth: "DD/MM/YYYY" }`. The mobile number isn't in the body; it's the OTP-verified `user.phone`. The picker must be 18+, a duplicate email returns 409, and field errors come back as `422 errors: [{ field, message }]`. Sign out with `POST /auth/picker/logout { refreshToken }` (this device) or `POST /auth/picker/logout-all`. Both revoke the refresh token(s), set the picker offline and unavailable so no new pick jobs are assigned, and clear the push token.
@@ -317,7 +317,8 @@ Checkout offers COD, Wallet, Razorpay, PhonePe and PayU. Each can be switched on
 ### /auth
 | Method | Path | Who |
 |---|---|---|
-| POST | /auth/register-vendor | Public |
+| POST | /vendor/auth/register (old: /auth/register-vendor) | Public |
+| POST | /vendor/auth/login | Public |
 | POST | /auth/login | Public |
 | POST | /auth/send-otp, /auth/resend-otp | Public |
 | POST | /auth/verify-otp | Public |
@@ -358,18 +359,15 @@ Checkout offers COD, Wallet, Razorpay, PhonePe and PayU. Each can be switched on
 - `POST /admin/admins`, `GET /admin/admins`, `PATCH /admin/admins/:id/permissions`
 - `GET /admin/activity-logs`
 
-### /vendor (vendor role)
-- `GET /vendor/dashboard` — KPIs across all of this vendor's stores
-- `GET/PUT /vendor/business` — Vendor business profile (name, documents)
-- `POST/GET /vendor/stores`, `GET/PUT /vendor/stores/:id`, `PATCH /vendor/stores/:id/status` — `{ isOpen }`
-- `GET /vendor/earnings`
-- `POST/GET /vendor/products` (create needs `storeId`), `PATCH /vendor/products/:id`, `PATCH /vendor/products/:id/stock`, `PATCH /vendor/products/:id/price`, `DELETE /vendor/products/:id`
-- `POST /vendor/products/:id/variants`, `PATCH/DELETE .../variants/:variantId`
-- `GET /vendor/orders`, `GET /vendor/orders/:id`, `PATCH /vendor/orders/:id/accept|reject`
-- `GET /vendor/reviews`
-- `POST/GET/PATCH/DELETE /vendor/offers` (vendor-scoped coupons, valid across all of that vendor's stores)
-- `GET /vendor/reports/sales` — `?from=&to=&storeId=`
-- `GET /vendor/settlements` — read-only payout history
+### /vendor (Vendor Panel — store-manager accounts)
+A vendor is a store-manager account: role `admin` with only `manage_own_store_inventory` and an `assignedStore`. Everything is locked to that one store. Accounts with wider permissions get 403 here and use the admin panel. The code lives in `src/controllers/vendor/`, `src/routes/vendor.routes.js` and `src/validators/vendor.validator.js`. Catalog, inventory and order handlers are reused from the admin controllers, which already scope a store-manager to their store.
+- `POST /vendor/auth/register` (public; the `/vendor-signup` page). The old path `POST /auth/register-vendor` still works. The new store starts `inactive` until an admin activates it.
+- `POST /vendor/auth/login` `{ email, password }` (vendors only). Refresh and logout use the shared `/auth/refresh` and `/auth/logout`.
+- `GET /vendor/me`, `GET /vendor/store`, `GET /vendor/dashboard?range=`
+- `GET /vendor/categories`, `GET/POST /vendor/products`, `PATCH/DELETE /vendor/products/:id`, `PATCH /vendor/products/:id/status`
+- `GET /vendor/inventory`, `GET /vendor/inventory/export`, `POST /vendor/inventory/import`
+- `GET /vendor/orders`, `GET /vendor/orders/:id`, `GET /vendor/orders/:id/tracking`, `PATCH /vendor/orders/:id/cancel`, `PATCH /vendor/orders/:id/mark-returned`
+- `GET/POST /vendor/hub-displays`, `DELETE /vendor/hub-displays/:id`
 
 ### /customer (customer role)
 - `GET /customer/home` — banners + categories + featured products + platform offers in one call

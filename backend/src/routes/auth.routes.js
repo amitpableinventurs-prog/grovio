@@ -4,8 +4,9 @@ const pickerCtrl = require('../controllers/auth/pickerAuth.controller');
 const deliveryCtrl = require('../controllers/auth/deliveryAuth.controller');
 const validate = require('../middleware/validate.middleware');
 const { authenticate, authorize } = require('../middleware/auth.middleware');
+const vendorAuthCtrl = require('../controllers/vendor/vendorAuth.controller');
+const { registerVendorRules } = require('../validators/vendor.validator');
 const {
-  registerVendorRules,
   loginRules,
   sendOtpRules,
   verifyOtpRules,
@@ -16,7 +17,8 @@ const {
   deliveryLogoutRules,
 } = require('../validators/auth.validator');
 
-router.post('/register-vendor', registerVendorRules, validate, ctrl.registerVendor);
+// Older path for POST /vendor/auth/register (vendor code lives under controllers/vendor/).
+router.post('/register-vendor', registerVendorRules, validate, vendorAuthCtrl.register);
 router.post('/login', loginRules, validate, ctrl.loginWithPassword);
 router.post('/send-otp', sendOtpRules, validate, ctrl.sendOtp);
 router.post('/resend-otp', sendOtpRules, validate, ctrl.resendOtp);

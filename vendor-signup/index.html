@@ -357,7 +357,7 @@
         </div>
         <h2>You're registered!</h2>
         <p>Your account and store have been created. The store is pending admin review before it goes live to customers.</p>
-        <p class="next-step">Open the Grovio Admin Panel and log in with the email and password you just set.</p>
+        <p class="next-step">Open the Grovio Vendor Panel and log in with the email and password you just set.</p>
       </div>
     </div>
   </div>
@@ -415,7 +415,7 @@
 
       try {
         // Served from the same backend/Express origin, so a relative path avoids any CORS setup.
-        const res = await fetch('/api/v1/auth/register-vendor', {
+        const res = await fetch('/api/v1/vendor/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),

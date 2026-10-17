@@ -12,7 +12,7 @@ const paths = {};
 paths['/auth/register-vendor'] = {
   post: {
     tags: ['Auth'],
-    summary: 'Vendor (store-manager) self-registration',
+    summary: 'Vendor (store-manager) self-registration — older path for POST /vendor/auth/register',
     description:
       'Public signup for a store-manager, as an alternative to an admin creating one via POST /admin/admins. ' +
       'Creates the exact same kind of account a manual creation would (role: admin, manage_own_store_inventory permission, assignedStore) plus a new Store. ' +

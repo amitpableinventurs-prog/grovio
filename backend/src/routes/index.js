@@ -4,6 +4,7 @@ const authCtrl = require('../controllers/auth/auth.controller');
 
 router.use('/auth', require('./auth.routes'));
 router.use('/admin', require('./admin.routes'));
+router.use('/vendor', require('./vendor.routes'));
 router.use('/customer', require('./customer.routes'));
 router.use('/picker', require('./picker.routes'));
 router.use('/delivery', require('./delivery.routes'));

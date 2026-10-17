@@ -48,6 +48,7 @@ const spec = {
     { name: 'Customer - Wallet' },
     { name: 'Customer - Coupons' },
     { name: 'Customer - Support' },
+    { name: 'Vendor' },
     { name: 'Picker' },
     { name: 'Delivery' },
     { name: 'Delivery - Gigs, Offers & Earnings' },
@@ -60,6 +61,7 @@ const spec = {
   paths: {
     ...require('./paths/core.paths'),
     ...require('./paths/admin.paths'),
+    ...require('./paths/vendor.paths'),
     ...require('./paths/customer.paths'),
     ...require('./paths/picker.paths'),
     ...require('./paths/delivery.paths'),

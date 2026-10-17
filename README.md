@@ -6,8 +6,9 @@ Multi-vendor grocery/quick-commerce platform — Admin, Vendor, Customer, Picker
 
 - **`backend/`** — Node.js + Express + MongoDB REST API serving all 5 roles. See `backend/README.md` for setup, the full endpoint reference, auth flows, and how to run Swagger docs / share a Postman collection.
 - **`admin-panel/`** — React + TypeScript + Ant Design web app for Admin/Staff-Admin users, consuming the backend's `/api/v1/admin/*` endpoints. See `admin-panel/README.md` for setup.
+- **`vendor-panel/`** — React + TypeScript + Ant Design web app for vendors (store managers): dashboard, orders, products, inventory and hub screens for their own store, against `/api/v1/vendor/*`. See `vendor-panel/README.md`.
 
-Vendor, Customer, Picker, and Delivery apps are built separately (Flutter) against the same backend.
+Customer, Picker, and Delivery apps are built separately (Flutter) against the same backend.
 
 ## Quick Start
 
@@ -24,6 +25,12 @@ cd admin-panel
 cp .env.example .env
 npm install
 npm run dev              # http://localhost:5173
+
+# 3. Vendor panel (in a third terminal)
+cd vendor-panel
+cp .env.example .env
+npm install
+npm run dev              # http://localhost:5190
 ```
 
 Default admin login (from `backend/.env.example`): `admin@grovio.com` / `Admin@12345`.
