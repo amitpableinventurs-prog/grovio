@@ -10,6 +10,7 @@ const riderSessions = require('../../services/riderSession.service');
 const { tripKm } = require('../../services/riderEarnings.service');
 const pocket = require('../../services/pocket.service');
 const coldBags = require('../../services/coldBag.service');
+const { pendingRequests } = require('../../services/deliveryRequest.service');
 
 const COD_COLLECTION_METHODS = ['cash', 'upi'];
 
@@ -91,6 +92,13 @@ const listJobs = catchAsync(async (req, res) => {
   ]);
 
   new ApiResponse(200, { items: rows, meta: buildPageMeta({ page, limit, count }) }).send(res);
+});
+
+// GET /delivery/requests?lat=&lng= -> "New order request" cards: orders assigned to me that I
+// haven't accepted or rejected yet, with pay, pickup (distance from my live location), drop and a
+// countdown (services/deliveryRequest.service.js). lat/lng override my last reported position.
+const listRequests = catchAsync(async (req, res) => {
+  new ApiResponse(200, await pendingRequests(req.user.id, req.query)).send(res);
 });
 
 // GET /delivery/history -> completed/failed/cancelled jobs
@@ -334,6 +342,7 @@ module.exports = {
   toggleAvailability,
   updateLocation,
   getRoute,
+  listRequests,
   listJobs,
   listHistory,
   getJobDetail,

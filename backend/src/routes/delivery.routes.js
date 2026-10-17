@@ -29,6 +29,9 @@ router.get('/route', ctrl.getRoute);
 router.get('/profile', ctrl.getProfile);
 router.patch('/profile', ctrl.updateProfile);
 
+// "New order request" cards — assigned to me, not yet accepted/rejected (also pushed as the
+// 'delivery:request' socket event).
+router.get('/requests', ctrl.listRequests);
 router.get('/jobs', ctrl.listJobs);
 router.get('/jobs/:id', ctrl.getJobDetail);
 router.post('/jobs/:id/accept', ctrl.acceptJob);

@@ -403,6 +403,7 @@ Checkout offers COD, Wallet, Razorpay, PhonePe and PayU. Each can be switched on
 ### /delivery (delivery role)
 - `PATCH /delivery/availability`, `POST /delivery/location` (drives live tracking, ETA and geofences), `GET /delivery/route` (optimised stops), `GET/PATCH /delivery/profile`
 - `GET /delivery/jobs`, `GET /delivery/jobs/:id`
+- `GET /delivery/requests?lat=&lng=` returns the "New order request" cards: orders assigned to me that I haven't accepted or rejected yet. Each card has `earning` (from `riderPayQuote`) and `pickup { name, distanceKm, etaMinutes }`, where the distance is measured from my live location. It also has `drop { title, distanceKm }` and a countdown in `respondBy` / `secondsLeft`, which comes from the `deliveryRequestSeconds` setting (default 30). The same card is pushed as the `delivery:request` socket event when an order is assigned.
 - `POST /delivery/jobs/:id/accept|reject`
 - `POST /delivery/jobs/:id/arrived-pickup`, `POST /delivery/jobs/:id/picked-up` (→ out_for_delivery)
 - `POST /delivery/jobs/:id/arrived-drop`

@@ -176,6 +176,12 @@ async function transitionOrder({ order, toStatus, changedBy, note }) {
   } catch (err) {
     console.error(`Trip/pay update for ${order.orderNumber} (${toStatus}) failed:`, err.message);
   }
+  // "New order request" card for the partner it was just assigned to (needs the pay quote above).
+  // Not for a hub claim, which is accepted as it's taken.
+  if (toStatus === 'assigned' && order.delivery && !order.deliveryAcceptedAt) {
+    await require('./deliveryRequest.service').pushRequest(order._id)
+      .catch((err) => console.error(`Order request push for ${order.orderNumber} failed:`, err.message));
+  }
 
   const message = STATUS_MESSAGES[toStatus];
   if (message) {

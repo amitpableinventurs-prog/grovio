@@ -102,6 +102,7 @@ export function TrackingCard() {
         <Form.Item name="trackingAvgSpeedKmph" label="Average rider speed (km/h)"><Input type="number" placeholder="20" style={{ width: 180 }} /></Form.Item>
         <Form.Item name="trackingPickingMinutes" label="Picking + packing time (min)"><Input type="number" placeholder="10" style={{ width: 180 }} /></Form.Item>
         <Form.Item name="defaultServiceRadiusKm" label="Default delivery radius (km)" extra="Blank = no limit"><Input type="number" style={{ width: 180 }} /></Form.Item>
+        <Form.Item name="deliveryRequestSeconds" label="Order request timer (sec)" extra="Countdown on the rider's New order request"><Input type="number" placeholder="30" style={{ width: 180 }} /></Form.Item>
       </Space>
       <Space wrap>
         <Form.Item name="geofenceNearbyKm" label="“Almost there” alert (km)"><Input type="number" placeholder="1" style={{ width: 180 }} /></Form.Item>

@@ -97,6 +97,33 @@ paths['/delivery/profile'] = {
   get: { tags: TAG, summary: 'Get my delivery profile', ...bearer(), responses: { 200: envelope(ref('DeliveryProfile')), 401: RESPONSES_401, 404: RESPONSES_404 } },
   patch: { tags: TAG, summary: 'Update vehicle/license details', ...bearer(), requestBody: jsonBody({ vehicleType: { type: 'string' }, vehicleNumber: { type: 'string' }, licenseNumber: { type: 'string' } }), responses: { 200: envelope(ref('DeliveryProfile'), 'Profile updated'), 401: RESPONSES_401 } },
 };
+const num = (example, description) => ({ type: 'number', nullable: true, example, ...(description ? { description } : {}) });
+const RequestCard = {
+  type: 'object',
+  properties: {
+    orderId: { type: 'string' },
+    orderNumber: { type: 'string' },
+    earning: num(42, 'What I will be paid (riderPayQuote.total)'),
+    earningBreakup: { type: 'object', properties: { basePayout: num(30), peakBonus: num(12), rainBonus: num(0), heavyLoadBonus: num(0), kmSlab: { type: 'string', example: '1–2 km' } } },
+    pickup: { type: 'object', properties: { name: { type: 'string', example: 'Bhawarkua dark store' }, address: { type: 'string' }, lat: num(22.69), lng: num(75.86), distanceKm: num(0.8, 'From my live location; null without a GPS fix from the last 10 min'), etaMinutes: num(3) } },
+    drop: { type: 'object', properties: { title: { type: 'string', example: 'MG Road, near Regal Chowk' }, city: { type: 'string' }, lat: num(22.72), lng: num(75.87), distanceKm: num(1.8, 'Pickup -> drop') } },
+    totalDistanceKm: num(2.6, 'Me -> pickup -> drop'),
+    paymentMethod: { type: 'string', example: 'COD' },
+    riderLocation: { type: 'object', nullable: true, properties: { lat: { type: 'number' }, lng: { type: 'number' } } },
+    respondBy: { type: 'string', format: 'date-time' },
+    seconds: { type: 'integer', example: 30, description: 'Whole countdown (setting deliveryRequestSeconds, default 30)' },
+    secondsLeft: { type: 'integer', example: 6 },
+  },
+};
+paths['/delivery/requests'] = {
+  get: {
+    tags: TAG,
+    summary: "\"New order request\" cards: orders assigned to me that I haven't accepted or rejected yet. Answer with POST /delivery/jobs/{id}/accept or /reject. The same card is pushed as the 'delivery:request' socket event the moment an order is assigned to me.",
+    ...bearer(),
+    parameters: [q('lat', 'Optional, overrides my last reported position'), q('lng', 'Optional, overrides my last reported position')],
+    responses: { 200: envelope({ type: 'array', items: RequestCard }), 401: RESPONSES_401 },
+  },
+};
 paths['/delivery/jobs'] = {
   get: { tags: TAG, summary: 'List my assigned/active jobs. Each order has riderPayQuote: mapped distance, KM pay, peak / rain / heavy-load bonus and estimated total — shown before accepting.', ...bearer(), parameters: [...PAGE_QS, q('status', "default: assigned,out_for_delivery")], responses: { 200: envelope(paginated(ref('Order'))), 401: RESPONSES_401 } },
 };
