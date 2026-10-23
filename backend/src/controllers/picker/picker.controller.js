@@ -15,6 +15,7 @@ const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const { transitionOrder, ensureHandoverOtp, ensureHandoverQrToken, advancePickingStatus } = require('../../services/order.service');
 const { findNearestDeliveryPartner, reassignPickerItems } = require('../../services/assignment.service');
 const { notifyUser } = require('../../services/notification.service');
+const { getHubPickupMode } = require('../../services/hubDisplay.service');
 
 const getProfile = catchAsync(async (req, res) => {
   const profile = await PickerProfile.findOne({ user: req.user.id });
@@ -162,9 +163,12 @@ function myItem(order, itemId, userId) {
   return item;
 }
 
+// handoverMode tells the app how the hub picker hands the order over once it's packed:
+// 'hub_screen' — the order's QR is on the hub screen, the rider scans it there (no QR/OTP in this
+// app); 'auto_assign' — a rider is assigned and the picker shows GET .../qr or reads out .../otp.
 const getJobDetail = catchAsync(async (req, res) => {
   const order = await findAssignedJob(req);
-  new ApiResponse(200, order).send(res);
+  new ApiResponse(200, { ...order.toJSON(), handoverMode: await getHubPickupMode() }).send(res);
 });
 
 // POST /picker/jobs/:id/accept -> the picker takes on their part of this order (the other choice
@@ -291,8 +295,9 @@ const getHandoverQr = catchAsync(async (req, res) => {
 
 // POST /picker/jobs/:id/complete -> marks THIS picker's own portion picked, packed and ready for
 // pickup. Once every picker on the order has done the same, it rolls up to 'packed' ("fully
-// ready for pickup" — see order.service.js#advancePickingStatus) and a delivery partner is
-// auto-assigned.
+// ready for pickup" — see order.service.js#advancePickingStatus). Then, by the Hub pickup setting:
+// 'hub_screen' (default) — the order shows on the hub screen with its own QR and the first rider
+// to scan it takes it (POST /delivery/hub/scan); 'auto_assign' — the nearest rider is assigned.
 // POST /picker/jobs/:id/reject { reason } -> turn down my part of this order, before I've accepted
 // or started it. My items go to another picker at my store (assignment.service.js#reassignPickerItems);
 // if nobody is free they wait for an admin. The order then drops off my job list, and I'm never
@@ -354,7 +359,8 @@ const completeMyPicking = catchAsync(async (req, res) => {
   await require('../../services/pickerPay.service').payTask(order, req.user.id);
   await advancePickingStatus({ order, changedBy: req.user.id });
 
-  if (order.orderStatus === 'packed') {
+  const handoverMode = await getHubPickupMode();
+  if (order.orderStatus === 'packed' && handoverMode === 'auto_assign') {
     const delivery = await findNearestDeliveryPartner({ lat: order.store.lat, lng: order.store.lng });
     if (delivery) {
       order.delivery = delivery.user;
@@ -369,7 +375,10 @@ const completeMyPicking = catchAsync(async (req, res) => {
     }
   }
 
-  new ApiResponse(200, order, 'Your portion is marked ready for pickup').send(res);
+  const message = order.orderStatus === 'packed' && handoverMode === 'hub_screen'
+    ? 'Order ready. Its QR is now on the hub screen; hand the bag to the rider who scans it.'
+    : 'Your portion is marked ready for pickup';
+  new ApiResponse(200, { ...order.toJSON(), handoverMode }, message).send(res);
 });
 
 module.exports = {

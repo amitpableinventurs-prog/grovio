@@ -2,6 +2,7 @@ const { DeliveryProfile, Store, Order } = require('../models');
 const { distanceKm } = require('../utils/geo');
 const { trackingConfig, planRiderRoute, freshRiderPoint } = require('./tracking.service');
 const directions = require('./directions.service');
+const { getHubPickupMode } = require('./hubDisplay.service');
 
 // The delivery app's home map (Feed): where the partner should be heading right now.
 //   no active order  -> their hub: "Reach the store to pick orders", then "Scan QR to get orders"
@@ -78,12 +79,15 @@ async function mapState(riderId, query = {}) {
     DeliveryProfile.findOne({ user: riderId }).select('isAvailable status currentLat currentLng locationUpdatedAt hubCheckin'),
     trackingConfig(),
   ]);
+  // 'hub_screen': riders take orders by scanning each order's QR on the hub screen
+  // (POST /delivery/hub/scan, which also accepts the check-in QR).
+  const hubScreen = (await getHubPickupMode()) === 'hub_screen';
   const position = await riderPosition(profile, query, cfg);
   const base = {
     online: !!profile?.isAvailable,
     // stale: an old GPS fix — send lat/lng for an accurate route.
     rider: position ? { ...position, updatedAt: position.stale || !query.lat ? profile?.locationUpdatedAt || null : new Date() } : null,
-    // Pill at the top of the map (hub check-in: POST /delivery/hub/checkin with the scanned QR).
+    // Pill at the top of the map (POST /delivery/hub/scan { code } with the scanned QR).
     topAction: null,
   };
 
@@ -116,12 +120,14 @@ async function mapState(riderId, query = {}) {
         ...common,
         mode: atPickup ? 'at_pickup' : 'to_pickup',
         banner: atPickup
-          ? { text: 'Collect the order: scan the package QR or enter the pickup OTP', tone: 'info' }
+          ? { text: hubScreen ? "Collect the order: scan its QR on the hub screen" : 'Collect the order: scan the package QR or enter the pickup OTP', tone: 'info' }
           : { text: `Reach ${order?.store?.name || 'the store'} to pick up ${orders.length > 1 ? `${orders.length} orders` : orders[0].orderNumber}`, tone: 'warning' },
         destination: { type: 'store', id: order?.store?._id, name: next.label, address: next.address, lat: next.lat, lng: next.lng, ...directions.navigationLinks(position, dest) },
         actions: [
           ...(atPickup ? [] : [action('navigate', 'Map')]),
-          action('scan_package', 'Scan package QR', { method: 'POST', path: `/delivery/jobs/${orders[0].orderId}/scan` }),
+          hubScreen
+            ? action('scan_package', 'Scan order QR', { method: 'POST', path: '/delivery/hub/scan' })
+            : action('scan_package', 'Scan package QR', { method: 'POST', path: `/delivery/jobs/${orders[0].orderId}/scan` }),
           action('pickup_otp', 'Enter pickup OTP', { method: 'POST', path: `/delivery/jobs/${orders[0].orderId}/otp/verify` }),
         ],
       };
@@ -175,25 +181,27 @@ async function mapState(riderId, query = {}) {
       actions: [action('go_online', 'Go online', { method: 'PATCH', path: '/delivery/availability', body: { isAvailable: true } })],
     };
   }
-  const scanQr = action('scan_qr', 'Scan QR to get orders', { method: 'POST', path: '/delivery/hub/checkin' });
+  const scanQr = action('scan_qr', 'Scan QR to get orders', { method: 'POST', path: '/delivery/hub/scan' });
   let mode = 'to_store';
   let banner = { text: 'Reach the store to pick orders', tone: 'warning' };
   if (checkedIn) {
     mode = 'waiting_at_store';
-    banner = { text: 'You are checked in. Pick an order from the hub screen or wait for one.', tone: 'success' };
+    banner = hubScreen
+      ? { text: 'Scan a ready order\'s QR on the hub screen to take it', tone: 'success' }
+      : { text: 'You are checked in. Pick an order from the hub screen or wait for one.', tone: 'success' };
   } else if (atStore) {
     mode = 'at_store';
     banner = { text: 'Scan QR to get orders', tone: 'info' };
   }
   return {
     ...base,
-    topAction: checkedIn ? null : scanQr,
+    topAction: checkedIn && !hubScreen ? null : scanQr,
     mode,
     banner,
     destination,
     route: route ? { ...route, label: routeLabel(route) } : null,
     actions: checkedIn
-      ? [action('hub_orders', 'Orders ready at this hub', { method: 'GET', path: '/delivery/hub/orders' })]
+      ? [...(hubScreen ? [scanQr] : []), action('hub_orders', 'Orders ready at this hub', { method: 'GET', path: '/delivery/hub/orders' })]
       : [...(atStore ? [] : [action('navigate', 'Map')]), scanQr],
   };
 }

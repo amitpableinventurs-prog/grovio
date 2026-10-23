@@ -49,6 +49,7 @@ router.post('/jobs/:id/return', ctrl.markReturned);
 router.post('/jobs/:id/call', voipCtrl.callFromDelivery);
 
 // At a Hub Center: check in by scanning the hub screen's QR, then pick an order to collect.
+router.post('/hub/scan', hubCtrl.scan);
 router.post('/hub/checkin', hubCtrl.checkIn);
 router.get('/hub/orders', hubCtrl.listHubOrders);
 router.post('/hub/orders/:id/claim', hubCtrl.claimOrder);

@@ -80,7 +80,7 @@ The admin panel and customer web both use this (`src/realtime/`): order queries 
 
 Live tracking adds `delivery:location { orderId, lat, lng, eta }` (customer + order room) and `rider:location` (admins). See Live Tracking below.
 
-Hub screens (below) connect with `auth: { hubDisplayKey }` instead of a token. They receive `hub:order` `{ orderId, orderNumber, orderStatus }` for orders whose hub is their store (never the full summary), and `hub:qr` when their check-in QR has been used.
+Hub screens (below) connect with `auth: { hubDisplayKey }` instead of a token. They receive `hub:order` `{ orderId, orderNumber, orderStatus }` for orders whose hub is their store (never the full summary), `hub:qr` when their check-in QR has been used, and `hub:pickup` `{ orderId, orderNumber, rider, pickedUp }` when a rider scans an order's QR.
 
 ## Hub Center Screen + Delivery Boy Check-in
 
@@ -88,7 +88,16 @@ A TV/tablet at each Hub Center opens **`/hub-display`** (served by this backend,
 
 **Pairing a screen.** Admin panel → Stores → **Hub screens** → Add screen. This returns a one-time link `<PUBLIC_BASE_URL>/hub-display/#key=<deviceKey>`; open it on the screen (the key is kept in the browser and removed from the address bar). Only the key's SHA-256 hash is stored (`HubDisplay` model). **Revoke** stops the screen immediately, including its live connection. Store managers can manage their own store's screens.
 
-**Delivery Boy flow at the hub**
+**Hub pickup by order QR (default).** Admin → Settings → Tracking → **Hub pickup** (`hubPickupMode`, env `HUB_PICKUP_MODE`): `hub_screen` (default) or `auto_assign`.
+- `hub_screen`: when the hub picker's *Ready* makes the order `packed`, **no rider is assigned**. The order's card on the screen shows its own QR (`<PUBLIC_BASE_URL>/hub-checkin/?p=<order.hubPickupToken>`).
+- A rider at the hub scans it in the Delivery app: `POST /delivery/hub/scan { code, lat, lng }`. The rider must be approved, online and within the pickup geofence (min 150 m). The order becomes theirs and is picked up in one step (`packed → assigned → picked_up`). Two riders at once: one wins, the other gets 409.
+- The screen flashes "#4821 → Ramesh" (`hub:pickup` socket event) and the hub picker gets a `hub_pickup` notification, so the right bag is handed over. The QR leaves the screen; it has no timer but is cleared on pickup.
+- Frozen items: the scan assigns the order but returns `pickedUp: false, nextStep: 'scan_cold_bag'`. The rider scans a cold bag, then the order QR again.
+- Then `POST /delivery/jobs/:id/out-for-delivery`, and the customer tracks the rider live (see Live tracking).
+- Every scan of an order QR is logged in `ScannerLog` (`qrType: 'hub_pickup'`). `/delivery/hub/scan` also accepts the check-in QR below, so the app needs only one scanner.
+- `auto_assign` is the earlier behaviour: the nearest rider is assigned on `packed`. The screen QR then works only for that rider, and the picker's QR/OTP still works too.
+
+**Delivery Boy flow at the hub (check-in QR)**
 1. Scan the screen's QR in the Delivery app → `POST /delivery/hub/checkin { code }` (the scanned URL or just its `t` token). The token is random, maps server-side to that screen's store, and is used up by this check-in (the screen shows a new QR at once), so a photo of it stops working. If two riders scan the same QR at once, the second is asked to scan the new one. The call is made with the rider's own access token, so role, approval and hub are all checked on the server. The check-in lasts `HUB_CHECKIN_MINUTES` (30) and marks arrival on the rider's assigned orders there.
 2. `GET /delivery/hub/orders` → `mine` (assigned to me / picked up at this hub) and `available` (packed, no rider yet).
 3. Pick an order: `POST /delivery/hub/orders/:id/claim` assigns and accepts it in one step (`packed → assigned`). If two riders claim at once, one gets it and the other gets 409. Auto-assigned orders appear in `mine` and don't need claiming.
@@ -302,6 +311,17 @@ These APIs back the delivery app's Feed, Gigs, Offers, Earnings, Session History
 3. **Mobile apps** (Twilio Voice Android/iOS SDK): create FCM/APNs **push credentials** in Twilio and enter their SIDs, so incoming calls ring while the app is in the background. On iOS, report calls through CallKit.
 
 The customer website (`customer-web`) registers the Device while it's open, shows the Call button on the tracking card and an incoming-call panel.
+
+## SOS (Emergency)
+
+For the Delivery, Picker and Customer apps (`services/sos.service.js`). **The phone dials the helpline itself** (`tel:112`, `tel:108`, …). Emergency numbers can't be called through Exotel/Twilio, and there's no public API to dispatch police or an ambulance. The backend records the SOS, follows the live location and alerts the ops team.
+
+- `GET /common/sos/config` returns the helplines to show, my emergency contact, and my open SOS. Defaults (India): 112 Emergency, 100 Police, 108 Ambulance, 101 Fire, 1091 Women helpline, 1033 Highway accident. Admin → Settings → SOS can replace them (`sosHelplines`, JSON) and add an ops phone (`sosOpsPhone`), shown as "Grovio safety team".
+- `POST /common/sos { kind, lat, lng, accuracy?, note?, orderId? }`: `kind` is `sos` (big button) or a helpline key; the response's `dial` is the number. The app starts the call first and sends this in parallel. One active SOS per person: further calls are added to it.
+- On a new SOS: the admin panel plays a siren and shows a notification (`sos:alert` to `sos:all` and the hub's `store:<id>` room). The person's emergency contact (`emergencyContactPhone` on the picker / delivery profile; riders set it with `PATCH /delivery/profile`) and the ops phone get an SMS with a Google Maps link. On MSG91 this needs a DLT template (`smsSosTemplateId`, variables `NAME`, `LINK`); Twilio sends plain text.
+- `POST /common/sos/:id/location` every ~10 s while open (`sos:location` to admins). `POST /common/sos/:id/cancel` = "I'm safe". `GET /common/sos` = my history.
+- Admin → **SOS Alerts**: `GET /admin/sos?status=active`, `POST /admin/sos/:id/acknowledge` (the app gets `sos:updated`, e.g. "Help is on the way"), `POST /admin/sos/:id/resolve { note }`. Store managers see their own store's alerts only.
+- The alert keeps the order the person was on and its hub, which helplines they dialled, the location trail and whether each SMS went out.
 
 ## Payment Gateways (Razorpay, PhonePe, PayU)
 

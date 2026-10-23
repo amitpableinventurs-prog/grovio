@@ -2,7 +2,7 @@ import { Button, Card, Form, Input, Select, Typography, App as AntApp, Spin, Spa
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { fetchSettings, updateSettings } from '../api/settings';
-import { IvrCard, PaymentOptionsCard, PayuCard, PhonepeCard, RiderPayCard, TrackingCard, VoipCard } from '../components/settings/IntegrationCards';
+import { IvrCard, PaymentOptionsCard, PayuCard, PhonepeCard, RiderPayCard, SosCard, TrackingCard, VoipCard } from '../components/settings/IntegrationCards';
 import { INTEGRATION_DEFAULTS } from '../components/settings/defaults';
 import { HubConditionsCard, RiderRateCard } from '../components/settings/RiderRateCard';
 
@@ -148,6 +148,7 @@ export default function SettingsPage() {
           <IvrCard data={data} provider={ivrProvider} />
           <VoipCard data={data} provider={voipProvider} />
           <TrackingCard />
+          <SosCard smsProvider={smsProvider} />
           <RiderPayCard />
 
           <Card title="Google Maps" style={{ maxWidth: 640 }}>

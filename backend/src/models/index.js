@@ -46,4 +46,5 @@ module.exports = {
   PickerError: require('./pickerError.model'),
   PickerDay: require('./pickerDay.model'),
   RiderPayPeriod: require('./riderPayPeriod.model'),
+  SosAlert: require('./sosAlert.model'),
 };

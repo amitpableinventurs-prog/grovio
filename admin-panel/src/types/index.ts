@@ -545,3 +545,35 @@ export interface IvrConfig {
   availableEvents: string[];
   webhooks: Record<'prompt' | 'input' | 'status' | 'missedCall' | 'carePrompt' | 'careInput' | 'careResult', string>;
 }
+
+// SOS raised from the Customer / Picker / Delivery app (backend models/sosAlert.model.js).
+export type SosStatus = 'open' | 'acknowledged' | 'resolved' | 'cancelled';
+export interface SosPoint {
+  lat: number;
+  lng: number;
+  accuracyM?: number | null;
+  at: string;
+}
+export interface SosAlert {
+  _id: string;
+  user?: { _id: string; name: string; phone?: string; role: string } | null;
+  role: 'customer' | 'picker' | 'delivery';
+  kind: string;
+  status: SosStatus;
+  note?: string | null;
+  location?: SosPoint | null;
+  trail?: SosPoint[];
+  order?: { _id: string; orderNumber: string; orderStatus: OrderStatus } | null;
+  store?: { _id: string; name: string; phone?: string } | null;
+  calls: { key: string; number: string; at: string }[];
+  contactsNotified: { kind: 'emergency_contact' | 'ops'; name?: string | null; phone: string; sent: boolean; reason?: string | null; at: string }[];
+  acknowledgedBy?: { _id: string; name: string } | null;
+  acknowledgedAt?: string | null;
+  resolvedBy?: { _id: string; name: string } | null;
+  resolvedAt?: string | null;
+  resolutionNote?: string | null;
+  cancelledAt?: string | null;
+  cancelReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

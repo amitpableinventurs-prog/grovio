@@ -109,6 +109,20 @@ export function TrackingCard() {
         <Form.Item name="geofencePickupMeters" label="Arrived at hub within (m)"><Input type="number" placeholder="100" style={{ width: 180 }} /></Form.Item>
         <Form.Item name="geofenceDropMeters" label="Arrived at customer within (m)"><Input type="number" placeholder="100" style={{ width: 180 }} /></Form.Item>
       </Space>
+      <Form.Item
+        name="hubPickupMode"
+        label="Hub pickup"
+        extra="Hub screen QR: each ready order shows its own QR on the hub screen, and the first rider at the hub to scan it takes the order. Auto-assign: the nearest rider is assigned when the order is packed, and the picker hands over with a QR or OTP."
+      >
+        <Select
+          placeholder="Hub screen QR"
+          style={{ maxWidth: 320 }}
+          options={[
+            { value: 'hub_screen', label: 'Hub screen QR (rider scans to take the order)' },
+            { value: 'auto_assign', label: 'Auto-assign nearest rider' },
+          ]}
+        />
+      </Form.Item>
     </Card>
   );
 }
@@ -274,5 +288,53 @@ function WebhookRow({ label, url }: { label: string; url: string }) {
       <Typography.Text type="secondary">{label}</Typography.Text>
       <Typography.Text copyable={{ text: url }} style={{ wordBreak: 'break-all', fontSize: 12 }}>{url}</Typography.Text>
     </>
+  );
+}
+
+// Default helplines (backend services/sos.service.js DEFAULT_HELPLINES) — shown as the placeholder.
+const DEFAULT_SOS_HELPLINES = `[
+  { "key": "emergency", "label": "Emergency (Police, Fire, Ambulance)", "number": "112" },
+  { "key": "police", "label": "Police", "number": "100" },
+  { "key": "ambulance", "label": "Ambulance", "number": "108" },
+  { "key": "fire", "label": "Fire", "number": "101" },
+  { "key": "women", "label": "Women helpline", "number": "1091" },
+  { "key": "road_accident", "label": "Highway accident", "number": "1033" }
+]`;
+
+export function SosCard({ smsProvider }: { smsProvider?: string }) {
+  return (
+    <Card title="SOS (Emergency)" style={{ maxWidth: 640 }}>
+      <Typography.Paragraph type="secondary">
+        The SOS screen in the Delivery, Picker and Customer apps. The phone dials these numbers itself; the alert, live location
+        and contacts reach the SOS Alerts page. The ops phone is texted on every SOS and shown in the apps as "Grovio safety team".
+      </Typography.Paragraph>
+      <Form.Item name="sosOpsPhone" label="Ops / safety team phone" extra="Texted the map link on every SOS. Blank = no SMS to ops.">
+        <Input placeholder="e.g. 9876543210" style={{ maxWidth: 240 }} />
+      </Form.Item>
+      {smsProvider === 'msg91' && (
+        <Form.Item name="smsSosTemplateId" label="MSG91 SOS template ID" extra="A DLT-approved template with variables NAME and LINK. Without it, SOS texts aren't sent on MSG91.">
+          <Input />
+        </Form.Item>
+      )}
+      <Form.Item
+        name="sosHelplines"
+        label="Helpline numbers (JSON)"
+        extra="Blank = the India defaults shown. Each entry: key, label, number."
+        rules={[{
+          validator: (_, value) => {
+            if (!value || !String(value).trim()) return Promise.resolve();
+            try {
+              const list = JSON.parse(value);
+              if (!Array.isArray(list) || !list.length || !list.every((h) => h && h.key && h.label && h.number)) throw new Error();
+              return Promise.resolve();
+            } catch {
+              return Promise.reject(new Error('Must be a JSON list of { "key", "label", "number" }'));
+            }
+          },
+        }]}
+      >
+        <Input.TextArea rows={8} placeholder={DEFAULT_SOS_HELPLINES} style={{ fontFamily: 'monospace', fontSize: 12 }} />
+      </Form.Item>
+    </Card>
   );
 }

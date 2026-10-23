@@ -4,6 +4,7 @@ const upload = require('../middleware/upload.middleware');
 
 const publicCtrl = require('../controllers/common/public.controller');
 const notificationsCtrl = require('../controllers/common/notifications.controller');
+const sosCtrl = require('../controllers/common/sos.controller');
 const supportCtrl = require('../controllers/common/support.controller');
 const announcementsCtrl = require('../controllers/common/announcements.controller');
 
@@ -15,6 +16,13 @@ router.get('/wishlist/:shareToken', publicCtrl.getSharedWishlist);
 // Authenticated (any role)
 router.post('/upload', authenticate, upload.single('file'), publicCtrl.uploadFile);
 router.post('/fcm-token', authenticate, notificationsCtrl.registerFcmToken);
+
+// SOS (Customer / Picker / Delivery apps) — services/sos.service.js.
+router.get('/sos/config', authenticate, sosCtrl.getConfig);
+router.get('/sos', authenticate, sosCtrl.listMine);
+router.post('/sos', authenticate, sosCtrl.raise);
+router.post('/sos/:id/location', authenticate, sosCtrl.addLocation);
+router.post('/sos/:id/cancel', authenticate, sosCtrl.cancel);
 
 router.get('/notifications', authenticate, notificationsCtrl.listNotifications);
 router.patch('/notifications/:id/read', authenticate, notificationsCtrl.markAsRead);

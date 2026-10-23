@@ -14,7 +14,12 @@ const spec = {
       '— click **Authorize** below and paste an `accessToken` obtained from a login/verify-otp response.\n\n' +
       'All successful responses share the envelope `{ success, message, data }`; failures are `{ success: false, message, errors }`.',
   },
-  servers: [{ url: 'http://localhost:5000/api/v1', description: 'Local dev' }],
+  // Relative first: "Try it out" then calls whatever host the docs were opened from (localhost,
+  // the LAN IP from a phone/another PC, or a tunnel URL) instead of the viewer's own localhost.
+  servers: [
+    { url: '/api/v1', description: 'This server (same address as these docs)' },
+    { url: 'http://localhost:5000/api/v1', description: 'Local dev' },
+  ],
   components: {
     securitySchemes: {
       bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
@@ -57,6 +62,8 @@ const spec = {
     { name: 'VoIP (masked calls)' },
     { name: 'Notices (Updates tab)' },
     { name: 'Picker - Earnings' },
+    { name: 'SOS' },
+    { name: 'Admin - SOS' },
   ],
   paths: {
     ...require('./paths/core.paths'),
@@ -68,6 +75,7 @@ const spec = {
     ...require('./paths/hubDisplay.paths'),
     ...require('./paths/features.paths'),
     ...require('./paths/programs.paths'),
+    ...require('./paths/sos.paths'),
   },
 };
 

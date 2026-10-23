@@ -33,6 +33,7 @@ const hubDisplaysCtrl = require('../controllers/admin/hubDisplays.controller');
 const trackingCtrl = require('../controllers/admin/tracking.controller');
 const ivrCtrl = require('../controllers/admin/ivr.controller');
 const voipCtrl = require('../controllers/admin/voip.controller');
+const sosCtrl = require('../controllers/admin/sos.controller');
 const announcementsCtrl = require('../controllers/admin/announcements.controller');
 const pickerPayCtrl = require('../controllers/admin/pickerPay.controller');
 const riderPayCtrl = require('../controllers/admin/riderPay.controller');
@@ -209,6 +210,13 @@ router.post('/orders/:id/ivr-call', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MAN
 // Masked customer <-> rider calls (in-app VoIP): call log and Twilio TwiML App URLs
 router.get('/voip/calls', p(PERMISSIONS.MANAGE_ORDERS), voipCtrl.listCalls);
 router.get('/voip/config', p(PERMISSIONS.MANAGE_SETTINGS), voipCtrl.getConfig);
+
+// SOS alerts (services/sos.service.js) — store managers see their own store's only.
+const SOS_PERMS = [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY];
+router.get('/sos', p(...SOS_PERMS), sosCtrl.list);
+router.get('/sos/:id', p(...SOS_PERMS), sosCtrl.get);
+router.post('/sos/:id/acknowledge', p(...SOS_PERMS), sosCtrl.acknowledge);
+router.post('/sos/:id/resolve', p(...SOS_PERMS), sosCtrl.resolve);
 router.get('/orders/:id/tracking', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), trackingCtrl.getOrderTracking);
 router.post('/orders/:id/refund', p(PERMISSIONS.MANAGE_PAYMENTS), paymentsCtrl.issueRefund);
 

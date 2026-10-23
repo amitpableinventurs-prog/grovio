@@ -3,6 +3,7 @@ const { ScannerLog } = require('../models');
 const { emitOrderEvent } = require('../sockets');
 const { notifyUser } = require('./notification.service');
 const ApiError = require('../utils/apiError');
+const { generateHubPickupToken } = require('../utils/hubPickupToken');
 
 // Allowed forward transitions. Cancellation is handled separately (allowed from most pre-delivery states).
 // 'assigned' -> 'picked_up' is gated behind a verified handover OTP (see verifyHandoverOtp below) —
@@ -140,7 +141,9 @@ async function verifyHandoverQr({ order, qrToken, scannedBy, userType, deviceId,
   return { valid: true };
 }
 
-async function transitionOrder({ order, toStatus, changedBy, note }) {
+// notifyHubPickers: false skips sending the hub picker the handover OTP on 'assigned' — for a
+// pickup scanned off the hub screen, where the picker doesn't hand over a code.
+async function transitionOrder({ order, toStatus, changedBy, note, notifyHubPickers = true }) {
   const allowed = TRANSITIONS[order.orderStatus] || [];
   if (!allowed.includes(toStatus)) {
     throw new ApiError(400, `Cannot move order from '${order.orderStatus}' to '${toStatus}'`);
@@ -149,6 +152,9 @@ async function transitionOrder({ order, toStatus, changedBy, note }) {
   order.orderStatus = toStatus;
   if (toStatus === 'delivered') order.deliveredAt = new Date();
   if (toStatus === 'picked_up') order.pickerHandoverAt = order.pickerHandoverAt || new Date();
+  // Packed = on the hub screen, with its own pickup QR until it leaves the hub (or is cancelled).
+  if (toStatus === 'packed') order.hubPickupToken = generateHubPickupToken();
+  if (toStatus === 'picked_up' || toStatus === 'cancelled') order.hubPickupToken = null;
 
   // Generate the customer hand-off PIN and both handover methods (OTP + QR) as soon as a
   // delivery partner is assigned. The PIN is collected from the customer at the doorstep to
@@ -200,7 +206,7 @@ async function transitionOrder({ order, toStatus, changedBy, note }) {
 
   // Only the hub picker(s) — the ones working order.store — ever meet the delivery partner, so
   // only they need the handover code.
-  if (handoverOtp && order.pickTasks?.length) {
+  if (handoverOtp && notifyHubPickers && order.pickTasks?.length) {
     const hubPickerIds = [...new Set(
       order.pickTasks.filter((t) => t.store.toString() === order.store.toString()).map((t) => t.picker.toString())
     )];

@@ -23,6 +23,8 @@ const ROOMS = {
   allOrders: 'orders:all',
   hub: (storeId) => `hub:${storeId}`,
   display: (id) => `display:${id}`,
+  // Admins who see every SOS (services/sos.service.js); store managers get their store's in store:<id>.
+  sosAll: 'sos:all',
 };
 
 const idOf = (v) => (v && v._id ? v._id : v)?.toString();
@@ -114,6 +116,8 @@ function initSocket(server) {
     if (role === 'admin') {
       if (hasFullAccess(socket.user, PERMISSIONS.MANAGE_ORDERS)) socket.join(ROOMS.allOrders);
       else if (socket.user.assignedStore) socket.join(ROOMS.store(socket.user.assignedStore));
+      const sosPerms = [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PICKERS];
+      if (sosPerms.some((perm) => hasFullAccess(socket.user, perm))) socket.join(ROOMS.sosAll);
     }
 
     // Rider GPS ping { lat, lng } (an orderId in the payload is ignored). Goes through the same

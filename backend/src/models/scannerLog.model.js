@@ -1,11 +1,12 @@
 const { Schema, model } = require('mongoose');
 
 // Every attempt to scan a handover QR (crate/order QR) is logged here, whether it succeeds or
-// not — see order.service.js#verifyHandoverQr. Currently the only qrType is the Picker<->Delivery
-// handover, but the field is kept open for other operational scans later.
+// not — see order.service.js#verifyHandoverQr. qrType 'handover' is the Picker<->Delivery handover
+// QR from the picker app; 'hub_pickup' is the order's QR on the hub screen
+// (controllers/delivery/hub.controller.js#scan).
 const scannerLogSchema = new Schema({
   order: { type: Schema.Types.ObjectId, ref: 'Order', required: true },
-  qrType: { type: String, enum: ['handover'], default: 'handover' },
+  qrType: { type: String, enum: ['handover', 'hub_pickup'], default: 'handover' },
   qrToken: { type: String, default: null },
   scannedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   userType: { type: String, enum: ['picker', 'delivery'], required: true },

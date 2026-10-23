@@ -33,8 +33,15 @@ paths['/picker/availability'] = {
 paths['/picker/jobs'] = {
   get: { tags: TAG, summary: 'List my assigned pick-lists (jobs) — any order I hold a pickTask on', ...bearer(), parameters: [...PAGE_QS, q('status', "default: accepted,picking,partially_picked,packed")], responses: { 200: envelope(paginated(ref('Order'))), 401: RESPONSES_401 } },
 };
+// The order plus how the hub picker hands it over (the "Hub pickup" admin setting).
+const HANDOVER_MODE = {
+  type: 'string', enum: ['hub_screen', 'auto_assign'], example: 'hub_screen',
+  description: "hub_screen: once packed, the order's QR is on the hub screen and the rider scans it there — the app shows no QR/OTP, just \"hand over the bag when the screen shows #1234 -> <rider>\" (a hub_pickup notification also arrives). auto_assign: a rider is assigned and the hub picker shows GET .../qr or reads out GET .../otp.",
+};
+const JOB = { allOf: [ref('Order'), { type: 'object', properties: { handoverMode: HANDOVER_MODE } }] };
+
 paths['/picker/jobs/{id}'] = {
-  get: { tags: TAG, summary: 'Get one job (pick-list) detail', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('Order')), 401: RESPONSES_401, 404: RESPONSES_404 } },
+  get: { tags: TAG, summary: 'Get one job (pick-list) detail, with handoverMode', ...bearer(), parameters: [idParam()], responses: { 200: envelope(JOB), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
 paths['/picker/jobs/{id}/accept'] = {
   post: { tags: TAG, summary: "Accept my part of a new order (the alternative to reject). Sets my pickTask.acceptedAt; after this the order can't be rejected. Calling it again is a no-op.", ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('Order'), 'Order accepted'), 400: errorResponse('The order is past picking'), 401: RESPONSES_401, 404: RESPONSES_404 } },
@@ -64,8 +71,8 @@ paths['/picker/jobs/{id}/substitutions'] = {
 };
 paths['/picker/jobs/{id}/complete'] = {
   post: {
-    tags: TAG, summary: "Mark MY portion (not the whole order — see pickTasks) picked, packed and ready for pickup. Once every picker on the order has done the same, it rolls up to 'packed' (\"fully ready for pickup\") automatically and a delivery partner is auto-assigned.", ...bearer(), parameters: [idParam()],
-    responses: { 200: envelope(ref('Order'), 'Your portion is marked ready for pickup'), 400: errorResponse('You have already completed your portion of this order'), 401: RESPONSES_401, 404: RESPONSES_404 },
+    tags: TAG, summary: "Mark MY portion (not the whole order — see pickTasks) picked, packed and ready for pickup. Once every picker on the order has done the same, it rolls up to 'packed' (\"fully ready for pickup\") automatically Then, by handoverMode: hub_screen (default) — no rider is assigned; the order shows on the hub screen with its own QR and the first rider at the hub to scan it takes it (POST /delivery/hub/scan); auto_assign — the nearest rider is auto-assigned.", ...bearer(), parameters: [idParam()],
+    responses: { 200: envelope(JOB, 'Order ready. Its QR is now on the hub screen; hand the bag to the rider who scans it.'), 400: errorResponse('You have already completed your portion of this order'), 401: RESPONSES_401, 404: RESPONSES_404 },
   },
 };
 paths['/picker/jobs/{id}/otp'] = {

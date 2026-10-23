@@ -43,6 +43,10 @@ const deliveryProfileSchema = new Schema({
   // Set once every onboarding step is done — when it landed in the admin's approval queue.
   onboardingCompletedAt: { type: Date, default: null },
 
+  // Texted with the live location when the partner raises an SOS (services/sos.service.js).
+  emergencyContactName: { type: String, default: null },
+  emergencyContactPhone: { type: String, default: null },
+
   isAvailable: { type: Boolean, default: false },
   // This partner's own pay rate card — only the policy sections that differ from the default
   // riderPayPolicy (services/riderPay.service.js).
