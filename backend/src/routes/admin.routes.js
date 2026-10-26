@@ -158,6 +158,7 @@ router.patch(
 );
 
 // Hub Center screens (/hub-display) — store managers manage their own store's screens only.
+router.delete('/stores/:id', p(PERMISSIONS.MANAGE_STORES), storesCtrl.deleteStore);
 router.get('/stores/:id/hub-displays', p(PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), hubDisplaysCtrl.listHubDisplays);
 router.post('/stores/:id/hub-displays', p(PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), hubDisplaysCtrl.createHubDisplay);
 router.delete('/hub-displays/:id', p(PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), hubDisplaysCtrl.revokeHubDisplay);

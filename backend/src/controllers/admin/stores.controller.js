@@ -1,21 +1,24 @@
-const { Store } = require('../../models');
+const {
+  Store, Order, GigSlot, Product, HubDisplay, ColdBag, User, PickerProfile, DeliveryProfile, Announcement, SosAlert, PickerError,
+} = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const { logAdminActivity } = require('../../services/audit.service');
 const { PERMISSIONS } = require('../../utils/permissions');
+const { resolveStoreScope } = require('../../utils/storeScope');
 
 // GET /admin/stores?status=&zoneId=
 const listStores = catchAsync(async (req, res) => {
   const { page, limit, offset } = getPagination(req.query);
   const { status, zoneId } = req.query;
 
-  // An inventory-manager sub-admin only ever sees their own assigned store.
+  // An inventory-manager sub-admin only ever sees their own assigned store (and none at all once
+  // it's unassigned, e.g. after deleteStore).
   const where = {};
-  if (req.user.assignedStore && !req.user.permissions?.includes('*') && !req.user.permissions?.includes(PERMISSIONS.MANAGE_STORES)) {
-    where._id = req.user.assignedStore;
-  }
+  const scopedStoreId = resolveStoreScope(req.user, null, PERMISSIONS.MANAGE_STORES);
+  if (scopedStoreId) where._id = scopedStoreId;
   if (status) where.status = status;
   if (zoneId) where.zoneId = zoneId;
 
@@ -24,7 +27,14 @@ const listStores = catchAsync(async (req, res) => {
     Store.countDocuments(where),
   ]);
 
-  new ApiResponse(200, { items: rows, meta: buildPageMeta({ page, limit, count }) }).send(res);
+  // Who runs each store: the admin / vendor-panel accounts assigned to it (user.assignedStore).
+  const managers = await User.find({ assignedStore: { $in: rows.map((s) => s._id) } }).select('name email assignedStore').lean();
+  const items = rows.map((s) => ({
+    ...s.toJSON(),
+    managers: managers.filter((u) => String(u.assignedStore) === String(s._id)).map(({ _id, name, email }) => ({ _id, name, email })),
+  }));
+
+  new ApiResponse(200, { items, meta: buildPageMeta({ page, limit, count }) }).send(res);
 });
 
 const getStore = catchAsync(async (req, res) => {
@@ -83,4 +93,47 @@ const updateStore = catchAsync(async (req, res) => {
   new ApiResponse(200, store, 'Store updated').send(res);
 });
 
-module.exports = { listStores, getStore, createStore, updateStore };
+// DELETE /admin/stores/:id  -> refused once the store has order or gig history (deactivate it
+// instead, so that history keeps its store). Otherwise its products, hub screens and cold bags go
+// with it, and staff/pickers/riders linked to it are unlinked, not deleted.
+const deleteStore = catchAsync(async (req, res) => {
+  const store = await Store.findById(req.params.id);
+  if (!store) throw new ApiError(404, 'Store not found');
+
+  const [orderCount, gigSlotCount] = await Promise.all([
+    Order.countDocuments({ store: store._id }),
+    GigSlot.countDocuments({ store: store._id }),
+  ]);
+  if (orderCount || gigSlotCount) {
+    const history = [orderCount && `${orderCount} order(s)`, gigSlotCount && `${gigSlotCount} gig slot(s)`].filter(Boolean).join(' and ');
+    throw new ApiError(400, `Cannot delete — this store has ${history}. Deactivate it instead.`);
+  }
+
+  await Promise.all([
+    Product.deleteMany({ store: store._id }),
+    HubDisplay.deleteMany({ store: store._id }),
+    ColdBag.deleteMany({ store: store._id }),
+    User.updateMany({ assignedStore: store._id }, { assignedStore: null }),
+    PickerProfile.updateMany({ store: store._id }, { store: null }),
+    DeliveryProfile.updateMany(
+      { 'hubCheckin.store': store._id },
+      { 'hubCheckin.store': null, 'hubCheckin.display': null, 'hubCheckin.at': null, 'hubCheckin.expiresAt': null }
+    ),
+    Announcement.updateMany({ stores: store._id }, { $pull: { stores: store._id } }),
+    SosAlert.updateMany({ store: store._id }, { store: null }),
+    PickerError.updateMany({ store: store._id }, { store: null }),
+  ]);
+  await store.deleteOne();
+
+  await logAdminActivity({
+    adminId: req.user.id,
+    action: 'store.delete',
+    entityType: 'Store',
+    entityId: store._id,
+    metadata: { name: store.name },
+  });
+
+  new ApiResponse(200, null, 'Store deleted').send(res);
+});
+
+module.exports = { listStores, getStore, createStore, updateStore, deleteStore };

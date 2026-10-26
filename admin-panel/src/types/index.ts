@@ -61,6 +61,8 @@ export interface Store {
   status: 'active' | 'inactive';
   // Delivery radius in km; null = the defaultServiceRadiusKm setting.
   serviceRadiusKm?: number | null;
+  // Accounts assigned to run this store (user.assignedStore) — only on GET /admin/stores.
+  managers?: { _id: string; name: string; email: string }[];
   createdAt: string;
 }
 

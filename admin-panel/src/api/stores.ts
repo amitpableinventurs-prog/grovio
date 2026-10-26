@@ -13,3 +13,7 @@ export function fetchStore(id: string) {
 export function updateStore(id: string, data: Partial<Store>) {
   return unwrap<Store>(apiClient.patch(`/admin/stores/${id}`, data));
 }
+
+export function deleteStore(id: string) {
+  return unwrap(apiClient.delete(`/admin/stores/${id}`));
+}

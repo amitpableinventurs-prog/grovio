@@ -170,6 +170,10 @@ paths['/admin/stores/{id}'] = {
     requestBody: jsonBody({ zoneId: { type: 'string' }, status: { type: 'string', enum: ['active', 'inactive'] }, openTime: { type: 'string' }, closeTime: { type: 'string' } }),
     responses: { 200: envelope(ref('Store'), 'Store updated'), 401: RESPONSES_401, 404: RESPONSES_404 },
   },
+  delete: {
+    tags: TAG_STORES, summary: 'Delete a store with its products and hub screens (refused once it has order or gig history — deactivate it instead)', ...bearer(), parameters: [idParam()],
+    responses: { 200: envelope(null, 'Store deleted'), 400: errorResponse('Cannot delete — this store has 3 order(s). Deactivate it instead.'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
+  },
 };
 
 const HUB_DISPLAY = {
