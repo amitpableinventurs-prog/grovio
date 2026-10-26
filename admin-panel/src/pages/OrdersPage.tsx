@@ -71,7 +71,7 @@ export default function OrdersPage() {
   const pickerOptions = useMemo(() => {
     const base = pickers?.items.map((p) => ({ value: p._id, label: p.name })) ?? [];
     (order?.pickTasks ?? []).forEach((t) => {
-      if (typeof t.picker === 'object') {
+      if (t.picker && typeof t.picker === 'object') {
         const assigned = t.picker as User;
         if (!base.some((o) => o.value === assigned._id)) base.push({ value: assigned._id, label: assigned.name });
       }
@@ -87,7 +87,7 @@ export default function OrdersPage() {
 
   const deliveryOptions = useMemo(() => {
     const base = deliveryPartners?.items.map((p) => ({ value: p._id, label: p.name })) ?? [];
-    const assigned = order && typeof order.delivery === 'object' ? (order.delivery as User) : null;
+    const assigned = order?.delivery && typeof order.delivery === 'object' ? (order.delivery as User) : null;
     if (assigned && !base.some((o) => o.value === assigned._id)) {
       base.push({ value: assigned._id, label: assigned.name });
     }
@@ -168,8 +168,9 @@ export default function OrdersPage() {
         pagination={{ current: page, pageSize, total: data?.meta.totalItems, onChange, showSizeChanger: true }}
         columns={[
           { title: 'Order #', dataIndex: 'orderNumber' },
-          { title: 'Customer', render: (_, r) => (typeof r.customer === 'object' ? (r.customer as User).name : '—') },
-          { title: 'Store', render: (_, r) => (typeof r.store === 'object' ? (r.store as Store).name : '—') },
+          // A deleted customer/store populates as null (and typeof null is 'object').
+          { title: 'Customer', render: (_, r) => (r.customer && typeof r.customer === 'object' ? (r.customer as User).name : '—') },
+          { title: 'Store', render: (_, r) => (r.store && typeof r.store === 'object' ? (r.store as Store).name : '—') },
           { title: 'Total', render: (_, r) => formatCurrency(r.grandTotal) },
           { title: 'Payment', render: (_, r) => <StatusTag status={r.paymentStatus} /> },
           { title: 'Status', render: (_, r) => <StatusTag status={r.orderStatus} /> },
@@ -287,7 +288,7 @@ export default function OrdersPage() {
                   dataSource={scannerLogs.items}
                   columns={[
                     { title: 'When', render: (_, r) => formatDateTime(r.createdAt) },
-                    { title: 'By', render: (_, r) => (typeof r.scannedBy === 'object' ? r.scannedBy.name : r.scannedBy) },
+                    { title: 'By', render: (_, r) => (r.scannedBy && typeof r.scannedBy === 'object' ? r.scannedBy.name : r.scannedBy || '—') },
                     { title: 'Role', render: (_, r) => titleCase(r.userType) },
                     { title: 'Result', render: (_, r) => <StatusTag status={r.status} /> },
                     { title: 'Reason', render: (_, r) => r.failureReason || '—' },

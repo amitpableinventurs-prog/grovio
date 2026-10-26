@@ -23,7 +23,7 @@ const TRACKING = {
   properties: {
     orderNumber: { type: 'string' },
     orderStatus: { type: 'string' },
-    deliveryPartner: { type: 'object', nullable: true, description: 'No phone number — call through POST /customer/orders/{id}/call', properties: { _id: { type: 'string' }, name: { type: 'string' } } },
+    deliveryPartner: { type: 'object', nullable: true, description: 'null until a rider is assigned. Masked calling is also available: POST /customer/orders/{id}/call', properties: { _id: { type: 'string', example: '66f1a2b3c4d5e6f789012345' }, name: { type: 'string', example: 'amit dhobhal' }, phone: { type: 'string', example: '9876543210' } } },
     hub: { ...POINT, properties: { ...POINT.properties, name: { type: 'string' } } },
     drop: POINT,
     rider: { ...POINT, properties: { ...POINT.properties, updatedAt: { type: 'string', format: 'date-time' } } },
