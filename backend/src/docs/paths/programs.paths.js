@@ -479,8 +479,23 @@ paths['/admin/delivery-partners/{id}/earnings'] = admin('post', 'Add an "Other e
 paths['/admin/delivery-partners/{id}/deductions'] = admin('post', 'Deduct from a partner\'s pocket (Deduction statement; may take the pocket negative; the partner is notified)', {
   parameters: [idParam()], body: jsonBody({ amount: num(100), title: str('Temp Manual Pay'), description: str('Cold Bag Fraud 27th Jan'), orderId: { type: 'string', nullable: true } }, ['amount', 'title']), status: 201, extra: { 404: RESPONSES_404, 422: RESPONSES_422 },
 });
-paths['/admin/delivery-partners/{id}/cash-deposits'] = admin('post', 'Record COD cash the partner handed in at the hub (credits the pocket)', {
-  parameters: [idParam()], body: jsonBody({ amount: num(200), reference: str('404022778') }, ['amount']), status: 201, extra: { 404: RESPONSES_404, 422: RESPONSES_422 },
+paths['/admin/delivery-partners/{id}/cash-deposits'] = admin('post', 'Record COD cash the partner handed in at the hub (credits the pocket). Refused above the cash they owe.', {
+  parameters: [idParam()], body: jsonBody({ amount: num(200), reference: str('404022778') }, ['amount']), status: 201, extra: { 400: errorResponse('Only ₹150 is due from this delivery partner'), 404: RESPONSES_404, 422: RESPONSES_422 },
+});
+paths['/admin/cash-collection'] = admin('get', 'Every delivery partner\'s COD cash position, most cash in hand first. cashToDeposit is the figure the delivery app shows (a negative pocket balance).', {
+  parameters: [...PAGE_QS, q('search', 'Name or phone'), q('holding', 'true = only partners holding cash')],
+  data: obj({
+    items: arr(obj({
+      rider: obj({ _id: str('6a1f...'), name: str('Amit'), phone: str('+919755230166'), isActive: bool(true) }),
+      balance: num(-850), cashToDeposit: num(850), cashCollected: num(2350), deposited: num(1500),
+      lastCollectedAt: S('string', null, { format: 'date-time', nullable: true }), lastDepositAt: S('string', null, { format: 'date-time', nullable: true }),
+    })),
+    totals: obj({ cashWithRiders: num(4210), ridersHolding: int(6), collectedToday: num(1820), depositedToday: num(900) }),
+    meta: obj({ page: int(1), limit: int(20), totalItems: int(14) }),
+  }),
+});
+paths['/admin/delivery-partners/{id}/cash-ledger'] = admin('get', 'A partner\'s cash entries: cash collected per order (negative) and deposits (positive), newest first', {
+  parameters: [idParam(), ...PAGE_QS], data: paginated(POCKET_ENTRY), extra: { 404: RESPONSES_404 },
 });
 paths['/admin/pocket-transfers'] = admin('get', 'Withdrawals / weekly payouts / deposits to process', { parameters: [...PAGE_QS, q('status', 'initiated | in_process | completed | failed'), q('type', 'withdrawal | weekly_payout | cash_deposit'), q('riderId', '')], data: paginated(TRANSFER) });
 paths['/admin/pocket-transfers/{id}'] = admin('patch', 'Move a bank transfer along: in_process, completed (with the IMPS/UTR reference) or failed (the amount goes back into the pocket and the partner sees the "Failed to transfer" popup). A pending deposit can only be completed.', {

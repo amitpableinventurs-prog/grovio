@@ -1,4 +1,4 @@
-const { Wallet, WalletTransaction, PocketTransfer, DeliveryProfile, Order } = require('../models');
+const { Wallet, WalletTransaction, PocketTransfer, DeliveryProfile, Order, User } = require('../models');
 const ApiError = require('../utils/apiError');
 const t = require('../utils/localTime');
 const { getSetting } = require('./settings.service');
@@ -318,10 +318,93 @@ async function verifyDeposit(riderId, { razorpayOrderId, razorpayPaymentId, razo
 
 // ---- Admin ----------------------------------------------------------------------------------
 
-// Cash handed over at the hub.
+// Cash handed over at the hub. Capped at what the partner owes — anything above it would turn into
+// pocket money they could withdraw.
 async function recordHubDeposit(riderId, amount, reference, adminId) {
+  const wallet = await Wallet.findOne({ user: riderId }).select('balance').lean();
+  const due = round2(-(wallet?.balance || 0));
+  if (due <= 0) throw new ApiError(400, 'This delivery partner has no cash to deposit');
+  if (round2(amount) > due) throw new ApiError(400, `Only ₹${due} is due from this delivery partner`);
   const transfer = await PocketTransfer.create({ rider: riderId, type: 'cash_deposit', amount: round2(amount), method: 'hub', reference: reference || null });
   return transferView(await completeDeposit(transfer, { reference, processedBy: adminId }));
+}
+
+const CASH_CATEGORIES = ['cash_collected', 'cash_deposit'];
+
+// Delivery partners with their pocket balance (0 without a wallet yet).
+const riderBalances = (match) => [
+  { $match: { role: 'delivery', ...match } },
+  { $lookup: { from: Wallet.collection.collectionName, localField: '_id', foreignField: 'user', as: 'wallet' } },
+  { $addFields: { balance: { $ifNull: [{ $arrayElemAt: ['$wallet.balance', 0] }, 0] } } },
+];
+
+// GET /admin/cash-collection?search=&holding=true -> every partner's COD cash position, most cash in
+// hand first. "To deposit" is the figure the delivery app shows: a negative pocket balance, i.e. cash
+// collected minus deposits and minus earnings already in the pocket.
+async function adminCashBook(query = {}, { offset = 0, limit = 20 } = {}) {
+  const match = {};
+  if (query.search) {
+    const rx = new RegExp(String(query.search).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    match.$or = [{ name: rx }, { phone: rx }];
+  }
+  const [[page], [totals], today] = await Promise.all([
+    User.aggregate([
+      ...riderBalances(match),
+      ...(query.holding === 'true' ? [{ $match: { balance: { $lt: 0 } } }] : []),
+      { $sort: { balance: 1, name: 1 } },
+      { $facet: { rows: [{ $skip: offset }, { $limit: limit }, { $project: { name: 1, phone: 1, isActive: 1, balance: 1 } }], count: [{ $count: 'n' }] } },
+    ]),
+    User.aggregate([
+      ...riderBalances({}),
+      { $match: { balance: { $lt: 0 } } },
+      { $group: { _id: null, cashWithRiders: { $sum: { $multiply: ['$balance', -1] } }, ridersHolding: { $sum: 1 } } },
+    ]),
+    WalletTransaction.aggregate([
+      { $match: { category: { $in: CASH_CATEGORIES }, createdAt: { $gte: t.startOfDay() } } },
+      { $group: { _id: '$category', amount: { $sum: '$amount' } } },
+    ]),
+  ]);
+
+  const stats = page.rows.length
+    ? await WalletTransaction.aggregate([
+      { $match: { user: { $in: page.rows.map((r) => r._id) }, category: { $in: CASH_CATEGORIES } } },
+      { $group: { _id: { user: '$user', category: '$category' }, amount: { $sum: '$amount' }, last: { $max: '$createdAt' } } },
+    ])
+    : [];
+  const stat = (userId, category) => stats.find((s) => String(s._id.user) === String(userId) && s._id.category === category);
+
+  return {
+    items: page.rows.map((r) => {
+      const collected = stat(r._id, 'cash_collected');
+      const deposited = stat(r._id, 'cash_deposit');
+      return {
+        rider: { _id: r._id, name: r.name, phone: r.phone, isActive: r.isActive },
+        balance: round2(r.balance),
+        cashToDeposit: r.balance < 0 ? round2(-r.balance) : 0,
+        cashCollected: round2(collected?.amount),
+        deposited: round2(deposited?.amount),
+        lastCollectedAt: collected?.last || null,
+        lastDepositAt: deposited?.last || null,
+      };
+    }),
+    count: page.count[0]?.n || 0,
+    totals: {
+      cashWithRiders: round2(totals?.cashWithRiders),
+      ridersHolding: totals?.ridersHolding || 0,
+      collectedToday: round2(today.find((c) => c._id === 'cash_collected')?.amount),
+      depositedToday: round2(today.find((c) => c._id === 'cash_deposit')?.amount),
+    },
+  };
+}
+
+// GET /admin/delivery-partners/:id/cash-ledger -> cash collected per order and deposits, newest first.
+async function adminCashLedger(riderId, { offset = 0, limit = 20 } = {}) {
+  const where = { user: riderId, category: { $in: CASH_CATEGORIES } };
+  const [txns, count] = await Promise.all([
+    WalletTransaction.find(where).sort({ createdAt: -1 }).skip(offset).limit(limit).lean(),
+    WalletTransaction.countDocuments(where),
+  ]);
+  return { items: await entryViews(txns), count };
 }
 
 async function addDeduction(riderId, { amount, title, description, orderId = null }) {
@@ -427,4 +510,6 @@ module.exports = {
   updateTransfer,
   runWeeklyPayouts,
   adminListTransfers,
+  adminCashBook,
+  adminCashLedger,
 };

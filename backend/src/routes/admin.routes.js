@@ -88,6 +88,8 @@ router.post('/delivery-partners/:id/earnings', p(PERMISSIONS.MANAGE_DELIVERY), e
 // Delivery partner pocket: deductions, cash handed in at the hub, withdrawals / weekly payouts.
 router.post('/delivery-partners/:id/deductions', p(PERMISSIONS.MANAGE_DELIVERY), deductionRules, validate, programsCtrl.addDeduction);
 router.post('/delivery-partners/:id/cash-deposits', p(PERMISSIONS.MANAGE_DELIVERY), cashDepositRules, validate, programsCtrl.recordCashDeposit);
+router.get('/delivery-partners/:id/cash-ledger', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS), programsCtrl.cashLedger);
+router.get('/cash-collection', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS), programsCtrl.cashCollection);
 router.get('/pocket-transfers', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS), programsCtrl.listPocketTransfers);
 router.post('/pocket-transfers/weekly-payouts', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS), programsCtrl.runWeeklyPayouts);
 router.patch('/pocket-transfers/:id', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS), programsCtrl.updatePocketTransfer);
@@ -156,9 +158,9 @@ router.patch(
   upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'banner', maxCount: 1 }]),
   storesCtrl.updateStore
 );
+router.delete('/stores/:id', p(PERMISSIONS.MANAGE_STORES), storesCtrl.deleteStore);
 
 // Hub Center screens (/hub-display) — store managers manage their own store's screens only.
-router.delete('/stores/:id', p(PERMISSIONS.MANAGE_STORES), storesCtrl.deleteStore);
 router.get('/stores/:id/hub-displays', p(PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), hubDisplaysCtrl.listHubDisplays);
 router.post('/stores/:id/hub-displays', p(PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), hubDisplaysCtrl.createHubDisplay);
 router.delete('/hub-displays/:id', p(PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), hubDisplaysCtrl.revokeHubDisplay);

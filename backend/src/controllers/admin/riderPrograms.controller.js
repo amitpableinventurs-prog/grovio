@@ -263,6 +263,21 @@ const recordCashDeposit = catchAsync(async (req, res) => {
   new ApiResponse(201, transfer, 'Cash deposit recorded').send(res);
 });
 
+// GET /admin/cash-collection?search=&holding=true -> each partner's COD cash in hand, most first
+const cashCollection = catchAsync(async (req, res) => {
+  const { page, limit, offset } = getPagination(req.query);
+  const { items, count, totals } = await pocket.adminCashBook(req.query, { offset, limit });
+  new ApiResponse(200, { items, totals, meta: buildPageMeta({ page, limit, count }) }).send(res);
+});
+
+// GET /admin/delivery-partners/:id/cash-ledger -> cash collected per order and deposits
+const cashLedger = catchAsync(async (req, res) => {
+  const rider = await findRider(req.params.id);
+  const { page, limit, offset } = getPagination(req.query);
+  const { items, count } = await pocket.adminCashLedger(rider._id, { offset, limit });
+  new ApiResponse(200, { items, meta: buildPageMeta({ page, limit, count }) }).send(res);
+});
+
 // GET /admin/pocket-transfers?status=&type=&riderId= -> withdrawals / weekly payouts / deposits to process
 const listPocketTransfers = catchAsync(async (req, res) => {
   const { page, limit, offset } = getPagination(req.query);
@@ -380,6 +395,8 @@ module.exports = {
   addEarning,
   addDeduction,
   recordCashDeposit,
+  cashCollection,
+  cashLedger,
   listPocketTransfers,
   updatePocketTransfer,
   runWeeklyPayouts,

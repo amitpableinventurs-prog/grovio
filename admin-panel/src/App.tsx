@@ -22,6 +22,7 @@ import InventoryPage from './pages/InventoryPage';
 import CouponsPage from './pages/CouponsPage';
 import BannersPage from './pages/BannersPage';
 import PaymentsPage from './pages/PaymentsPage';
+import CashCollectionPage from './pages/CashCollectionPage';
 import SettlementsPage from './pages/SettlementsPage';
 import ReportsPage from './pages/ReportsPage';
 import SupportTicketsPage from './pages/SupportTicketsPage';
@@ -170,6 +171,14 @@ export default function App() {
             element={
               <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_PAYMENTS]}>
                 <PaymentsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cash-collection"
+            element={
+              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS]}>
+                <CashCollectionPage />
               </ProtectedRoute>
             }
           />

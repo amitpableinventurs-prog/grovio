@@ -22,6 +22,9 @@ export function useOrderRealtime() {
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['payments'] });
       queryClient.invalidateQueries({ queryKey: ['cod-reconciliation'] });
+      // A COD order delivered for cash changes what that partner holds.
+      queryClient.invalidateQueries({ queryKey: ['cash-collection'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-ledger'] });
     };
 
     const onUpdated = (e: OrderEventPayload) => {
