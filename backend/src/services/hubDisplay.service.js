@@ -38,8 +38,7 @@ async function getHubPickupMode() {
   return HUB_PICKUP_MODES.includes(mode) ? mode : 'hub_screen';
 }
 
-// Orders a hub screen lists: still being picked/packed, or packed and waiting for a rider.
-const PREPARING_STATUSES = ['accepted', 'picking', 'partially_picked'];
+// Orders a hub screen lists: packed and waiting for a rider.
 const READY_STATUSES = ['packed', 'assigned'];
 
 function hashKey(key) {
@@ -164,7 +163,7 @@ function readySince(order) {
 // What the hub screen shows. Deliberately no customer name/phone/address or amounts — the screen
 // is on a wall for anyone at the hub to see. Each ready order comes with its pickup QR (SVG).
 async function buildBoard(storeId, { baseUrl }) {
-  const orders = await Order.find({ store: storeId, orderStatus: { $in: [...PREPARING_STATUSES, ...READY_STATUSES] } })
+  const orders = await Order.find({ store: storeId, orderStatus: { $in: READY_STATUSES } })
     .select('+hubPickupToken orderNumber orderStatus items.qty pickTasks.status delivery deliveryAcceptedAt arrivedAtPickupAt statusLogs placedAt updatedAt')
     .populate('delivery', 'name')
     .sort({ placedAt: 1 })
@@ -173,12 +172,12 @@ async function buildBoard(storeId, { baseUrl }) {
   // Orders packed before pickup QRs existed have no token yet — issue one (only if still empty,
   // so two screens loading at once agree on it).
   for (const o of orders) {
-    if (!READY_STATUSES.includes(o.orderStatus) || o.hubPickupToken) continue;
+    if (o.hubPickupToken) continue;
     await Order.updateOne({ _id: o._id, hubPickupToken: null }, { $set: { hubPickupToken: generateHubPickupToken() } });
     o.hubPickupToken = (await Order.findById(o._id).select('+hubPickupToken').lean())?.hubPickupToken || null;
   }
   const qrs = new Map(await Promise.all(orders
-    .filter((o) => READY_STATUSES.includes(o.orderStatus) && o.hubPickupToken)
+    .filter((o) => o.hubPickupToken)
     .map(async (o) => [o.id, await qrSvg(pickupUrl(baseUrl, o.hubPickupToken))])));
 
   const toCard = (o) => ({
@@ -188,15 +187,13 @@ async function buildBoard(storeId, { baseUrl }) {
     itemCount: (o.items || []).reduce((sum, i) => sum + (i.qty || 0), 0),
     pickers: { total: o.pickTasks.length, done: o.pickTasks.filter((t) => t.status === 'completed').length },
     placedAt: o.placedAt,
-    readySince: READY_STATUSES.includes(o.orderStatus) ? readySince(o) : null,
+    readySince: readySince(o),
     rider: o.delivery ? { name: firstName(o.delivery.name), arrived: !!o.arrivedAtPickupAt } : null,
     pickupQr: qrs.get(o.id) || null,
   });
 
   return {
-    preparing: orders.filter((o) => PREPARING_STATUSES.includes(o.orderStatus)).map(toCard),
-    ready: orders.filter((o) => READY_STATUSES.includes(o.orderStatus)).map(toCard)
-      .sort((a, b) => new Date(a.readySince) - new Date(b.readySince)),
+    ready: orders.map(toCard).sort((a, b) => new Date(a.readySince) - new Date(b.readySince)),
   };
 }
 

@@ -20,14 +20,13 @@ const CARD = {
 
 paths['/hub-display/board'] = {
   get: {
-    tags: TAG, summary: 'This screen\'s hub and its preparing / ready-for-pickup orders (no customer details or amounts)', ...security,
+    tags: TAG, summary: 'This screen\'s hub and its ready-for-pickup orders (no customer details or amounts)', ...security,
     responses: {
       200: envelope({
         type: 'object',
         properties: {
           display: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' } } },
           hub: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, address: { type: 'string' } } },
-          preparing: { type: 'array', items: CARD },
           ready: { type: 'array', items: CARD },
           serverTime: { type: 'string', format: 'date-time' },
         },

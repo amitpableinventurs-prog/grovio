@@ -12,7 +12,7 @@ const {
 // Endpoints for the Hub Center screen itself (/hub-display page), authenticated by its device key
 // — see middleware/hubDisplayAuth.middleware.js.
 
-// GET /hub-display/board -> which screen/hub this is, plus the hub's preparing and ready orders
+// GET /hub-display/board -> which screen/hub this is, plus the hub's orders ready for pickup
 // (each ready one with its pickup QR — see hubDisplay.service.js). The screen calls this on load
 // and again whenever a 'hub:order' socket event arrives.
 const getBoard = catchAsync(async (req, res) => {
