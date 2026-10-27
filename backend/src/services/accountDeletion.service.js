@@ -7,8 +7,8 @@ const {
 const ApiError = require('../utils/apiError');
 
 // Deleting a customer, picker or delivery partner account — by the person from their app
-// (DELETE /customer/account, /picker/account, /delivery/account) or, for a customer, by an admin
-// (DELETE /admin/customers/:id). Their personal data goes: devices, sessions, notifications and the
+// (DELETE /customer/account, /picker/account, /delivery/account) or, for a customer or picker, by an
+// admin (DELETE /admin/customers/:id, /admin/pickers/:id). Their personal data goes: devices, sessions, notifications and the
 // name/phone/email/photo on the user, plus per role — a customer's addresses, cart and wishlist; a
 // picker's ID proof, address and emergency contact; a delivery partner's KYC, address proof, selfies,
 // bank details and emergency contact (uploaded documents are removed from disk too). The user
@@ -25,7 +25,7 @@ const openOrdersBlocker = (orders, waitFor) => (orders.length
   ? [{ code: 'open_orders', message: `${orders.length} order(s) still in progress (${orders.map((o) => o.orderNumber).join(', ')}). Try again once they are ${waitFor}.` }]
   : []);
 const pendingSettlementBlocker = (count) => (count
-  ? [{ code: 'pending_settlement', message: 'A payout to you is still being processed. Try again once it is paid.' }]
+  ? [{ code: 'pending_settlement', message: 'A payout is still being processed. Try again once it is paid.' }]
   : []);
 
 // What has to be finished before the account can go, per role: [{ code, message }].

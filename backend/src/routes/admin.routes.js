@@ -48,7 +48,7 @@ router.get('/dashboard', dashboardCtrl.getStats);
 // Users by role
 const p = requirePermission;
 router.get('/customers', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.VIEW_REPORTS), usersCtrl.listByRole('customer'));
-router.delete('/customers/:id', p(PERMISSIONS.MANAGE_ORDERS), usersCtrl.deleteCustomer);
+router.delete('/customers/:id', p(PERMISSIONS.MANAGE_ORDERS), usersCtrl.deleteByRole('customer'));
 router.get('/pickers', p(PERMISSIONS.MANAGE_PICKERS), usersCtrl.listByRole('picker'));
 router.post(
   '/pickers',
@@ -62,6 +62,7 @@ router.put(
   upload.fields([{ name: 'profilePhoto', maxCount: 1 }, { name: 'idProofDocument', maxCount: 1 }]),
   pickersCtrl.updatePicker
 );
+router.delete('/pickers/:id', p(PERMISSIONS.MANAGE_PICKERS), usersCtrl.deleteByRole('picker'));
 router.get('/delivery-partners', p(PERMISSIONS.MANAGE_DELIVERY), usersCtrl.listByRole('delivery'));
 router.post('/delivery-partners', p(PERMISSIONS.MANAGE_DELIVERY), adminBankRules, validate, deliveryPartnersCtrl.createDeliveryPartner);
 router.put('/delivery-partners/:id', p(PERMISSIONS.MANAGE_DELIVERY), adminBankRules, validate, deliveryPartnersCtrl.updateDeliveryPartner);

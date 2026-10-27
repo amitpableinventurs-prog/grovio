@@ -91,6 +91,13 @@ paths['/admin/pickers/{id}'] = {
     }),
     responses: { 200: envelope({ type: 'object', properties: { user: ref('User'), pickerProfile: ref('PickerProfile') } }, 'Picker updated'), 401: RESPONSES_401, 404: RESPONSES_404 },
   },
+  delete: {
+    tags: TAG_USERS,
+    summary: 'Delete a picker account — same as DELETE /picker/account. Requires manage_pickers',
+    description: 'ID proof (number and document), address and emergency contact are removed and the picker is unlinked from their store; picking and pay history is kept under "Deleted user". Refused (400, blockers in errors[]) while a pick task is in progress or a payout is pending.',
+    ...bearer(), parameters: [idParam('id', 'Picker USER ID')],
+    responses: { 200: envelope(null, 'Picker deleted'), 400: errorResponse('1 order(s) still in progress (GRV1024). Try again once they are picked or handed to another picker.'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
+  },
 };
 
 paths['/admin/delivery-partners'] = userListPath('delivery', 'Requires manage_delivery permission');

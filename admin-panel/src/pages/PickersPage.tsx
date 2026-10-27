@@ -16,7 +16,7 @@ import {
   App as AntApp,
 } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchUsersByRole, fetchUserDetail, updatePickerStatus, assignPickerToStore, toggleUserActive } from '../api/users';
+import { fetchUsersByRole, fetchUserDetail, updatePickerStatus, assignPickerToStore, toggleUserActive, deletePicker } from '../api/users';
 import { fetchStores } from '../api/stores';
 import type { UserWithProfile, Store, PickerOnboarding } from '../types';
 import { usePageState } from '../hooks/usePageState';
@@ -108,6 +108,16 @@ export default function PickersPage() {
       message.success('Updated');
       refreshPickers();
     },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deletePicker,
+    onSuccess: (_, id) => {
+      message.success('Picker deleted');
+      if (detailId === id) setDetailId(null);
+      refreshPickers();
+    },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Could not delete picker'),
   });
 
   const storeIdOf = (r: UserWithProfile) =>
@@ -216,6 +226,22 @@ export default function PickersPage() {
                 <Button size="small" onClick={() => activeMutation.mutate({ id: r._id, isActive: !r.isActive })}>
                   {r.isActive ? 'Disable Login' : 'Enable Login'}
                 </Button>
+                <Popconfirm
+                  title={`Delete ${r.name}'s account?`}
+                  description={
+                    <div style={{ maxWidth: 280 }}>
+                      Their ID proof, address and emergency contact are removed for good and they're unlinked from their store. Past picking
+                      and pay records stay, under "Deleted user". Any wallet balance is lost.
+                    </div>
+                  }
+                  okText="Delete"
+                  okButtonProps={{ danger: true }}
+                  onConfirm={() => deleteMutation.mutate(r._id)}
+                >
+                  <Button size="small" danger>
+                    Delete
+                  </Button>
+                </Popconfirm>
               </Space>
             ),
           },
