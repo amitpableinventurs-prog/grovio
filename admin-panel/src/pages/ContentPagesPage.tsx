@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Typography, Tabs, Form, Input, Button, Card, App as AntApp, Spin } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchContentPages, updateContentPage, type ContentPage, type ContentSlug } from '../api/contentPages';
+import RichTextEditor from '../components/RichTextEditor';
 
 const LABELS: Record<ContentSlug, string> = {
   'about-us': 'About Us',
@@ -30,16 +31,15 @@ function ContentPageEditor({ page }: { page: ContentPage }) {
   return (
     <Card>
       <Typography.Paragraph type="secondary">
-        Content is HTML, rendered as-is on the customer site at{' '}
-        <code>/{page.slug === 'terms-and-conditions' ? 'terms' : page.slug}</code>. Use tags like <code>&lt;h2&gt;</code>,{' '}
-        <code>&lt;p&gt;</code>, <code>&lt;ul&gt;&lt;li&gt;</code>, and <code>&lt;a href="..."&gt;</code>.
+        Shown on the customer site at <code>/{page.slug === 'terms-and-conditions' ? 'terms' : page.slug}</code>. Use
+        Heading for section titles; the HTML button shows the raw source.
       </Typography.Paragraph>
       <Form form={form} layout="vertical" onFinish={(values) => mutation.mutate(values)}>
         <Form.Item name="title" label="Page Title" rules={[{ required: true }]}>
           <Input />
         </Form.Item>
-        <Form.Item name="content" label="Content (HTML)" rules={[{ required: true }]}>
-          <Input.TextArea rows={20} style={{ fontFamily: 'monospace', fontSize: 13 }} />
+        <Form.Item name="content" label="Content" rules={[{ required: true, message: 'Content is required' }]}>
+          <RichTextEditor />
         </Form.Item>
         <Button type="primary" htmlType="submit" loading={mutation.isPending}>
           Save

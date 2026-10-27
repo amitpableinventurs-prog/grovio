@@ -95,7 +95,7 @@ paths['/delivery/location'] = {
 };
 paths['/delivery/profile'] = {
   get: { tags: TAG, summary: 'Get my delivery profile', ...bearer(), responses: { 200: envelope(ref('DeliveryProfile')), 401: RESPONSES_401, 404: RESPONSES_404 } },
-  patch: { tags: TAG, summary: 'Update vehicle/license details', ...bearer(), requestBody: jsonBody({ vehicleType: { type: 'string' }, vehicleNumber: { type: 'string' }, licenseNumber: { type: 'string' } }), responses: { 200: envelope(ref('DeliveryProfile'), 'Profile updated'), 401: RESPONSES_401 } },
+  patch: { tags: TAG, summary: 'Update vehicle/license details and the SOS emergency contact', ...bearer(), requestBody: jsonBody({ vehicleType: { type: 'string' }, vehicleNumber: { type: 'string' }, licenseNumber: { type: 'string' }, emergencyContactName: { type: 'string', example: 'Sunita (wife)' }, emergencyContactPhone: { type: 'string', example: '9876543210', description: 'Texted the live location when this partner raises an SOS' } }), responses: { 200: envelope(ref('DeliveryProfile'), 'Profile updated'), 401: RESPONSES_401 } },
 };
 const num = (example, description) => ({ type: 'number', nullable: true, example, ...(description ? { description } : {}) });
 const RequestCard = {
@@ -195,6 +195,49 @@ const HUB_CHECKIN = {
     expiresAt: { type: 'string', format: 'date-time' },
     mine: { type: 'array', items: HUB_ORDER, description: 'Assigned to me / picked up at this hub' },
     available: { type: 'array', items: HUB_ORDER, description: 'Packed, no delivery partner yet — claimable' },
+  },
+};
+paths['/delivery/hub/scan'] = {
+  post: {
+    tags: TAG,
+    summary: "The Delivery app's one scanner for hub screens. An order's QR (…/hub-checkin/?p=…) takes the order and picks it up in one step; the check-in QR (…/hub-checkin/?t=…) checks in, same as /delivery/hub/checkin",
+    description: [
+      'Send whatever the camera read as `code` (the full URL or just the token) and the phone\'s current `lat`/`lng`.',
+      '',
+      '**Order QR** (`type: "pickup"`):',
+      '- The rider must be approved, online and within the pickup geofence of the hub (min 150 m). Otherwise 400.',
+      "- A packed order with no rider becomes theirs (`packed -> assigned`, accepted). If another rider took it first: 409.",
+      '- Then `assigned -> picked_up`. The QR leaves the screen and the screen flashes "#1234 → Ramesh" so the hub picker hands over the right bag.',
+      '- Frozen items with no cold bag yet: `pickedUp: false`, `nextStep: "scan_cold_bag"`. The order stays theirs; scan a cold bag (`POST /delivery/jobs/{id}/cold-bag`), then this order QR again.',
+      '- Next: `POST /delivery/jobs/{id}/out-for-delivery`, then open the map at `drop` (or `navigation.googleMapsUrl`) and keep sending `delivery:location` pings — the customer sees them live.',
+      '',
+      '**Check-in QR** (`type: "checkin"`): same response as `POST /delivery/hub/checkin`, plus `type`.',
+    ].join('\n'),
+    ...bearer(),
+    requestBody: jsonBody({
+      code: { type: 'string', description: 'The scanned QR content — the full URL or just the token' },
+      lat: { type: 'number', example: 23.8343, description: 'Current position, for the at-the-hub check (falls back to the last GPS ping if recent)' },
+      lng: { type: 'number', example: 80.3894 },
+      deviceId: { type: 'string' },
+    }, ['code']),
+    responses: {
+      200: envelope({
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['pickup', 'checkin'] },
+          pickedUp: { type: 'boolean', description: 'pickup only' },
+          nextStep: { type: 'string', enum: ['start_delivery', 'scan_cold_bag'], description: 'pickup only' },
+          order: { ...ref('Order'), description: 'pickup only — with address, store and customer name populated' },
+          drop: { type: 'object', nullable: true, properties: { lat: { type: 'number' }, lng: { type: 'number' } }, description: "pickup only — the customer's location" },
+          navigation: { type: 'object', nullable: true, properties: { googleMapsUrl: { type: 'string' }, androidIntent: { type: 'string' } } },
+        },
+        description: 'For type "checkin" the fields of /delivery/hub/checkin (hub, checkedInAt, expiresAt, mine, available) come instead',
+      }, 'Order GRV-…-4821 is yours. Take the bag and start the delivery.'),
+      400: errorResponse('QR no longer valid, offline, not at the hub, no location, or order not ready'),
+      401: RESPONSES_401,
+      403: errorResponse('Account not approved'),
+      409: errorResponse('Another delivery partner has already taken this order'),
+    },
   },
 };
 paths['/delivery/hub/checkin'] = {

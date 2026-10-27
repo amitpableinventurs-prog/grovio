@@ -62,6 +62,12 @@ function userListPath(role, description) {
 }
 paths['/admin/vendors'] = userListPath('vendor', 'Requires manage_vendors permission');
 paths['/admin/customers'] = userListPath('customer', 'Requires manage_orders or view_reports permission');
+paths['/admin/customers/{id}'] = {
+  delete: {
+    tags: TAG_USERS, summary: 'Delete a customer account — same as DELETE /customer/account (personal data removed, orders/payments kept under "Deleted user"); refused while an order is in progress. Requires manage_orders', ...bearer(), parameters: [idParam()],
+    responses: { 200: envelope(null, 'Customer deleted'), 400: errorResponse('Cannot delete — 1 order(s) still in progress (GRV1024). Try again once they are delivered or cancelled.'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
+  },
+};
 paths['/admin/pickers'] = userListPath('picker', 'Requires manage_pickers permission. Each item also carries `onboarding: { status, profileComplete, kycComplete, nextStep }` — the same object the Picker app gets — so a pending picker can be checked for a complete Register step and KYC upload before approval.');
 paths['/admin/pickers'].post = {
   tags: TAG_USERS, summary: 'Onboard a picker directly (created already approved; pickers can also self-register in the app)', ...bearer(),
@@ -170,6 +176,10 @@ paths['/admin/stores/{id}'] = {
     requestBody: jsonBody({ zoneId: { type: 'string' }, status: { type: 'string', enum: ['active', 'inactive'] }, openTime: { type: 'string' }, closeTime: { type: 'string' } }),
     responses: { 200: envelope(ref('Store'), 'Store updated'), 401: RESPONSES_401, 404: RESPONSES_404 },
   },
+  delete: {
+    tags: TAG_STORES, summary: 'Delete a store with its products and hub screens (refused once it has order or gig history — deactivate it instead)', ...bearer(), parameters: [idParam()],
+    responses: { 200: envelope(null, 'Store deleted'), 400: errorResponse('Cannot delete — this store has 3 order(s). Deactivate it instead.'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
+  },
 };
 
 const HUB_DISPLAY = {
@@ -268,6 +278,20 @@ paths['/admin/orders/{id}'] = {
   get: {
     tags: TAG_ORDERS, summary: 'Get full order detail', ...bearer(), parameters: [idParam()],
     responses: { 200: envelope(ref('Order')), 401: RESPONSES_401, 404: RESPONSES_404 },
+  },
+  delete: {
+    tags: TAG_ORDERS,
+    summary: 'Delete an order for good. Requires manage_orders',
+    description: 'Also deletes its payments, refunds, coupon usage, review, scanner logs, IVR/masked calls and picker errors; SOS alerts, support tickets and wallet transactions lose the link; trips drop it (an empty trip is removed). Nothing is refunded and the customer is not notified — cancel instead to stop a live order.',
+    ...bearer(), parameters: [idParam()],
+    responses: { 200: envelope(null, 'Order deleted'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
+  },
+};
+paths['/admin/orders/delete'] = {
+  post: {
+    tags: TAG_ORDERS, summary: 'Delete several orders at once (same as DELETE /admin/orders/{id}). Requires manage_orders', ...bearer(),
+    requestBody: jsonBody({ ids: { type: 'array', items: { type: 'string' } } }, ['ids']),
+    responses: { 200: envelope({ type: 'object', properties: { deleted: { type: 'integer', example: 3 } } }, '3 order(s) deleted'), 400: errorResponse('ids must be a non-empty array of order IDs'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
   },
 };
 paths['/admin/orders/{id}/assign-picker'] = {

@@ -27,6 +27,8 @@ import {
   PhoneOutlined,
   ScheduleOutlined,
   AudioOutlined,
+  AlertOutlined,
+  MoneyCollectOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -34,8 +36,14 @@ import { hasPermission, PERMISSIONS } from '../utils/permissions';
 import { logout as logoutApi } from '../api/auth';
 import { useOrderRealtime } from '../realtime/useOrderRealtime';
 import { useSocketConnected } from '../realtime/socket';
+import { useSosRealtime } from '../realtime/useSosRealtime';
+import { useQuery } from '@tanstack/react-query';
+import { fetchSosAlerts } from '../api/sos';
 
 const { Header, Sider, Content } = Layout;
+
+// Who sees SOS alerts (matches backend routes/admin.routes.js SOS_PERMS).
+const SOS_PERMISSIONS = [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY];
 
 interface NavItem {
   key: string;
@@ -54,6 +62,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'delivery', path: '/delivery-partners', label: 'Delivery Partners', icon: <CarOutlined />, permissions: [PERMISSIONS.MANAGE_DELIVERY] },
   { key: 'categories', path: '/categories', label: 'Categories', icon: <AppstoreOutlined />, permissions: [PERMISSIONS.MANAGE_CATALOG] },
   { key: 'products', path: '/products', label: 'Products', icon: <AppstoreOutlined />, permissions: [PERMISSIONS.MANAGE_CATALOG, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
+  { key: 'sos', path: '/sos', label: 'SOS Alerts', icon: <AlertOutlined />, permissions: SOS_PERMISSIONS },
   { key: 'live-map', path: '/live-map', label: 'Live Map', icon: <EnvironmentOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
   { key: 'gigs', path: '/gigs', label: 'Gigs', icon: <ScheduleOutlined />, permissions: [PERMISSIONS.MANAGE_DELIVERY] },
   { key: 'orders', path: '/orders', label: 'Orders', icon: <ShoppingCartOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
@@ -61,6 +70,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'coupons', path: '/coupons', label: 'Coupons', icon: <TagsOutlined />, permissions: [PERMISSIONS.MANAGE_PROMOTIONS] },
   { key: 'banners', path: '/banners', label: 'Banners', icon: <PictureOutlined />, permissions: [PERMISSIONS.MANAGE_PROMOTIONS] },
   { key: 'payments', path: '/payments', label: 'Payments & Refunds', icon: <CreditCardOutlined />, permissions: [PERMISSIONS.MANAGE_PAYMENTS] },
+  { key: 'cash-collection', path: '/cash-collection', label: 'Cash Collection', icon: <MoneyCollectOutlined />, permissions: [PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS] },
   { key: 'settlements', path: '/settlements', label: 'Settlements', icon: <WalletOutlined />, permissions: [PERMISSIONS.MANAGE_SETTLEMENTS] },
   { key: 'reports', path: '/reports', label: 'Reports', icon: <BarChartOutlined />, permissions: [PERMISSIONS.VIEW_REPORTS] },
   { key: 'ivr-calls', path: '/ivr-calls', label: 'Call Logs (IVR)', icon: <PhoneOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS] },
@@ -93,6 +103,15 @@ export default function AdminLayout() {
   const location = useLocation();
   const live = useSocketConnected();
   useOrderRealtime();
+  const canSeeSos = hasPermission(user?.permissions, ...SOS_PERMISSIONS);
+  useSosRealtime(canSeeSos);
+  // Red count on the SOS menu item while any alert is still open or acknowledged.
+  const { data: sosActive } = useQuery({
+    queryKey: ['sos', 'active-count'],
+    queryFn: () => fetchSosAlerts({ status: 'active', limit: 1 }),
+    enabled: canSeeSos,
+    refetchInterval: 60000,
+  });
   const brandLabel = isStoreManager(user?.permissions) ? 'Grovio Vendor' : 'Grovio Admin';
 
   const visibleItems = useMemo(
@@ -143,7 +162,9 @@ export default function AdminLayout() {
           items={visibleItems.map((item) => ({
             key: item.key,
             icon: item.icon,
-            label: item.label,
+            label: item.key === 'sos' && sosActive?.activeCount
+              ? <Space size={8}>{item.label}<Badge count={sosActive.activeCount} /></Space>
+              : item.label,
           }))}
           onClick={({ key }) => {
             const item = visibleItems.find((i) => i.key === key);

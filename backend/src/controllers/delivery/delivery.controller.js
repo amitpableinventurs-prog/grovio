@@ -26,10 +26,13 @@ const updateProfile = catchAsync(async (req, res) => {
   const profile = await DeliveryProfile.findOne({ user: req.user.id });
   if (!profile) throw new ApiError(404, 'Delivery profile not found');
 
-  const { vehicleType, vehicleNumber, licenseNumber } = req.body;
+  const { vehicleType, vehicleNumber, licenseNumber, emergencyContactName, emergencyContactPhone } = req.body;
   if (vehicleType !== undefined) profile.vehicleType = vehicleType;
   if (vehicleNumber !== undefined) profile.vehicleNumber = vehicleNumber;
   if (licenseNumber !== undefined) profile.licenseNumber = licenseNumber;
+  // Texted with the live location on an SOS (services/sos.service.js).
+  if (emergencyContactName !== undefined) profile.emergencyContactName = emergencyContactName || null;
+  if (emergencyContactPhone !== undefined) profile.emergencyContactPhone = emergencyContactPhone || null;
   await profile.save();
 
   new ApiResponse(200, profile, 'Profile updated').send(res);

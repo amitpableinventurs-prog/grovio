@@ -15,12 +15,14 @@ import OrdersPage from './pages/OrdersPage';
 import LiveMapPage from './pages/LiveMapPage';
 import IvrCallsPage from './pages/IvrCallsPage';
 import VoipCallsPage from './pages/VoipCallsPage';
+import SosAlertsPage from './pages/SosAlertsPage';
 import GigsPage from './pages/GigsPage';
 import ChargesPage from './pages/ChargesPage';
 import InventoryPage from './pages/InventoryPage';
 import CouponsPage from './pages/CouponsPage';
 import BannersPage from './pages/BannersPage';
 import PaymentsPage from './pages/PaymentsPage';
+import CashCollectionPage from './pages/CashCollectionPage';
 import SettlementsPage from './pages/SettlementsPage';
 import ReportsPage from './pages/ReportsPage';
 import SupportTicketsPage from './pages/SupportTicketsPage';
@@ -117,6 +119,14 @@ export default function App() {
             }
           />
           <Route
+            path="/sos"
+            element={
+              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY]}>
+                <SosAlertsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/voip-calls"
             element={
               <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_ORDERS]}>
@@ -161,6 +171,14 @@ export default function App() {
             element={
               <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_PAYMENTS]}>
                 <PaymentsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cash-collection"
+            element={
+              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS]}>
+                <CashCollectionPage />
               </ProtectedRoute>
             }
           />

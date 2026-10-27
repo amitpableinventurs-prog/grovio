@@ -285,8 +285,9 @@ const getOrderDetail = catchAsync(async (req, res) => {
 const getTracking = catchAsync(async (req, res) => {
   const order = await Order.findOne({ _id: req.params.id, customer: req.user.id })
     .select('orderNumber orderStatus statusLogs deliveredAt delivery store address placedAt createdAt arrivedAtPickupAt arrivedAtDropAt')
-    // No phone: the customer calls the rider in-app (POST /customer/orders/:id/call).
-    .populate('delivery', 'name')
+    // Phone too, so the tracking screen can show the rider's number (the in-app masked call,
+    // POST /customer/orders/:id/call, still works as well).
+    .populate('delivery', 'name phone')
     .populate('store', 'name lat lng')
     .populate('address', 'lat lng');
   if (!order) throw new ApiError(404, 'Order not found');

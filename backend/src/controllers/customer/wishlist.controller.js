@@ -70,7 +70,7 @@ const shareWishlist = catchAsync(async (req, res) => {
 // DELETE /customer/wishlist/share -> turns sharing back off; any previously shared link stops working
 const unshareWishlist = catchAsync(async (req, res) => {
   const wishlist = await getOrCreateWishlist(req.user.id);
-  wishlist.shareToken = null;
+  wishlist.shareToken = undefined; // $unset, not null — see the note on shareToken in the model
   await wishlist.save();
   new ApiResponse(200, null, 'Wishlist sharing disabled').send(res);
 });

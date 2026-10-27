@@ -12,13 +12,19 @@ import {
   Form,
   InputNumber,
   Input,
+  Popconfirm,
   App as AntApp,
 } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchOrders, fetchOrder, assignPickerToOrder, assignDeliveryToOrder, issueRefund, fetchScannerLogs, cancelOrderAdmin, markOrderReturned } from '../api/orders';
+import {
+  fetchOrders, fetchOrder, assignPickerToOrder, assignDeliveryToOrder, issueRefund, fetchScannerLogs, cancelOrderAdmin, markOrderReturned,
+  deleteOrder, deleteOrders,
+} from '../api/orders';
 import { fetchUsersByRole } from '../api/users';
 import type { Order, User, Store } from '../types';
 import { usePageState } from '../hooks/usePageState';
+import { useAuthStore } from '../store/authStore';
+import { hasPermission, PERMISSIONS } from '../utils/permissions';
 import StatusTag from '../components/StatusTag';
 import OrderLiveTracking from '../components/OrderLiveTracking';
 import { formatCurrency, formatDateTime, titleCase } from '../utils/format';
@@ -42,8 +48,11 @@ export default function OrdersPage() {
   const [cancelForm] = Form.useForm();
   const [returnOpen, setReturnOpen] = useState(false);
   const [returnForm] = Form.useForm();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const { message } = AntApp.useApp();
   const queryClient = useQueryClient();
+  // Store managers see their store's orders here too, but only a full orders admin can delete.
+  const canDelete = hasPermission(useAuthStore((s) => s.user?.permissions) || [], PERMISSIONS.MANAGE_ORDERS);
 
   const { data, isLoading } = useQuery({
     queryKey: ['orders', page, pageSize, status],
@@ -71,7 +80,7 @@ export default function OrdersPage() {
   const pickerOptions = useMemo(() => {
     const base = pickers?.items.map((p) => ({ value: p._id, label: p.name })) ?? [];
     (order?.pickTasks ?? []).forEach((t) => {
-      if (typeof t.picker === 'object') {
+      if (t.picker && typeof t.picker === 'object') {
         const assigned = t.picker as User;
         if (!base.some((o) => o.value === assigned._id)) base.push({ value: assigned._id, label: assigned.name });
       }
@@ -87,7 +96,7 @@ export default function OrdersPage() {
 
   const deliveryOptions = useMemo(() => {
     const base = deliveryPartners?.items.map((p) => ({ value: p._id, label: p.name })) ?? [];
-    const assigned = order && typeof order.delivery === 'object' ? (order.delivery as User) : null;
+    const assigned = order?.delivery && typeof order.delivery === 'object' ? (order.delivery as User) : null;
     if (assigned && !base.some((o) => o.value === assigned._id)) {
       base.push({ value: assigned._id, label: assigned.name });
     }
@@ -148,28 +157,60 @@ export default function OrdersPage() {
     onError: (err: any) => message.error(err?.response?.data?.message || 'Could not mark order as returned'),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (ids: string[]) => (ids.length === 1 ? deleteOrder(ids[0]).then(() => ({ deleted: 1 })) : deleteOrders(ids)),
+    onSuccess: ({ deleted }) => {
+      message.success(deleted === 1 ? 'Order deleted' : `${deleted} orders deleted`);
+      setSelectedIds([]);
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    },
+    onError: (err: any) => message.error(err?.response?.data?.message || 'Could not delete'),
+  });
+
+  const deleteWarning = 'Its payments, refunds and review are deleted too. Nothing is refunded and the customer is not told — cancel instead to stop a live order.';
+
   return (
     <div>
       <Typography.Title level={3}>Orders</Typography.Title>
 
-      <Select
-        placeholder="Filter by status"
-        allowClear
-        style={{ width: 220, marginBottom: 16 }}
-        value={status}
-        onChange={setStatus}
-        options={ORDER_STATUSES.map((s) => ({ value: s, label: titleCase(s) }))}
-      />
+      <Space style={{ marginBottom: 16 }} wrap>
+        <Select
+          placeholder="Filter by status"
+          allowClear
+          style={{ width: 220 }}
+          value={status}
+          onChange={(value) => {
+            setStatus(value);
+            setSelectedIds([]);
+          }}
+          options={ORDER_STATUSES.map((s) => ({ value: s, label: titleCase(s) }))}
+        />
+        {canDelete && selectedIds.length > 0 && (
+          <Popconfirm
+            title={`Delete ${selectedIds.length} order(s)?`}
+            description={<div style={{ maxWidth: 300 }}>{deleteWarning}</div>}
+            okText="Delete"
+            okButtonProps={{ danger: true }}
+            onConfirm={() => deleteMutation.mutate(selectedIds)}
+          >
+            <Button danger loading={deleteMutation.isPending}>
+              Delete selected ({selectedIds.length})
+            </Button>
+          </Popconfirm>
+        )}
+      </Space>
 
       <Table<Order>
         rowKey="_id"
         loading={isLoading}
         dataSource={data?.items}
+        rowSelection={canDelete ? { selectedRowKeys: selectedIds, onChange: (keys) => setSelectedIds(keys as string[]) } : undefined}
         pagination={{ current: page, pageSize, total: data?.meta.totalItems, onChange, showSizeChanger: true }}
         columns={[
           { title: 'Order #', dataIndex: 'orderNumber' },
-          { title: 'Customer', render: (_, r) => (typeof r.customer === 'object' ? (r.customer as User).name : '—') },
-          { title: 'Store', render: (_, r) => (typeof r.store === 'object' ? (r.store as Store).name : '—') },
+          // A deleted customer/store populates as null (and typeof null is 'object').
+          { title: 'Customer', render: (_, r) => (r.customer && typeof r.customer === 'object' ? (r.customer as User).name : '—') },
+          { title: 'Store', render: (_, r) => (r.store && typeof r.store === 'object' ? (r.store as Store).name : '—') },
           { title: 'Total', render: (_, r) => formatCurrency(r.grandTotal) },
           { title: 'Payment', render: (_, r) => <StatusTag status={r.paymentStatus} /> },
           { title: 'Status', render: (_, r) => <StatusTag status={r.orderStatus} /> },
@@ -177,9 +218,24 @@ export default function OrdersPage() {
           {
             title: 'Actions',
             render: (_, r) => (
-              <Button size="small" onClick={() => setDetailId(r._id)}>
-                View
-              </Button>
+              <Space>
+                <Button size="small" onClick={() => setDetailId(r._id)}>
+                  View
+                </Button>
+                {canDelete && (
+                  <Popconfirm
+                    title={`Delete order ${r.orderNumber}?`}
+                    description={<div style={{ maxWidth: 300 }}>{deleteWarning}</div>}
+                    okText="Delete"
+                    okButtonProps={{ danger: true }}
+                    onConfirm={() => deleteMutation.mutate([r._id])}
+                  >
+                    <Button size="small" danger>
+                      Delete
+                    </Button>
+                  </Popconfirm>
+                )}
+              </Space>
             ),
           },
         ]}
@@ -287,7 +343,7 @@ export default function OrdersPage() {
                   dataSource={scannerLogs.items}
                   columns={[
                     { title: 'When', render: (_, r) => formatDateTime(r.createdAt) },
-                    { title: 'By', render: (_, r) => (typeof r.scannedBy === 'object' ? r.scannedBy.name : r.scannedBy) },
+                    { title: 'By', render: (_, r) => (r.scannedBy && typeof r.scannedBy === 'object' ? r.scannedBy.name : r.scannedBy || '—') },
                     { title: 'Role', render: (_, r) => titleCase(r.userType) },
                     { title: 'Result', render: (_, r) => <StatusTag status={r.status} /> },
                     { title: 'Reason', render: (_, r) => r.failureReason || '—' },

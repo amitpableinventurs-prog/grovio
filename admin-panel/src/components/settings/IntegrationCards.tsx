@@ -18,6 +18,9 @@ function secretHint(value?: string | null) {
 
 const secretInput = <Input.Password placeholder="Leave blank to keep existing" autoComplete="new-password" />;
 
+// Rows of short fields: equal-width columns that wrap, so labels and inputs line up.
+const fieldGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', columnGap: 16 } as const;
+
 // Comma-separated string setting <-> multi-select value. An empty selection is saved as 'none' —
 // a blank setting would fall back to the backend defaults instead of switching everything off.
 const csvProps = {
@@ -39,7 +42,7 @@ type Settings = Record<string, string | null | undefined> | undefined;
 
 export function PaymentOptionsCard() {
   return (
-    <Card title="Checkout Payment Options" style={{ maxWidth: 640 }}>
+    <Card title="Checkout Payment Options">
       <Typography.Paragraph type="secondary">
         What customers can pick at checkout. PayU and PhonePe only appear once their keys below are set. Wallet is always available.
       </Typography.Paragraph>
@@ -55,7 +58,7 @@ export function PaymentOptionsCard() {
 
 export function PayuCard({ data }: { data: Settings }) {
   return (
-    <Card title="Payment Gateway — PayU" style={{ maxWidth: 640 }}>
+    <Card title="Payment Gateway — PayU">
       <Typography.Paragraph type="secondary">
         From the PayU dashboard (Developers &gt; API Keys). In PayU, set the webhook URL to{' '}
         <Typography.Text code copyable>{`${API_ORIGIN}/api/v1/payments/payu/webhook`}</Typography.Text>
@@ -71,7 +74,7 @@ export function PayuCard({ data }: { data: Settings }) {
 
 export function PhonepeCard({ data }: { data: Settings }) {
   return (
-    <Card title="Payment Gateway — PhonePe" style={{ maxWidth: 640 }}>
+    <Card title="Payment Gateway — PhonePe">
       <Typography.Paragraph type="secondary">
         PhonePe PG Standard Checkout credentials (Business dashboard &gt; Developer Settings). Webhook URL:{' '}
         <Typography.Text code copyable>{`${API_ORIGIN}/api/v1/payments/phonepe/webhook`}</Typography.Text>{' '}
@@ -83,32 +86,46 @@ export function PhonepeCard({ data }: { data: Settings }) {
       <Form.Item name="phonepeClientId" label="Client ID"><Input /></Form.Item>
       <Form.Item name="phonepeClientSecret" label="Client Secret" extra={secretHint(data?.phonepeClientSecret)}>{secretInput}</Form.Item>
       <Form.Item name="phonepeClientVersion" label="Client Version"><Input placeholder="1" /></Form.Item>
-      <Space style={{ display: 'flex' }}>
-        <Form.Item name="phonepeWebhookUsername" label="Webhook Username" style={{ flex: 1 }}><Input /></Form.Item>
-        <Form.Item name="phonepeWebhookPassword" label="Webhook Password" extra={secretHint(data?.phonepeWebhookPassword)} style={{ flex: 1 }}>{secretInput}</Form.Item>
-      </Space>
+      <div style={fieldGrid}>
+        <Form.Item name="phonepeWebhookUsername" label="Webhook Username"><Input /></Form.Item>
+        <Form.Item name="phonepeWebhookPassword" label="Webhook Password" extra={secretHint(data?.phonepeWebhookPassword)}>{secretInput}</Form.Item>
+      </div>
     </Card>
   );
 }
 
 export function TrackingCard() {
   return (
-    <Card title="Tracking & Delivery Area" style={{ maxWidth: 640 }}>
+    <Card title="Tracking & Delivery Area">
       <Typography.Paragraph type="secondary">
         ETAs use straight-line distance × 1.3 at the average speed below. Geofences mark the rider as arrived automatically and
         trigger the "almost there" alert. Per-store delivery radius is set on the Stores page.
       </Typography.Paragraph>
-      <Space wrap>
-        <Form.Item name="trackingAvgSpeedKmph" label="Average rider speed (km/h)"><Input type="number" placeholder="20" style={{ width: 180 }} /></Form.Item>
-        <Form.Item name="trackingPickingMinutes" label="Picking + packing time (min)"><Input type="number" placeholder="10" style={{ width: 180 }} /></Form.Item>
-        <Form.Item name="defaultServiceRadiusKm" label="Default delivery radius (km)" extra="Blank = no limit"><Input type="number" style={{ width: 180 }} /></Form.Item>
-        <Form.Item name="deliveryRequestSeconds" label="Order request timer (sec)" extra="Countdown on the rider's New order request"><Input type="number" placeholder="30" style={{ width: 180 }} /></Form.Item>
-      </Space>
-      <Space wrap>
-        <Form.Item name="geofenceNearbyKm" label="“Almost there” alert (km)"><Input type="number" placeholder="1" style={{ width: 180 }} /></Form.Item>
-        <Form.Item name="geofencePickupMeters" label="Arrived at hub within (m)"><Input type="number" placeholder="100" style={{ width: 180 }} /></Form.Item>
-        <Form.Item name="geofenceDropMeters" label="Arrived at customer within (m)"><Input type="number" placeholder="100" style={{ width: 180 }} /></Form.Item>
-      </Space>
+      <div style={fieldGrid}>
+        <Form.Item name="trackingAvgSpeedKmph" label="Average rider speed (km/h)"><Input type="number" placeholder="20" /></Form.Item>
+        <Form.Item name="trackingPickingMinutes" label="Picking + packing time (min)"><Input type="number" placeholder="10" /></Form.Item>
+        <Form.Item name="defaultServiceRadiusKm" label="Default delivery radius (km)" extra="Blank = no limit"><Input type="number" /></Form.Item>
+        <Form.Item name="deliveryRequestSeconds" label="Order request timer (sec)" extra="Countdown on the rider's New order request"><Input type="number" placeholder="30" /></Form.Item>
+      </div>
+      <div style={fieldGrid}>
+        <Form.Item name="geofenceNearbyKm" label="“Almost there” alert (km)"><Input type="number" placeholder="1" /></Form.Item>
+        <Form.Item name="geofencePickupMeters" label="Arrived at hub within (m)"><Input type="number" placeholder="100" /></Form.Item>
+        <Form.Item name="geofenceDropMeters" label="Arrived at customer within (m)"><Input type="number" placeholder="100" /></Form.Item>
+      </div>
+      <Form.Item
+        name="hubPickupMode"
+        label="Hub pickup"
+        extra="Hub screen QR: each ready order shows its own QR on the hub screen, and the first rider at the hub to scan it takes the order. Auto-assign: the nearest rider is assigned when the order is packed, and the picker hands over with a QR or OTP."
+      >
+        <Select
+          placeholder="Hub screen QR"
+          style={{ maxWidth: 320 }}
+          options={[
+            { value: 'hub_screen', label: 'Hub screen QR (rider scans to take the order)' },
+            { value: 'auto_assign', label: 'Auto-assign nearest rider' },
+          ]}
+        />
+      </Form.Item>
     </Card>
   );
 }
@@ -118,7 +135,7 @@ export function IvrCard({ data, provider }: { data: Settings; provider?: string 
   const events = config?.availableEvents || Object.keys(EVENT_LABELS);
 
   return (
-    <Card title="IVR — Automatic Calls (Exotel)" style={{ maxWidth: 640 }}>
+    <Card title="IVR — Automatic Calls (Exotel)">
       <Typography.Paragraph type="secondary">
         With "None", calls are only recorded in Call Logs as simulated. With Exotel, calls go out from your ExoPhone using two
         call flows built in the Exotel dashboard (see the backend README, "IVR").
@@ -129,35 +146,35 @@ export function IvrCard({ data, provider }: { data: Settings; provider?: string 
 
       {provider === 'exotel' && (
         <>
-          <Space style={{ display: 'flex' }}>
-            <Form.Item name="exotelSid" label="Account SID" style={{ flex: 1 }}><Input /></Form.Item>
-            <Form.Item name="exotelSubdomain" label="API host" style={{ flex: 1 }} extra="api.exotel.com or api.in.exotel.com">
+          <div style={fieldGrid}>
+            <Form.Item name="exotelSid" label="Account SID"><Input /></Form.Item>
+            <Form.Item name="exotelSubdomain" label="API host" extra="api.exotel.com or api.in.exotel.com">
               <Input />
             </Form.Item>
-          </Space>
-          <Space style={{ display: 'flex' }}>
-            <Form.Item name="exotelApiKey" label="API Key" extra={secretHint(data?.exotelApiKey)} style={{ flex: 1 }}>{secretInput}</Form.Item>
-            <Form.Item name="exotelApiToken" label="API Token" extra={secretHint(data?.exotelApiToken)} style={{ flex: 1 }}>{secretInput}</Form.Item>
-          </Space>
+          </div>
+          <div style={fieldGrid}>
+            <Form.Item name="exotelApiKey" label="API Key" extra={secretHint(data?.exotelApiKey)}>{secretInput}</Form.Item>
+            <Form.Item name="exotelApiToken" label="API Token" extra={secretHint(data?.exotelApiToken)}>{secretInput}</Form.Item>
+          </div>
           <Form.Item name="exotelCallerId" label="Caller ID (ExoPhone)"><Input placeholder="e.g. 08047xxxxxx" /></Form.Item>
-          <Space style={{ display: 'flex' }}>
-            <Form.Item name="exotelMessageAppId" label="Message flow App ID" style={{ flex: 1 }} extra="Greeting → Hangup"><Input /></Form.Item>
-            <Form.Item name="exotelConfirmAppId" label="Confirmation flow App ID" style={{ flex: 1 }} extra="Greeting → Gather → Passthru → Greeting"><Input /></Form.Item>
-          </Space>
+          <div style={fieldGrid}>
+            <Form.Item name="exotelMessageAppId" label="Message flow App ID" extra="Greeting → Hangup"><Input /></Form.Item>
+            <Form.Item name="exotelConfirmAppId" label="Confirmation flow App ID" extra="Greeting → Gather → Passthru → Greeting"><Input /></Form.Item>
+          </div>
         </>
       )}
 
       <Form.Item name="ivrAutoCallEvents" label="Call the customer automatically when" {...csvProps}>
         <Select mode="multiple" allowClear options={events.map((e) => ({ value: e, label: EVENT_LABELS[e] || e }))} />
       </Form.Item>
-      <Space wrap>
+      <div style={fieldGrid}>
         <Form.Item name="ivrCodConfirmAbove" label="COD confirmation call for orders of ₹" extra="Blank = off, 0 = every COD order">
-          <Input type="number" style={{ width: 200 }} />
+          <Input type="number" />
         </Form.Item>
         <Form.Item name="ivrMissedCallCallback" label="Call back after a missed call">
-          <Select style={{ width: 120 }} options={ON_OFF} />
+          <Select options={ON_OFF} />
         </Form.Item>
-      </Space>
+      </div>
 
       {config && (
         <div style={{ marginTop: 8 }}>
@@ -189,7 +206,7 @@ export function VoipCard({ data, provider }: { data: Settings; provider?: string
   const { data: config } = useQuery({ queryKey: ['voip-config'], queryFn: fetchVoipConfig });
 
   return (
-    <Card title="In-app Calls — Masked Customer ↔ Rider Calls (Twilio)" style={{ maxWidth: 640 }}>
+    <Card title="In-app Calls — Masked Customer ↔ Rider Calls (Twilio)">
       <Typography.Paragraph type="secondary">
         Customers and delivery partners call each other inside the app (VoIP), so neither ever sees the other's phone number.
         Calls are only possible while the order is out for delivery. With "None", calls are only recorded in Masked Calls as
@@ -201,21 +218,21 @@ export function VoipCard({ data, provider }: { data: Settings; provider?: string
 
       {provider === 'twilio' && (
         <>
-          <Space style={{ display: 'flex' }}>
-            <Form.Item name="twilioAccountSid" label="Account SID" style={{ flex: 1 }}><Input placeholder="AC..." /></Form.Item>
-            <Form.Item name="twilioAuthToken" label="Auth Token" extra={secretHint(data?.twilioAuthToken)} style={{ flex: 1 }}>{secretInput}</Form.Item>
-          </Space>
-          <Space style={{ display: 'flex' }}>
-            <Form.Item name="twilioApiKeySid" label="API Key SID" style={{ flex: 1 }}><Input placeholder="SK..." /></Form.Item>
-            <Form.Item name="twilioApiKeySecret" label="API Key Secret" extra={secretHint(data?.twilioApiKeySecret)} style={{ flex: 1 }}>{secretInput}</Form.Item>
-          </Space>
+          <div style={fieldGrid}>
+            <Form.Item name="twilioAccountSid" label="Account SID"><Input placeholder="AC..." /></Form.Item>
+            <Form.Item name="twilioAuthToken" label="Auth Token" extra={secretHint(data?.twilioAuthToken)}>{secretInput}</Form.Item>
+          </div>
+          <div style={fieldGrid}>
+            <Form.Item name="twilioApiKeySid" label="API Key SID"><Input placeholder="SK..." /></Form.Item>
+            <Form.Item name="twilioApiKeySecret" label="API Key Secret" extra={secretHint(data?.twilioApiKeySecret)}>{secretInput}</Form.Item>
+          </div>
           <Form.Item name="twilioTwimlAppSid" label="TwiML App SID"><Input placeholder="AP..." /></Form.Item>
-          <Space style={{ display: 'flex' }}>
-            <Form.Item name="twilioPushCredentialAndroid" label="Push credential — Android (FCM)" style={{ flex: 1 }} extra="Optional: rings the rider app in background">
+          <div style={fieldGrid}>
+            <Form.Item name="twilioPushCredentialAndroid" label="Push credential — Android (FCM)" extra="Optional: rings the rider app in background">
               <Input placeholder="CR..." />
             </Form.Item>
-            <Form.Item name="twilioPushCredentialIos" label="Push credential — iOS (APNs)" style={{ flex: 1 }}><Input placeholder="CR..." /></Form.Item>
-          </Space>
+            <Form.Item name="twilioPushCredentialIos" label="Push credential — iOS (APNs)"><Input placeholder="CR..." /></Form.Item>
+          </div>
           <Form.Item name="voipRingSeconds" label="Ring for (seconds)"><Input type="number" placeholder="30" style={{ width: 180 }} /></Form.Item>
         </>
       )}
@@ -244,26 +261,26 @@ export function VoipCard({ data, provider }: { data: Settings; provider?: string
 // accountHold.service.js, collect.service.js). Pay itself is the rate card (RiderRateCard.tsx).
 export function RiderPayCard() {
   return (
-    <Card title="Delivery Partner Pocket & Rules" style={{ maxWidth: 640 }}>
+    <Card title="Delivery Partner Pocket & Rules">
       <Typography.Paragraph type="secondary">
         KM pay, bonuses and daily / weekly incentives are set in the <b>Delivery Partner Rate Card</b> below.
       </Typography.Paragraph>
       <Typography.Text strong style={{ display: 'block', margin: '8px 0' }}>Pocket</Typography.Text>
-      <Space wrap>
-        <Form.Item name="riderMinWithdrawal" label="Minimum withdrawal (₹)"><Input type="number" placeholder="100" style={{ width: 180 }} /></Form.Item>
-        <Form.Item name="riderWeeklyPayoutEnabled" label="Weekly payout (Mondays)"><Select style={{ width: 120 }} options={ON_OFF} /></Form.Item>
-        <Form.Item name="riderWeeklyPayoutHour" label="From hour (0-23)"><Input type="number" placeholder="7" style={{ width: 140 }} /></Form.Item>
-      </Space>
+      <div style={fieldGrid}>
+        <Form.Item name="riderMinWithdrawal" label="Minimum withdrawal (₹)"><Input type="number" placeholder="100" /></Form.Item>
+        <Form.Item name="riderWeeklyPayoutEnabled" label="Weekly payout (Mondays)"><Select options={ON_OFF} /></Form.Item>
+        <Form.Item name="riderWeeklyPayoutHour" label="From hour (0-23)"><Input type="number" placeholder="7" /></Form.Item>
+      </div>
 
       <Typography.Text strong style={{ display: 'block', margin: '8px 0' }}>Rules</Typography.Text>
-      <Space wrap>
-        <Form.Item name="coldBagReturnHours" label="Return cold bag within (hours)"><Input type="number" placeholder="4" style={{ width: 200 }} /></Form.Item>
-        <Form.Item name="riderFaceMismatchHoldHours" label="Face mismatch hold (hours)"><Input type="number" placeholder="24" style={{ width: 200 }} /></Form.Item>
-      </Space>
-      <Space wrap>
-        <Form.Item name="upiVpa" label="UPI ID for doorstep payments" extra="Used when Razorpay UPI QR isn't available"><Input placeholder="grovio@okaxis" style={{ width: 260 }} /></Form.Item>
-        <Form.Item name="upiPayeeName" label="Payee name"><Input placeholder="Grovio" style={{ width: 200 }} /></Form.Item>
-      </Space>
+      <div style={fieldGrid}>
+        <Form.Item name="coldBagReturnHours" label="Return cold bag within (hours)"><Input type="number" placeholder="4" /></Form.Item>
+        <Form.Item name="riderFaceMismatchHoldHours" label="Face mismatch hold (hours)"><Input type="number" placeholder="24" /></Form.Item>
+      </div>
+      <div style={fieldGrid}>
+        <Form.Item name="upiVpa" label="UPI ID for doorstep payments" extra="Used when Razorpay UPI QR isn't available"><Input placeholder="grovio@okaxis" /></Form.Item>
+        <Form.Item name="upiPayeeName" label="Payee name"><Input placeholder="Grovio" /></Form.Item>
+      </div>
     </Card>
   );
 }
@@ -274,5 +291,53 @@ function WebhookRow({ label, url }: { label: string; url: string }) {
       <Typography.Text type="secondary">{label}</Typography.Text>
       <Typography.Text copyable={{ text: url }} style={{ wordBreak: 'break-all', fontSize: 12 }}>{url}</Typography.Text>
     </>
+  );
+}
+
+// Default helplines (backend services/sos.service.js DEFAULT_HELPLINES) — shown as the placeholder.
+const DEFAULT_SOS_HELPLINES = `[
+  { "key": "emergency", "label": "Emergency (Police, Fire, Ambulance)", "number": "112" },
+  { "key": "police", "label": "Police", "number": "100" },
+  { "key": "ambulance", "label": "Ambulance", "number": "108" },
+  { "key": "fire", "label": "Fire", "number": "101" },
+  { "key": "women", "label": "Women helpline", "number": "1091" },
+  { "key": "road_accident", "label": "Highway accident", "number": "1033" }
+]`;
+
+export function SosCard({ smsProvider }: { smsProvider?: string }) {
+  return (
+    <Card title="SOS (Emergency)">
+      <Typography.Paragraph type="secondary">
+        The SOS screen in the Delivery, Picker and Customer apps. The phone dials these numbers itself; the alert, live location
+        and contacts reach the SOS Alerts page. The ops phone is texted on every SOS and shown in the apps as "Grovio safety team".
+      </Typography.Paragraph>
+      <Form.Item name="sosOpsPhone" label="Ops / safety team phone" extra="Texted the map link on every SOS. Blank = no SMS to ops.">
+        <Input placeholder="e.g. 9876543210" style={{ maxWidth: 240 }} />
+      </Form.Item>
+      {smsProvider === 'msg91' && (
+        <Form.Item name="smsSosTemplateId" label="MSG91 SOS template ID" extra="A DLT-approved template with variables NAME and LINK. Without it, SOS texts aren't sent on MSG91.">
+          <Input />
+        </Form.Item>
+      )}
+      <Form.Item
+        name="sosHelplines"
+        label="Helpline numbers (JSON)"
+        extra="Blank = the India defaults shown. Each entry: key, label, number."
+        rules={[{
+          validator: (_, value) => {
+            if (!value || !String(value).trim()) return Promise.resolve();
+            try {
+              const list = JSON.parse(value);
+              if (!Array.isArray(list) || !list.length || !list.every((h) => h && h.key && h.label && h.number)) throw new Error();
+              return Promise.resolve();
+            } catch {
+              return Promise.reject(new Error('Must be a JSON list of { "key", "label", "number" }'));
+            }
+          },
+        }]}
+      >
+        <Input.TextArea rows={8} placeholder={DEFAULT_SOS_HELPLINES} style={{ fontFamily: 'monospace', fontSize: 12 }} />
+      </Form.Item>
+    </Card>
   );
 }

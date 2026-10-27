@@ -51,7 +51,7 @@ export default function SupportTicketsPage() {
         pagination={{ current: page, pageSize, total: data?.meta.totalItems, onChange, showSizeChanger: true }}
         columns={[
           { title: 'Subject', dataIndex: 'subject' },
-          { title: 'From', render: (_, r) => (typeof r.user === 'object' ? (r.user as User).name : '—') },
+          { title: 'From', render: (_, r) => (r.user && typeof r.user === 'object' ? (r.user as User).name : '—') },
           { title: 'Status', render: (_, r) => <StatusTag status={r.status} /> },
           { title: 'Created', render: (_, r) => formatDateTime(r.createdAt) },
           {

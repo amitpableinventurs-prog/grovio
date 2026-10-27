@@ -64,4 +64,42 @@ async function sendViaTwilio(phone, message) {
   return { sent: true };
 }
 
-module.exports = { sendSms };
+// A non-OTP text (e.g. an SOS alert). MSG91 can only send DLT-approved templates, so it needs its
+// own template: `msg91TemplateSetting` names the setting holding that flow ID, and `vars` fill its
+// variables. Without that template, MSG91 returns not_configured rather than misusing the OTP one.
+// Twilio sends `message` as is.
+async function sendTextSms(phone, message, { msg91TemplateSetting, vars = {} } = {}) {
+  const provider = await getSetting('smsProvider', 'SMS_PROVIDER');
+  if (!provider || provider === 'none') return { sent: false, reason: 'not_configured' };
+
+  try {
+    if (provider === 'twilio') return await sendViaTwilio(toE164(phone), message);
+    if (provider === 'msg91') {
+      const authKey = await getSetting('smsApiKey', 'MSG91_AUTH_KEY');
+      const senderId = await getSetting('smsSenderId', 'MSG91_SENDER_ID');
+      const templateId = msg91TemplateSetting ? await getSetting(msg91TemplateSetting) : null;
+      if (!authKey || !senderId || !templateId) return { sent: false, reason: 'not_configured' };
+      const res = await fetch('https://control.msg91.com/api/v5/flow/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', authkey: authKey },
+        body: JSON.stringify({ flow_id: templateId, sender: senderId, mobiles: toE164(phone).replace(/^\+/, ''), ...vars }),
+      });
+      if (!res.ok) return { sent: false, reason: `msg91_http_${res.status}` };
+      return { sent: true };
+    }
+    return { sent: false, reason: 'unknown_provider' };
+  } catch (err) {
+    return { sent: false, reason: err.message };
+  }
+}
+
+// Phones are stored as '9876543210' or '+919876543210'; providers want E.164.
+function toE164(phone) {
+  const digits = String(phone || '').replace(/[^\d+]/g, '');
+  if (digits.startsWith('+')) return digits;
+  if (/^\d{10}$/.test(digits)) return `+91${digits}`;
+  if (/^91\d{10}$/.test(digits)) return `+${digits}`;
+  return digits;
+}
+
+module.exports = { sendSms, sendTextSms, toE164 };

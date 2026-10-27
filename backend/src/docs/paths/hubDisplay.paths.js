@@ -14,6 +14,7 @@ const CARD = {
     placedAt: { type: 'string', format: 'date-time' },
     readySince: { type: 'string', format: 'date-time', nullable: true },
     rider: { type: 'object', nullable: true, properties: { name: { type: 'string', description: 'First name only' }, arrived: { type: 'boolean' } } },
+    pickupQr: { type: 'string', nullable: true, description: "Ready orders only: the order's pickup QR (SVG markup) for riders to scan with POST /delivery/hub/scan" },
   },
 };
 

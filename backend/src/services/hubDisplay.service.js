@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const QRCode = require('qrcode');
 const { HubDisplay, Order } = require('../models');
 const { getSetting } = require('./settings.service');
+const { HUB_PICKUP_TOKEN_RE, generateHubPickupToken } = require('../utils/hubPickupToken');
 
 // Hub Center screens (models/hubDisplay.model.js) and the Delivery Boy check-in they enable.
 //
@@ -18,8 +19,24 @@ const { getSetting } = require('./settings.service');
 // The QR is only proof of presence, never an authorization by itself: the scan is made with the
 // partner's own access token, and everything it unlocks is checked server-side against their role
 // and the hub the token maps to.
+//
+// Order pickup QRs ('hub_screen' pickup mode, the default): every ready order's card on the screen
+// carries its own QR,  <PUBLIC_BASE_URL>/hub-checkin/?p=<order.hubPickupToken>.  A partner at the
+// hub scans it (POST /delivery/hub/scan) to take that order and pick it up in one step, so no rider
+// is auto-assigned when the order is packed. In 'auto_assign' mode the nearest rider is assigned
+// as before; the card's QR then works only for that rider. See hub.controller.js#scan.
 
 const CHECKIN_MINUTES = Number(process.env.HUB_CHECKIN_MINUTES || 30);
+
+// How a packed order gets its rider — the "Hub pickup" setting (hubPickupMode / HUB_PICKUP_MODE):
+//   hub_screen   (default) nobody is assigned; the first partner to scan the order's QR on the
+//                hub screen takes it
+//   auto_assign  the nearest available partner is assigned when the order is packed
+const HUB_PICKUP_MODES = ['hub_screen', 'auto_assign'];
+async function getHubPickupMode() {
+  const mode = await getSetting('hubPickupMode', 'HUB_PICKUP_MODE');
+  return HUB_PICKUP_MODES.includes(mode) ? mode : 'hub_screen';
+}
 
 // Orders a hub screen lists: still being picked/packed, or packed and waiting for a rider.
 const PREPARING_STATUSES = ['accepted', 'picking', 'partially_picked'];
@@ -70,6 +87,10 @@ function checkinUrl(baseUrl, token) {
   return `${baseUrl}/hub-checkin/?t=${encodeURIComponent(token)}`;
 }
 
+function pickupUrl(baseUrl, token) {
+  return `${baseUrl}/hub-checkin/?p=${encodeURIComponent(token)}`;
+}
+
 function qrSvg(text) {
   return QRCode.toString(text, { type: 'svg', errorCorrectionLevel: 'M', margin: 1 });
 }
@@ -86,6 +107,24 @@ function extractCheckinToken(code) {
     }
   }
   return raw;
+}
+
+// Anything scanned off a hub screen -> { kind: 'checkin' | 'pickup', token }, or null. Takes the
+// full URL (…/hub-checkin/?t=… is a check-in, ?p=… an order pickup) or just the token.
+function parseHubCode(code) {
+  const raw = String(code || '').trim();
+  if (!raw) return null;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) {
+    try {
+      const params = new URL(raw).searchParams;
+      if (params.get('p')) return { kind: 'pickup', token: params.get('p') };
+      if (params.get('t')) return { kind: 'checkin', token: params.get('t') };
+    } catch {
+      // fall through
+    }
+    return null;
+  }
+  return { kind: HUB_PICKUP_TOKEN_RE.test(raw) ? 'pickup' : 'checkin', token: raw };
 }
 
 // Uses up a scanned check-in token: swaps in a new one and tells the screen to show it. Returns the
@@ -123,13 +162,24 @@ function readySince(order) {
 }
 
 // What the hub screen shows. Deliberately no customer name/phone/address or amounts — the screen
-// is on a wall for anyone at the hub to see.
-async function buildBoard(storeId) {
+// is on a wall for anyone at the hub to see. Each ready order comes with its pickup QR (SVG).
+async function buildBoard(storeId, { baseUrl }) {
   const orders = await Order.find({ store: storeId, orderStatus: { $in: [...PREPARING_STATUSES, ...READY_STATUSES] } })
-    .select('orderNumber orderStatus items.qty pickTasks.status delivery deliveryAcceptedAt arrivedAtPickupAt statusLogs placedAt updatedAt')
+    .select('+hubPickupToken orderNumber orderStatus items.qty pickTasks.status delivery deliveryAcceptedAt arrivedAtPickupAt statusLogs placedAt updatedAt')
     .populate('delivery', 'name')
     .sort({ placedAt: 1 })
     .limit(200);
+
+  // Orders packed before pickup QRs existed have no token yet — issue one (only if still empty,
+  // so two screens loading at once agree on it).
+  for (const o of orders) {
+    if (!READY_STATUSES.includes(o.orderStatus) || o.hubPickupToken) continue;
+    await Order.updateOne({ _id: o._id, hubPickupToken: null }, { $set: { hubPickupToken: generateHubPickupToken() } });
+    o.hubPickupToken = (await Order.findById(o._id).select('+hubPickupToken').lean())?.hubPickupToken || null;
+  }
+  const qrs = new Map(await Promise.all(orders
+    .filter((o) => READY_STATUSES.includes(o.orderStatus) && o.hubPickupToken)
+    .map(async (o) => [o.id, await qrSvg(pickupUrl(baseUrl, o.hubPickupToken))])));
 
   const toCard = (o) => ({
     orderId: o._id,
@@ -140,6 +190,7 @@ async function buildBoard(storeId) {
     placedAt: o.placedAt,
     readySince: READY_STATUSES.includes(o.orderStatus) ? readySince(o) : null,
     rider: o.delivery ? { name: firstName(o.delivery.name), arrived: !!o.arrivedAtPickupAt } : null,
+    pickupQr: qrs.get(o.id) || null,
   });
 
   return {
@@ -151,6 +202,11 @@ async function buildBoard(storeId) {
 
 module.exports = {
   CHECKIN_MINUTES,
+  HUB_PICKUP_MODES,
+  getHubPickupMode,
+  pickupUrl,
+  parseHubCode,
+  firstName,
   hashKey,
   generateDisplayKey,
   publicBaseUrl,

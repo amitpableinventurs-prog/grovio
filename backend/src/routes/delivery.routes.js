@@ -5,11 +5,16 @@ const hubCtrl = require('../controllers/delivery/hub.controller');
 const onboardingCtrl = require('../controllers/delivery/onboarding.controller');
 const voipCtrl = require('../controllers/voip/voip.controller');
 const programsCtrl = require('../controllers/delivery/programs.controller');
+const accountCtrl = require('../controllers/common/account.controller');
 const upload = require('../middleware/upload.middleware');
 const validate = require('../middleware/validate.middleware');
 const { vehicleRules, identityRules, bankRules } = require('../validators/delivery.validator');
 
 router.use(authenticate, authorize('delivery'));
+
+// Account deletion (services/accountDeletion.service.js)
+router.get('/account/delete-check', accountCtrl.deletionCheck);
+router.delete('/account', accountCtrl.deleteAccount);
 
 // Onboarding after OTP signup — one endpoint per app screen (see onboarding.controller.js).
 router.get('/onboarding', onboardingCtrl.getOnboarding);
@@ -49,6 +54,7 @@ router.post('/jobs/:id/return', ctrl.markReturned);
 router.post('/jobs/:id/call', voipCtrl.callFromDelivery);
 
 // At a Hub Center: check in by scanning the hub screen's QR, then pick an order to collect.
+router.post('/hub/scan', hubCtrl.scan);
 router.post('/hub/checkin', hubCtrl.checkIn);
 router.get('/hub/orders', hubCtrl.listHubOrders);
 router.post('/hub/orders/:id/claim', hubCtrl.claimOrder);

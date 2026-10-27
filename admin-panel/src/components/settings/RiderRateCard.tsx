@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, App as AntApp, Button, Card, Checkbox, Descriptions, Form, Input, InputNumber, Select, Space, Spin, Switch, Table, Tag, Typography } from 'antd';
+import { Alert, App as AntApp, Button, Card, Checkbox, Col, Descriptions, Form, Input, InputNumber, Row, Select, Space, Spin, Switch, Table, Tag, Typography } from 'antd';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -98,7 +98,7 @@ export function RiderRateCard() {
   });
 
   return (
-    <Card title="Delivery Partner Rate Card — KM earning + incentives" style={{ maxWidth: 760 }}>
+    <Card title="Delivery Partner Rate Card — KM earning + incentives">
       {isLoading ? <Spin /> : (
         <Form form={form} layout="vertical" onFinish={(v) => save.mutate(v)}>
           <Typography.Paragraph type="secondary">
@@ -107,73 +107,80 @@ export function RiderRateCard() {
             minimum guarantee are paid after each day / week ends, if the partner is eligible.
           </Typography.Paragraph>
 
-          {section('KM slabs (first slab whose "up to km" covers the distance)')}
-          <SlabList name="kmSlabs" field="upToKm" fieldLabel="up to km" addLabel="Add slab" />
-          <Form.Item name="perKmBeyond" label="Beyond the last slab: ₹ per started km" style={{ marginTop: 12 }}>{num(160)}</Form.Item>
+          {/* Per-order pay on the left, per-day / per-week pay and rules on the right. */}
+          <Row gutter={32}>
+            <Col xs={24} xl={12}>
+              {section('KM slabs (first slab whose "up to km" covers the distance)')}
+              <SlabList name="kmSlabs" field="upToKm" fieldLabel="up to km" addLabel="Add slab" />
+              <Form.Item name="perKmBeyond" label="Beyond the last slab: ₹ per started km" style={{ marginTop: 12 }}>{num(160)}</Form.Item>
 
-          {section('Peak / surge (₹ per delivery)')}
-          <Space wrap>
-            <Form.Item name={['peak', 'amount']} label="In peak windows">{num()}</Form.Item>
-            <Form.Item name={['peak', 'highSurgeAmount']} label="Hub on high surge">{num()}</Form.Item>
-          </Space>
-          <Form.List name={['peak', 'windows']}>
-            {(rows, { add, remove }) => (
-              <>
-                {rows.map(({ key, name: row }) => (
-                  <Space key={key} align="baseline">
-                    <Form.Item name={[row, 'from']} rules={[{ pattern: HHMM, required: true, message: 'HH:mm' }]} style={{ marginBottom: 8 }}><Input addonBefore="from" placeholder="18:00" style={{ width: 130 }} /></Form.Item>
-                    <Form.Item name={[row, 'to']} rules={[{ pattern: HHMM, required: true, message: 'HH:mm' }]} style={{ marginBottom: 8 }}><Input addonBefore="to" placeholder="22:00" style={{ width: 130 }} /></Form.Item>
-                    <MinusCircleOutlined onClick={() => remove(row)} />
-                  </Space>
-                ))}
-                <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={() => add({ from: '', to: '' })}>Add peak window</Button>
-              </>
-            )}
-          </Form.List>
+              {section('Peak / surge (₹ per delivery)')}
+              <Space wrap align="start">
+                <Form.Item name={['peak', 'amount']} label="In peak windows">{num()}</Form.Item>
+                <Form.Item name={['peak', 'highSurgeAmount']} label="Hub on high surge">{num()}</Form.Item>
+              </Space>
+              <Form.List name={['peak', 'windows']}>
+                {(rows, { add, remove }) => (
+                  <>
+                    {rows.map(({ key, name: row }) => (
+                      <Space key={key} align="baseline">
+                        <Form.Item name={[row, 'from']} rules={[{ pattern: HHMM, required: true, message: 'HH:mm' }]} style={{ marginBottom: 8 }}><Input addonBefore="from" placeholder="18:00" style={{ width: 130 }} /></Form.Item>
+                        <Form.Item name={[row, 'to']} rules={[{ pattern: HHMM, required: true, message: 'HH:mm' }]} style={{ marginBottom: 8 }}><Input addonBefore="to" placeholder="22:00" style={{ width: 130 }} /></Form.Item>
+                        <MinusCircleOutlined onClick={() => remove(row)} />
+                      </Space>
+                    ))}
+                    <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={() => add({ from: '', to: '' })}>Add peak window</Button>
+                  </>
+                )}
+              </Form.List>
 
-          {section('Rain (₹ per delivery, by the hub\'s rain level)')}
-          <Space wrap>
-            <Form.Item name={['rain', 'normal']} label="Normal">{num()}</Form.Item>
-            <Form.Item name={['rain', 'heavy']} label="Heavy">{num()}</Form.Item>
-            <Form.Item name={['rain', 'severe']} label="Severe">{num()}</Form.Item>
-          </Space>
+              {section('Rain (₹ per delivery, by the hub\'s rain level)')}
+              <Space wrap align="start">
+                <Form.Item name={['rain', 'normal']} label="Normal">{num()}</Form.Item>
+                <Form.Item name={['rain', 'heavy']} label="Heavy">{num()}</Form.Item>
+                <Form.Item name={['rain', 'severe']} label="Severe">{num()}</Form.Item>
+              </Space>
 
-          {section('Heavy load (order weight from product weights)')}
-          <SlabList name="heavyLoad" field="minKg" fieldLabel="from kg" addLabel="Add weight slab" />
+              {section('Heavy load (order weight from product weights)')}
+              <SlabList name="heavyLoad" field="minKg" fieldLabel="from kg" addLabel="Add weight slab" />
 
-          {section('Waiting & cancellation pay (0 = off)')}
-          <Space wrap>
-            <Form.Item name={['waiting', 'freeMinutes']} label="Free minutes per stop">{num()}</Form.Item>
-            <Form.Item name={['waiting', 'perMinute']} label="₹ per extra minute">{num()}</Form.Item>
-            <Form.Item name={['waiting', 'maxPay']} label="Max per order (₹)" extra="Blank = no cap">{num()}</Form.Item>
-          </Space>
-          <Space wrap>
-            <Form.Item name={['cancellation', 'arrivedAtPickup']} label="Cancelled after reaching hub (₹)">{num(160)}</Form.Item>
-            <Form.Item name={['cancellation', 'pickedUp']} label="Cancelled after pickup (₹)">{num(160)}</Form.Item>
-          </Space>
+              {section('Waiting & cancellation pay (0 = off)')}
+              <Space wrap align="start">
+                <Form.Item name={['waiting', 'freeMinutes']} label="Free minutes per stop">{num()}</Form.Item>
+                <Form.Item name={['waiting', 'perMinute']} label="₹ per extra minute">{num()}</Form.Item>
+                <Form.Item name={['waiting', 'maxPay']} label="Max per order (₹)" extra="Blank = no cap">{num()}</Form.Item>
+              </Space>
+              <Space wrap align="start">
+                <Form.Item name={['cancellation', 'arrivedAtPickup']} label="Cancelled after reaching hub (₹)">{num(160)}</Form.Item>
+                <Form.Item name={['cancellation', 'pickedUp']} label="Cancelled after pickup (₹)">{num(160)}</Form.Item>
+              </Space>
+            </Col>
 
-          {section('Daily slabs (deliveries in a day → bonus; tier name shown in the app)')}
-          <SlabList name="daily" field="deliveries" fieldLabel="deliveries" withTier addLabel="Add daily slab" />
+            <Col xs={24} xl={12}>
+              {section('Daily slabs (deliveries in a day → bonus; tier name shown in the app)')}
+              <SlabList name="daily" field="deliveries" fieldLabel="deliveries" withTier addLabel="Add daily slab" />
 
-          {section('Weekly slabs (Mon–Sun)')}
-          <SlabList name="weekly" field="deliveries" fieldLabel="deliveries" addLabel="Add weekly slab" />
+              {section('Weekly slabs (Mon–Sun)')}
+              <SlabList name="weekly" field="deliveries" fieldLabel="deliveries" addLabel="Add weekly slab" />
 
-          {section('Minimum guarantee (per day)')}
-          <Space wrap align="end">
-            <Form.Item name={['guarantee', 'enabled']} label="On" valuePropName="checked"><Switch /></Form.Item>
-            <Form.Item name={['guarantee', 'amount']} label="Amount (₹)">{num()}</Form.Item>
-            <Form.Item name={['guarantee', 'minOnlineMinutes']} label="Min online (minutes)">{num(140)}</Form.Item>
-            <Form.Item name={['guarantee', 'minDeliveries']} label="Min deliveries">{num()}</Form.Item>
-            <Form.Item name={['guarantee', 'requireGig']} valuePropName="checked"><Checkbox>Needs a completed gig</Checkbox></Form.Item>
-          </Space>
+              {section('Minimum guarantee (per day)')}
+              <Space wrap align="end">
+                <Form.Item name={['guarantee', 'enabled']} label="On" valuePropName="checked"><Switch /></Form.Item>
+                <Form.Item name={['guarantee', 'amount']} label="Amount (₹)">{num()}</Form.Item>
+                <Form.Item name={['guarantee', 'minOnlineMinutes']} label="Min online (minutes)">{num(140)}</Form.Item>
+                <Form.Item name={['guarantee', 'minDeliveries']} label="Min deliveries">{num()}</Form.Item>
+                <Form.Item name={['guarantee', 'requireGig']} valuePropName="checked"><Checkbox>Needs a completed gig</Checkbox></Form.Item>
+              </Space>
 
-          {section('Eligibility & settlement')}
-          <Space wrap>
-            <Form.Item name={['eligibility', 'maxCancellationRatePct']} label="Max cancellation rate (%)">{num(150)}</Form.Item>
-            <Form.Item name={['eligibility', 'minOrdersForRate']} label="Check rate from (orders)">{num(150)}</Form.Item>
-            <Form.Item name="settleDelayHours" label="Settle after (hours)" extra="Time to flag fraud / complaints">{num(150)}</Form.Item>
-          </Space>
-          <Alert type="info" showIcon style={{ marginBottom: 16 }} message="GPS / payment manipulation and verified customer complaints aren't detected automatically — withhold that day or week from the delivery partner's page." />
+              {section('Eligibility & settlement')}
+              <Space wrap align="start">
+                <Form.Item name={['eligibility', 'maxCancellationRatePct']} label="Max cancellation rate (%)">{num(150)}</Form.Item>
+                <Form.Item name={['eligibility', 'minOrdersForRate']} label="Check rate from (orders)">{num(150)}</Form.Item>
+                <Form.Item name="settleDelayHours" label="Settle after (hours)" extra="Time to flag fraud / complaints">{num(150)}</Form.Item>
+              </Space>
+            </Col>
+          </Row>
+          <Alert type="info" showIcon style={{ marginBottom: 16 }} title="GPS / payment manipulation and verified customer complaints aren't detected automatically — withhold that day or week from the delivery partner's page." />
 
           <Space>
             <Button type="primary" htmlType="submit" loading={save.isPending}>Save rate card</Button>
@@ -220,7 +227,7 @@ function HubRow({ hub }: { hub: HubConditions }) {
     onError: (err: any) => message.error(err?.response?.data?.message || 'Could not update'),
   });
   return (
-    <Space wrap>
+    <Space wrap align="start">
       <Select value={rain} onChange={setRain} options={RAIN_OPTIONS} style={{ width: 120 }} />
       <Select value={surge} onChange={setSurge} options={SURGE_OPTIONS} style={{ width: 120 }} />
       <Select value={hours} onChange={setHours} options={DURATIONS} style={{ width: 160 }} />
@@ -232,7 +239,7 @@ function HubRow({ hub }: { hub: HubConditions }) {
 export function HubConditionsCard() {
   const { data, isLoading } = useQuery({ queryKey: ['hub-conditions'], queryFn: fetchHubConditions, refetchInterval: 60_000 });
   return (
-    <Card title="Hub rain & surge (delivery partner bonuses)" style={{ maxWidth: 760 }}>
+    <Card title="Hub rain & surge (delivery partner bonuses)">
       <Typography.Paragraph type="secondary">
         Applies to deliveries from now. Only switch on severe-weather pay where riding is safely permitted — safety and road rules come before any target.
       </Typography.Paragraph>

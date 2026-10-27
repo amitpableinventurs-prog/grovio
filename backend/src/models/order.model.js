@@ -75,6 +75,11 @@ const orderSchema = new Schema({
   // attempt, successful or not, is recorded in ScannerLog regardless of which method completes it.
   handoverQrToken: { type: String, default: null, select: false },
   handoverQrTokenExpiresAt: { type: Date, default: null, select: false },
+  // The order's own QR on the hub screen (/hub-display), issued when the order is packed. A
+  // delivery partner at the hub scans it (POST /delivery/hub/scan) to take the order and pick it
+  // up in one step — see controllers/delivery/hub.controller.js#scan. No timer: it's cleared once
+  // the order is picked up, so it only works while the order is on the screen.
+  hubPickupToken: { type: String, default: null, select: false },
   pickerHandoverAt: { type: Date, default: null },
   arrivedAtPickupAt: { type: Date, default: null },
   arrivedAtDropAt: { type: Date, default: null },
@@ -227,8 +232,12 @@ function stripSensitiveFields(doc, ret) {
   delete ret.handoverOtpAttempts;
   delete ret.handoverQrToken;
   delete ret.handoverQrTokenExpiresAt;
+  delete ret.hubPickupToken;
   return ret;
 }
+// Hub screen scans look an order up by its pickup token; only packed orders on a screen have one.
+orderSchema.index({ hubPickupToken: 1 }, { partialFilterExpression: { hubPickupToken: { $type: 'string' } } });
+
 orderSchema.set('toJSON', { transform: stripSensitiveFields });
 orderSchema.set('toObject', { transform: stripSensitiveFields });
 

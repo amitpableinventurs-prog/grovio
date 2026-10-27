@@ -8,6 +8,8 @@ const { notifyUser } = require('../../services/notification.service');
 const { creditWallet } = require('../../services/payment.service');
 const { resolveStoreScope, hasFullAccess } = require('../../utils/storeScope');
 const { PERMISSIONS } = require('../../utils/permissions');
+const { deleteOrders } = require('../../services/orderDeletion.service');
+const { logAdminActivity } = require('../../services/audit.service');
 
 // GET /admin/orders?storeId=&status=   (status may be comma-separated, e.g. placed,accepted)
 // A full MANAGE_ORDERS admin sees everything (optionally filtered by storeId). A restricted
@@ -170,4 +172,43 @@ const markReturned = catchAsync(async (req, res) => {
   new ApiResponse(200, order, 'Order marked as returned').send(res);
 });
 
-module.exports = { listOrders, getOrderDetail, assignPicker, assignDelivery, cancelOrder, markReturned };
+// DELETE /admin/orders/:id — removes the order and what hangs off it (services/orderDeletion.service.js).
+// Unlike cancelling, nothing is refunded and the customer isn't told.
+const deleteOrder = catchAsync(async (req, res) => {
+  const order = await Order.findById(req.params.id).select('orderNumber orderStatus');
+  if (!order) throw new ApiError(404, 'Order not found');
+
+  await deleteOrders([order._id]);
+
+  await logAdminActivity({
+    adminId: req.user.id,
+    action: 'order.delete',
+    entityType: 'Order',
+    entityId: order._id,
+    metadata: { orderNumber: order.orderNumber, orderStatus: order.orderStatus },
+  });
+
+  new ApiResponse(200, null, 'Order deleted').send(res);
+});
+
+// POST /admin/orders/delete { ids } — the same, for the rows selected on the Orders page.
+const deleteManyOrders = catchAsync(async (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || !ids.length) throw new ApiError(400, 'ids must be a non-empty array of order IDs');
+
+  const orders = await Order.find({ _id: { $in: ids } }).select('orderNumber');
+  if (!orders.length) throw new ApiError(404, 'No matching orders found');
+
+  const deleted = await deleteOrders(orders.map((o) => o._id));
+
+  await logAdminActivity({
+    adminId: req.user.id,
+    action: 'order.delete_many',
+    entityType: 'Order',
+    metadata: { orderNumbers: orders.map((o) => o.orderNumber) },
+  });
+
+  new ApiResponse(200, { deleted }, `${deleted} order(s) deleted`).send(res);
+});
+
+module.exports = { listOrders, getOrderDetail, assignPicker, assignDelivery, cancelOrder, markReturned, deleteOrder, deleteManyOrders };

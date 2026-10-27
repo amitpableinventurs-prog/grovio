@@ -33,6 +33,7 @@ const hubDisplaysCtrl = require('../controllers/admin/hubDisplays.controller');
 const trackingCtrl = require('../controllers/admin/tracking.controller');
 const ivrCtrl = require('../controllers/admin/ivr.controller');
 const voipCtrl = require('../controllers/admin/voip.controller');
+const sosCtrl = require('../controllers/admin/sos.controller');
 const announcementsCtrl = require('../controllers/admin/announcements.controller');
 const pickerPayCtrl = require('../controllers/admin/pickerPay.controller');
 const riderPayCtrl = require('../controllers/admin/riderPay.controller');
@@ -47,6 +48,7 @@ router.get('/dashboard', dashboardCtrl.getStats);
 // Users by role
 const p = requirePermission;
 router.get('/customers', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.VIEW_REPORTS), usersCtrl.listByRole('customer'));
+router.delete('/customers/:id', p(PERMISSIONS.MANAGE_ORDERS), usersCtrl.deleteCustomer);
 router.get('/pickers', p(PERMISSIONS.MANAGE_PICKERS), usersCtrl.listByRole('picker'));
 router.post(
   '/pickers',
@@ -87,6 +89,8 @@ router.post('/delivery-partners/:id/earnings', p(PERMISSIONS.MANAGE_DELIVERY), e
 // Delivery partner pocket: deductions, cash handed in at the hub, withdrawals / weekly payouts.
 router.post('/delivery-partners/:id/deductions', p(PERMISSIONS.MANAGE_DELIVERY), deductionRules, validate, programsCtrl.addDeduction);
 router.post('/delivery-partners/:id/cash-deposits', p(PERMISSIONS.MANAGE_DELIVERY), cashDepositRules, validate, programsCtrl.recordCashDeposit);
+router.get('/delivery-partners/:id/cash-ledger', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS), programsCtrl.cashLedger);
+router.get('/cash-collection', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS), programsCtrl.cashCollection);
 router.get('/pocket-transfers', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS), programsCtrl.listPocketTransfers);
 router.post('/pocket-transfers/weekly-payouts', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS), programsCtrl.runWeeklyPayouts);
 router.patch('/pocket-transfers/:id', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS), programsCtrl.updatePocketTransfer);
@@ -155,6 +159,7 @@ router.patch(
   upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'banner', maxCount: 1 }]),
   storesCtrl.updateStore
 );
+router.delete('/stores/:id', p(PERMISSIONS.MANAGE_STORES), storesCtrl.deleteStore);
 
 // Hub Center screens (/hub-display) — store managers manage their own store's screens only.
 router.get('/stores/:id/hub-displays', p(PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), hubDisplaysCtrl.listHubDisplays);
@@ -199,6 +204,8 @@ router.patch('/orders/:id/cancel', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANA
 router.patch('/orders/:id/mark-returned', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.markReturned);
 router.patch('/orders/:id/assign-picker', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.assignPicker);
 router.patch('/orders/:id/assign-delivery', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.assignDelivery);
+router.delete('/orders/:id', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.deleteOrder);
+router.post('/orders/delete', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.deleteManyOrders);
 
 // Live tracking: rider map + one order's rider position / ETA (store managers: own hub only)
 router.get('/tracking/riders', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), trackingCtrl.listRiders);
@@ -209,6 +216,13 @@ router.post('/orders/:id/ivr-call', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MAN
 // Masked customer <-> rider calls (in-app VoIP): call log and Twilio TwiML App URLs
 router.get('/voip/calls', p(PERMISSIONS.MANAGE_ORDERS), voipCtrl.listCalls);
 router.get('/voip/config', p(PERMISSIONS.MANAGE_SETTINGS), voipCtrl.getConfig);
+
+// SOS alerts (services/sos.service.js) — store managers see their own store's only.
+const SOS_PERMS = [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY];
+router.get('/sos', p(...SOS_PERMS), sosCtrl.list);
+router.get('/sos/:id', p(...SOS_PERMS), sosCtrl.get);
+router.post('/sos/:id/acknowledge', p(...SOS_PERMS), sosCtrl.acknowledge);
+router.post('/sos/:id/resolve', p(...SOS_PERMS), sosCtrl.resolve);
 router.get('/orders/:id/tracking', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), trackingCtrl.getOrderTracking);
 router.post('/orders/:id/refund', p(PERMISSIONS.MANAGE_PAYMENTS), paymentsCtrl.issueRefund);
 

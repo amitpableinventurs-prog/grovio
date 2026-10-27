@@ -275,7 +275,7 @@ const Wishlist = {
     _id: id,
     user: id,
     items: { type: 'array', items: WishlistItem },
-    shareToken: { type: 'string', nullable: true, description: 'Set once sharing is enabled via POST /customer/wishlist/share' },
+    shareToken: { type: 'string', description: 'Present only while sharing is enabled (POST /customer/wishlist/share); absent otherwise' },
   },
 };
 
@@ -408,7 +408,7 @@ const OrderTracking = {
     orderStatus: { type: 'string' },
     statusLogs: { type: 'array', items: StatusLog },
     deliveredAt: { ...dateTime, nullable: true },
-    deliveryPartner: { type: 'object', nullable: true },
+    deliveryPartner: { type: 'object', nullable: true, properties: { _id: id, name: { type: 'string' }, phone: { type: 'string', example: '9876543210' } } },
   },
 };
 

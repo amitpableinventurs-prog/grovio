@@ -32,7 +32,13 @@
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg>
     </div>
     <h1>Scan from the Grovio Delivery app</h1>
-    <p>This is a hub check-in code. Open the Grovio Delivery app, go to <strong>Hub check-in</strong> and scan the code on the hub screen from there.</p>
+    <p id="text">This is a hub check-in code. Open the Grovio Delivery app, go to <strong>Hub check-in</strong> and scan the code on the hub screen from there.</p>
   </div>
+  <script>
+    // ?p=… is an order's pickup QR from the hub screen (?t=… the check-in QR above).
+    if (new URLSearchParams(location.search).get('p')) {
+      document.getElementById('text').innerHTML = 'This is an order pickup code. Open the Grovio Delivery app, tap <strong>Scan QR</strong> and scan the order on the hub screen from there.';
+    }
+  </script>
 </body>
 </html>

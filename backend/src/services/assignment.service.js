@@ -30,9 +30,11 @@ async function splitOrderAcrossPickers(order, maxPickers = 3) {
   const assignedPickerIds = [];
 
   for (const [storeId, itemIndexes] of itemIndexesByStore) {
+    // No more pickers than items — a picker with nothing to pick would still have to complete
+    // their task before the order can be packed (order.service.js#advancePickingStatus).
     const pickers = await PickerProfile.find({ store: storeId, status: 'approved', isAvailable: true })
       .sort({ updatedAt: 1 })
-      .limit(maxPickers);
+      .limit(Math.min(maxPickers, itemIndexes.length));
     if (!pickers.length) continue;
 
     itemIndexes.forEach((itemIndex, i) => {

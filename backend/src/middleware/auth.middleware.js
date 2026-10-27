@@ -18,7 +18,7 @@ const authenticate = catchAsync(async (req, res, next) => {
   }
 
   const user = await User.findById(decoded.id);
-  if (!user) throw new ApiError(401, 'User no longer exists');
+  if (!user || user.deletedAt) throw new ApiError(401, 'User no longer exists');
   if (!user.isActive) throw new ApiError(403, 'Account has been disabled');
 
   req.user = user;
