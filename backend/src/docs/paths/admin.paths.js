@@ -62,6 +62,12 @@ function userListPath(role, description) {
 }
 paths['/admin/vendors'] = userListPath('vendor', 'Requires manage_vendors permission');
 paths['/admin/customers'] = userListPath('customer', 'Requires manage_orders or view_reports permission');
+paths['/admin/customers/{id}'] = {
+  delete: {
+    tags: TAG_USERS, summary: 'Delete a customer account — same as DELETE /customer/account (personal data removed, orders/payments kept under "Deleted user"); refused while an order is in progress. Requires manage_orders', ...bearer(), parameters: [idParam()],
+    responses: { 200: envelope(null, 'Customer deleted'), 400: errorResponse('Cannot delete — 1 order(s) still in progress (GRV1024). Try again once they are delivered or cancelled.'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
+  },
+};
 paths['/admin/pickers'] = userListPath('picker', 'Requires manage_pickers permission. Each item also carries `onboarding: { status, profileComplete, kycComplete, nextStep }` — the same object the Picker app gets — so a pending picker can be checked for a complete Register step and KYC upload before approval.');
 paths['/admin/pickers'].post = {
   tags: TAG_USERS, summary: 'Onboard a picker directly (created already approved; pickers can also self-register in the app)', ...bearer(),

@@ -589,4 +589,56 @@ paths['/payments/razorpay/webhook'] = {
   },
 };
 
+// ============================== ACCOUNT DELETION ==============================
+// The same two endpoints in the customer, picker and delivery apps (services/accountDeletion.service.js).
+
+const ACCOUNT_DELETION = {
+  customer: {
+    removes: 'addresses, cart and wishlist',
+    blockers: 'open_orders (an order not yet delivered/cancelled)',
+    blockedExample: '1 order(s) still in progress (GRV1024). Try again once they are delivered or cancelled.',
+  },
+  picker: {
+    removes: 'ID proof (number and document), address and emergency contact; the picker is unlinked from their store',
+    blockers: 'open_orders (a pick task not yet completed), pending_settlement (a payout still pending)',
+    blockedExample: '1 order(s) still in progress (GRV1024). Try again once they are picked or handed to another picker.',
+  },
+  delivery: {
+    removes: 'KYC, address proof, selfies, bank details, vehicle/licence numbers and emergency contact (uploaded documents are deleted); goes offline and upcoming gig bookings are cancelled',
+    blockers: 'open_orders (a delivery not yet delivered/returned), cash_in_hand (negative pocket: collected cash not deposited), pending_transfer (a withdrawal/payout in process), cold_bag (a cold bag not returned), pending_settlement',
+    blockedExample: 'You still hold ₹230 of collected cash. Deposit it first.',
+  },
+};
+
+for (const [role, info] of Object.entries(ACCOUNT_DELETION)) {
+  paths[`/${role}/account/delete-check`] = {
+    get: {
+      tags: ['Account deletion'],
+      summary: `${role}: what has to be finished before the account can be deleted`,
+      description: `Blocker codes: ${info.blockers}. Show each blocker's message. walletBalance (the ${role === 'delivery' ? 'pocket' : 'wallet'}) is not paid out on deletion — warn that a positive balance will be lost.`,
+      ...bearer(),
+      responses: {
+        200: envelope({
+          type: 'object',
+          properties: {
+            canDelete: { type: 'boolean' },
+            blockers: { type: 'array', items: { type: 'object', properties: { code: { type: 'string' }, message: { type: 'string', example: info.blockedExample } } } },
+            walletBalance: { type: 'number', example: 120 },
+          },
+        }),
+        401: RESPONSES_401, 403: RESPONSES_403,
+      },
+    },
+  };
+  paths[`/${role}/account`] = {
+    delete: {
+      tags: ['Account deletion'],
+      summary: `${role}: delete my account`,
+      description: `Removes devices, sessions, notifications and the name/phone/email/photo, plus ${info.removes}. Past orders, payments and earnings are kept, under "Deleted user". Tokens stop working at once (401) — clear them and go to login. Logging in again with the same number creates a new account. Refused (400, with the blockers in errors[]) while delete-check has blockers.`,
+      ...bearer(),
+      responses: { 200: envelope(null, 'Your account has been deleted'), 400: errorResponse(info.blockedExample), 401: RESPONSES_401, 403: RESPONSES_403 },
+    },
+  };
+}
+
 module.exports = paths;

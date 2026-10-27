@@ -18,6 +18,9 @@ const userSchema = new Schema({
   fcmToken: { type: String, default: null },
   isActive: { type: Boolean, default: true },
   isVerified: { type: Boolean, default: false },
+  // Set when a customer account is deleted (services/accountDeletion.service.js); the user is kept,
+  // anonymised, so their orders and payments still have someone to point at.
+  deletedAt: { type: Date, default: null },
 }, { timestamps: true });
 
 module.exports = model('User', userSchema);

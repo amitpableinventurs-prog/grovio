@@ -53,6 +53,7 @@ const spec = {
     { name: 'Customer - Wallet' },
     { name: 'Customer - Coupons' },
     { name: 'Customer - Support' },
+    { name: 'Account deletion' },
     { name: 'Vendor' },
     { name: 'Picker' },
     { name: 'Delivery' },

@@ -12,6 +12,7 @@ const couponsCtrl = require('../controllers/customer/coupons.controller');
 const reviewsCtrl = require('../controllers/customer/reviews.controller');
 const voipCtrl = require('../controllers/voip/voip.controller');
 const supportCtrl = require('../controllers/common/support.controller');
+const accountCtrl = require('../controllers/common/account.controller');
 
 router.use(authenticate, authorize('customer'));
 
@@ -72,5 +73,9 @@ router.get('/coupons', couponsCtrl.listAvailableCoupons);
 
 // Support
 router.post('/support/tickets', supportCtrl.createTicket);
+
+// Account deletion (services/accountDeletion.service.js)
+router.get('/account/delete-check', accountCtrl.deletionCheck);
+router.delete('/account', accountCtrl.deleteAccount);
 
 module.exports = router;

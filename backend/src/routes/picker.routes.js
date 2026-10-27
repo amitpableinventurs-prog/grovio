@@ -3,8 +3,13 @@ const { authenticate, authorize } = require('../middleware/auth.middleware');
 const upload = require('../middleware/upload.middleware');
 const ctrl = require('../controllers/picker/picker.controller');
 const earningsCtrl = require('../controllers/picker/earnings.controller');
+const accountCtrl = require('../controllers/common/account.controller');
 
 router.use(authenticate, authorize('picker'));
+
+// Account deletion (services/accountDeletion.service.js)
+router.get('/account/delete-check', accountCtrl.deletionCheck);
+router.delete('/account', accountCtrl.deleteAccount);
 
 const kycDocumentUpload = upload.fields([{ name: 'idProofDocument', maxCount: 1 }]);
 

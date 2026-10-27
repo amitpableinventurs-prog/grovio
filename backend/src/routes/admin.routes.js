@@ -48,6 +48,7 @@ router.get('/dashboard', dashboardCtrl.getStats);
 // Users by role
 const p = requirePermission;
 router.get('/customers', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.VIEW_REPORTS), usersCtrl.listByRole('customer'));
+router.delete('/customers/:id', p(PERMISSIONS.MANAGE_ORDERS), usersCtrl.deleteCustomer);
 router.get('/pickers', p(PERMISSIONS.MANAGE_PICKERS), usersCtrl.listByRole('picker'));
 router.post(
   '/pickers',

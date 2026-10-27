@@ -7,6 +7,7 @@ const { notifyUser } = require('../../services/notification.service');
 const { logAdminActivity } = require('../../services/audit.service');
 const { pickerOnboarding } = require('../../utils/pickerOnboarding');
 const { deliveryOnboarding } = require('../../utils/deliveryOnboarding');
+const { deleteAccount } = require('../../services/accountDeletion.service');
 
 // Search text goes into a RegExp — escape it so "+91" or "(" match literally instead of erroring.
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -22,7 +23,7 @@ function listByRole(role) {
     const { page, limit, offset } = getPagination(req.query);
     const { status, search } = req.query;
 
-    const where = { role };
+    const where = { role, deletedAt: null };
     if (search) {
       const pattern = new RegExp(escapeRegex(search), 'i');
       where.$or = [{ name: pattern }, { phone: pattern }, { email: pattern }];
@@ -147,4 +148,23 @@ const getUserDetail = catchAsync(async (req, res) => {
   new ApiResponse(200, { ...user.toObject(), pickerProfile, deliveryProfile, onboarding }).send(res);
 });
 
-module.exports = { listByRole, updateProfileStatus, assignPickerToStore, toggleActive, getUserDetail };
+// DELETE /admin/customers/:id — the same deletion as the customer doing it from the app
+// (services/accountDeletion.service.js): refused while an order is still in progress.
+const deleteCustomer = catchAsync(async (req, res) => {
+  const user = await User.findOne({ _id: req.params.id, role: 'customer', deletedAt: null });
+  if (!user) throw new ApiError(404, 'Customer not found');
+
+  const { walletBalance } = await deleteAccount(user);
+
+  await logAdminActivity({
+    adminId: req.user.id,
+    action: 'customer.delete',
+    entityType: 'User',
+    entityId: user._id,
+    metadata: { walletBalance },
+  });
+
+  new ApiResponse(200, null, 'Customer deleted').send(res);
+});
+
+module.exports = { listByRole, updateProfileStatus, assignPickerToStore, toggleActive, getUserDetail, deleteCustomer };
