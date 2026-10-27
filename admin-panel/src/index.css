@@ -37,6 +37,53 @@ body {
 }
 .grovio-logo-badge img { width: 30px; height: 30px; }
 
+/* Rich-text editor (components/RichTextEditor.tsx): toolbar stays visible while the content scrolls */
+.rte {
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.rte:focus-within { border-color: #16a34a; box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.1); }
+.ant-form-item-has-error .rte { border-color: #ff4d4f; }
+.rte-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+.rte-toolbar .ant-btn.is-active { background: #dcfce7; color: #15803d; }
+.rte-content { max-height: 60vh; overflow-y: auto; }
+.rte-content .tiptap {
+  min-height: 360px;
+  padding: 16px 20px;
+  outline: none;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #374151;
+}
+.rte-content .tiptap > :first-child { margin-top: 0; }
+.rte-content .tiptap h2 { font-size: 17px; font-weight: 600; color: #111827; margin: 22px 0 6px; }
+.rte-content .tiptap h3 { font-size: 15px; font-weight: 600; color: #1f2937; margin: 16px 0 4px; }
+.rte-content .tiptap p { margin: 8px 0 0; }
+.rte-content .tiptap ul,
+.rte-content .tiptap ol { margin: 8px 0 0; padding-left: 22px; }
+.rte-content .tiptap li p { margin: 0; }
+.rte-content .tiptap a { color: #15803d; font-weight: 500; text-decoration: underline; cursor: text; }
+.rte-content .tiptap hr { border: none; border-top: 1px solid #e5e7eb; margin: 16px 0; }
+.rte-content .tiptap hr.ProseMirror-selectednode { border-top-color: #16a34a; }
+.rte-content .tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: #bfbfbf;
+  pointer-events: none;
+}
+
 /* Live Map: map and rider list side by side, stacked on narrow screens */
 @media (max-width: 992px) {
   .live-map-grid { grid-template-columns: 1fr !important; }
