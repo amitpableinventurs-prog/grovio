@@ -166,6 +166,19 @@ paths['/admin/users/{id}/active'] = {
 };
 
 // ---------- Stores ----------
+paths['/admin/places'] = {
+  get: {
+    tags: TAG_STORES,
+    summary: 'Search a place by name (area, street, city) for a store\'s location. Requires manage_stores',
+    description: 'Google Geocoding when a Maps key is set in Settings, else OpenStreetMap (Nominatim). At most 6 results, India only, cached for a day.',
+    ...bearer(), parameters: [q('q', 'What to search for, at least 3 letters')],
+    responses: {
+      200: envelope({ type: 'array', items: { type: 'object', properties: { label: { type: 'string', example: 'Vijay Nagar, Indore, Madhya Pradesh, India' }, lat: { type: 'number', example: 22.7511 }, lng: { type: 'number', example: 75.8955 } } } }),
+      400: errorResponse('Type at least 3 letters — an area, street or city'), 401: RESPONSES_401, 403: RESPONSES_403,
+      502: errorResponse('Place search is not available right now. Try again in a moment, or drop the pin on the map.'),
+    },
+  },
+};
 paths['/admin/stores'] = {
   get: {
     tags: TAG_STORES, summary: 'List all stores platform-wide', ...bearer(),

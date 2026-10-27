@@ -153,6 +153,7 @@ router.post(
   storesCtrl.createStore
 );
 router.get('/stores', p(PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), storesCtrl.listStores);
+router.get('/places', p(PERMISSIONS.MANAGE_STORES), storesCtrl.placeSearch);
 router.get('/stores/:id', p(PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), storesCtrl.getStore);
 router.patch(
   '/stores/:id',

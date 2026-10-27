@@ -8,6 +8,7 @@ const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const { logAdminActivity } = require('../../services/audit.service');
 const { PERMISSIONS } = require('../../utils/permissions');
 const { resolveStoreScope } = require('../../utils/storeScope');
+const { searchPlaces } = require('../../services/geocode.service');
 
 // GET /admin/stores?status=&zoneId=
 const listStores = catchAsync(async (req, res) => {
@@ -136,4 +137,10 @@ const deleteStore = catchAsync(async (req, res) => {
   new ApiResponse(200, null, 'Store deleted').send(res);
 });
 
-module.exports = { listStores, getStore, createStore, updateStore, deleteStore };
+// GET /admin/places?q= -> [{ label, lat, lng }] for the store form's location search
+// (services/geocode.service.js).
+const placeSearch = catchAsync(async (req, res) => {
+  new ApiResponse(200, await searchPlaces(req.query.q)).send(res);
+});
+
+module.exports = { listStores, getStore, createStore, updateStore, deleteStore, placeSearch };

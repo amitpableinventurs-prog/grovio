@@ -7,6 +7,7 @@ import type { Store } from '../types';
 import { usePageState } from '../hooks/usePageState';
 import StatusTag from '../components/StatusTag';
 import HubScreensModal from '../components/HubScreensModal';
+import LocationPicker from '../components/LocationPicker';
 
 export default function StoresPage() {
   const { page, pageSize, setPage, onChange } = usePageState();
@@ -45,7 +46,7 @@ export default function StoresPage() {
     setEditing(r);
     form.setFieldsValue({
       name: r.name, address: r.address, zoneId: r.zoneId, status: r.status, openTime: r.openTime, closeTime: r.closeTime,
-      lat: r.lat, lng: r.lng, serviceRadiusKm: r.serviceRadiusKm,
+      location: r.lat != null && r.lng != null ? { lat: r.lat, lng: r.lng } : null, serviceRadiusKm: r.serviceRadiusKm,
     });
   };
 
@@ -191,12 +192,18 @@ export default function StoresPage() {
         onOk={() => form.submit()}
         okText="Save"
         confirmLoading={updateMutation.isPending}
-        width={600}
+        width={680}
       >
         <Form
           form={form}
           layout="vertical"
-          onFinish={(values) => editing && updateMutation.mutate({ id: editing._id, values: { ...values, serviceRadiusKm: values.serviceRadiusKm ?? '' } })}
+          onFinish={({ location, ...values }) =>
+            editing &&
+            updateMutation.mutate({
+              id: editing._id,
+              values: { ...values, lat: location?.lat ?? null, lng: location?.lng ?? null, serviceRadiusKm: values.serviceRadiusKm ?? '' },
+            })
+          }
         >
           <Form.Item name="name" label="Store name" rules={[{ required: true, whitespace: true, message: 'Enter the store name' }]}>
             <Input />
@@ -204,13 +211,14 @@ export default function StoresPage() {
           <Form.Item name="address" label="Address">
             <Input.TextArea rows={2} />
           </Form.Item>
+          <Form.Item
+            name="location"
+            label="Location"
+            extra="Used for ETAs, the live map, the delivery area, and to check a rider is at the store when they scan its hub QR"
+          >
+            <LocationPicker />
+          </Form.Item>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 16 }}>
-            <Form.Item name="lat" label="Latitude" extra="Needed for ETAs, the live map and the delivery area">
-              <InputNumber style={{ width: '100%' }} min={-90} max={90} step={0.0001} placeholder="28.4595" />
-            </Form.Item>
-            <Form.Item name="lng" label="Longitude">
-              <InputNumber style={{ width: '100%' }} min={-180} max={180} step={0.0001} placeholder="77.0266" />
-            </Form.Item>
             <Form.Item name="zoneId" label="Zone ID">
               <Input placeholder="e.g. ZONE-NORTH" />
             </Form.Item>
