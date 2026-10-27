@@ -204,6 +204,8 @@ router.patch('/orders/:id/cancel', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANA
 router.patch('/orders/:id/mark-returned', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), ordersCtrl.markReturned);
 router.patch('/orders/:id/assign-picker', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.assignPicker);
 router.patch('/orders/:id/assign-delivery', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.assignDelivery);
+router.delete('/orders/:id', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.deleteOrder);
+router.post('/orders/delete', p(PERMISSIONS.MANAGE_ORDERS), ordersCtrl.deleteManyOrders);
 
 // Live tracking: rider map + one order's rider position / ETA (store managers: own hub only)
 router.get('/tracking/riders', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), trackingCtrl.listRiders);

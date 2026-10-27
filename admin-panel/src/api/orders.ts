@@ -26,6 +26,14 @@ export function markOrderReturned(orderId: string, reason: string) {
   return unwrap<Order>(apiClient.patch(`/admin/orders/${orderId}/mark-returned`, { reason }));
 }
 
+export function deleteOrder(orderId: string) {
+  return unwrap(apiClient.delete(`/admin/orders/${orderId}`));
+}
+
+export function deleteOrders(ids: string[]) {
+  return unwrap<{ deleted: number }>(apiClient.post('/admin/orders/delete', { ids }));
+}
+
 export function issueRefund(orderId: string, amount: number, reason: string) {
   return unwrap(apiClient.post(`/admin/orders/${orderId}/refund`, { amount, reason }));
 }

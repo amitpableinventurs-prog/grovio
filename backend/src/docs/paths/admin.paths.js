@@ -279,6 +279,20 @@ paths['/admin/orders/{id}'] = {
     tags: TAG_ORDERS, summary: 'Get full order detail', ...bearer(), parameters: [idParam()],
     responses: { 200: envelope(ref('Order')), 401: RESPONSES_401, 404: RESPONSES_404 },
   },
+  delete: {
+    tags: TAG_ORDERS,
+    summary: 'Delete an order for good. Requires manage_orders',
+    description: 'Also deletes its payments, refunds, coupon usage, review, scanner logs, IVR/masked calls and picker errors; SOS alerts, support tickets and wallet transactions lose the link; trips drop it (an empty trip is removed). Nothing is refunded and the customer is not notified — cancel instead to stop a live order.',
+    ...bearer(), parameters: [idParam()],
+    responses: { 200: envelope(null, 'Order deleted'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
+  },
+};
+paths['/admin/orders/delete'] = {
+  post: {
+    tags: TAG_ORDERS, summary: 'Delete several orders at once (same as DELETE /admin/orders/{id}). Requires manage_orders', ...bearer(),
+    requestBody: jsonBody({ ids: { type: 'array', items: { type: 'string' } } }, ['ids']),
+    responses: { 200: envelope({ type: 'object', properties: { deleted: { type: 'integer', example: 3 } } }, '3 order(s) deleted'), 400: errorResponse('ids must be a non-empty array of order IDs'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
+  },
 };
 paths['/admin/orders/{id}/assign-picker'] = {
   patch: {
