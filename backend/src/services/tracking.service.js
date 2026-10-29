@@ -3,6 +3,7 @@ const { distanceKm } = require('../utils/geo');
 const { getSetting } = require('./settings.service');
 const { emitToRooms, ROOMS } = require('../sockets');
 const { notifyUser } = require('./notification.service');
+const { logServerError } = require('./errorLog.service');
 
 // Live delivery tracking: rider GPS -> ETA, geofences, service area and multi-stop route planning.
 //
@@ -161,7 +162,7 @@ async function applyGeofences(order, rider, cfg, eta) {
   // Delivery alert calls (IVR) — best effort, never blocks tracking. Required lazily: ivr.service
   // depends on order data this module also touches.
   for (const event of events) {
-    require('./ivr.service').triggerOrderEvent(order, event).catch((err) => console.error('IVR alert failed:', err.message));
+    require('./ivr.service').triggerOrderEvent(order, event).catch((err) => logServerError('IVR alert failed', err));
   }
 }
 

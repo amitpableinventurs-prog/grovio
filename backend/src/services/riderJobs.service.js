@@ -6,6 +6,8 @@
 // Gigs and offers are also settled on demand when the app reads them; this is what makes
 // payouts happen without anyone opening the app. RIDER_JOBS_DISABLED=true turns it off (e.g. on
 // extra API instances).
+const { logServerError } = require('./errorLog.service');
+
 const INTERVAL_MS = 5 * 60 * 1000;
 
 function startRiderJobs() {
@@ -27,7 +29,7 @@ function startRiderJobs() {
       // No-op except on Monday after the payout hour, and once per partner per week.
       await require('./pocket.service').runWeeklyPayouts();
     } catch (err) {
-      console.error('Rider jobs failed:', err.message);
+      logServerError('Rider jobs failed', err);
     } finally {
       running = false;
     }

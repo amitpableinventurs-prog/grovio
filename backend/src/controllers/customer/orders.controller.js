@@ -10,6 +10,7 @@ const { getChargeConfig, computeCharges, round2 } = require('../../services/char
 const { trackingSnapshot, checkServiceArea } = require('../../services/tracking.service');
 const { requestOrderConfirmation } = require('../../services/ivr.service');
 const { enabledPaymentOptions } = require('../../services/gateways');
+const { logServerError } = require('../../services/errorLog.service');
 
 function serviceAreaError(check) {
   const s = check.outside[0];
@@ -246,7 +247,7 @@ const placeOrder = catchAsync(async (req, res) => {
   await cart.save();
 
   // COD confirmation call, when switched on (services/ivr.service.js). Never blocks checkout.
-  requestOrderConfirmation(order).catch((err) => console.error(`Confirmation call for ${order.orderNumber} failed:`, err.message));
+  requestOrderConfirmation(order).catch((err) => logServerError(`Confirmation call for ${order.orderNumber} failed`, err));
 
   // No manual accept step: COD/Wallet orders go straight to the pickers here. An online order
   // waits at 'placed' until it's paid, then the payment handlers dispatch it — see

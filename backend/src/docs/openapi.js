@@ -65,6 +65,8 @@ const spec = {
     { name: 'Picker - Earnings' },
     { name: 'SOS' },
     { name: 'Admin - SOS' },
+    { name: 'Error Logs' },
+    { name: 'Admin - Error Logs' },
   ],
   paths: {
     ...require('./paths/core.paths'),
@@ -77,6 +79,7 @@ const spec = {
     ...require('./paths/features.paths'),
     ...require('./paths/programs.paths'),
     ...require('./paths/sos.paths'),
+    ...require('./paths/errorLogs.paths'),
   },
 };
 

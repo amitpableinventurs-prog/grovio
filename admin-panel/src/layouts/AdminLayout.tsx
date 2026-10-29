@@ -30,6 +30,7 @@ import {
   AlertOutlined,
   MoneyCollectOutlined,
   GiftOutlined,
+  BugOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -83,6 +84,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'content-pages', path: '/content-pages', label: 'Content Pages', icon: <FileTextOutlined />, permissions: [PERMISSIONS.MANAGE_SETTINGS] },
   { key: 'admins', path: '/admins', label: 'Admins & Roles', icon: <SafetyCertificateOutlined />, permissions: [PERMISSIONS.MANAGE_ADMINS] },
   { key: 'activity-logs', path: '/activity-logs', label: 'Activity Logs', icon: <FileSearchOutlined />, permissions: [PERMISSIONS.MANAGE_ADMINS] },
+  { key: 'error-logs', path: '/error-logs', label: 'Error Logs', icon: <BugOutlined />, permissions: [PERMISSIONS.MANAGE_SETTINGS] },
 ];
 
 // A store-manager (vendor) account holds only MANAGE_OWN_STORE_INVENTORY — everyone else with

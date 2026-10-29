@@ -31,6 +31,7 @@ import SettingsPage from './pages/SettingsPage';
 import ContentPagesPage from './pages/ContentPagesPage';
 import AdminsPage from './pages/AdminsPage';
 import ActivityLogsPage from './pages/ActivityLogsPage';
+import ErrorLogsPage from './pages/ErrorLogsPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -252,6 +253,14 @@ export default function App() {
             element={
               <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_ADMINS]}>
                 <ActivityLogsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/error-logs"
+            element={
+              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_SETTINGS]}>
+                <ErrorLogsPage />
               </ProtectedRoute>
             }
           />

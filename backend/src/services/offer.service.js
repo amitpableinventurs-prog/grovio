@@ -6,6 +6,7 @@ const sessions = require('./riderSession.service');
 const gigs = require('./gig.service');
 const { deliveredStats, round2 } = require('./riderEarnings.service');
 const { creditWallet } = require('./payment.service');
+const { logServerError } = require('./errorLog.service');
 
 // Incentive offers for delivery partners (models/incentiveOffer.model.js). While an offer runs,
 // a partner's progress is computed live from their gigs, delivered orders, order earnings,
@@ -423,7 +424,7 @@ async function settleDueOffers() {
     try {
       await settleOffer(offer);
     } catch (err) {
-      console.error(`Settling offer ${offer.id} failed:`, err.message);
+      logServerError(`Settling offer ${offer.id} failed`, err);
     }
   }
   return due.length;

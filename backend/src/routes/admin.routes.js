@@ -38,7 +38,9 @@ const announcementsCtrl = require('../controllers/admin/announcements.controller
 const pickerPayCtrl = require('../controllers/admin/pickerPay.controller');
 const riderPayCtrl = require('../controllers/admin/riderPay.controller');
 const programsCtrl = require('../controllers/admin/riderPrograms.controller');
+const errorLogsCtrl = require('../controllers/admin/errorLogs.controller');
 const { gigBulkRules, gigUpdateRules, offerRules, earningAdjustmentRules, deductionRules, cashDepositRules, announcementRules } = require('../validators/programs.validator');
+const { errorLogFilterRules } = require('../validators/errorLogs.validator');
 
 router.use(authenticate, authorize('admin'));
 
@@ -289,5 +291,11 @@ router.post('/admins', p(PERMISSIONS.MANAGE_ADMINS), adminsCtrl.createAdmin);
 router.get('/admins', p(PERMISSIONS.MANAGE_ADMINS), adminsCtrl.listAdmins);
 router.patch('/admins/:id/permissions', p(PERMISSIONS.MANAGE_ADMINS), adminsCtrl.updatePermissions);
 router.get('/activity-logs', p(PERMISSIONS.MANAGE_ADMINS), adminsCtrl.listActivityLogs);
+
+// Error logs: backend errors and the ones apps report (POST /common/error-logs).
+router.get('/error-logs', p(PERMISSIONS.MANAGE_SETTINGS), errorLogFilterRules, validate, errorLogsCtrl.listErrorLogs);
+router.delete('/error-logs', p(PERMISSIONS.MANAGE_SETTINGS), errorLogFilterRules, validate, errorLogsCtrl.clearErrorLogs);
+router.get('/error-logs/:id', p(PERMISSIONS.MANAGE_SETTINGS), errorLogsCtrl.getErrorLog);
+router.delete('/error-logs/:id', p(PERMISSIONS.MANAGE_SETTINGS), errorLogsCtrl.deleteErrorLog);
 
 module.exports = router;

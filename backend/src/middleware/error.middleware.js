@@ -1,4 +1,5 @@
 const ApiError = require('../utils/apiError');
+const { logRequestError } = require('../services/errorLog.service');
 
 function notFoundHandler(req, res, next) {
   next(new ApiError(404, `Route not found: ${req.method} ${req.originalUrl}`));
@@ -25,6 +26,8 @@ function errorHandler(err, req, res, next) {
   if (process.env.NODE_ENV !== 'production') {
     console.error(err);
   }
+  // Server faults (not 4xx client mistakes) go to Admin > Error Logs.
+  if (statusCode >= 500) logRequestError(err, req, statusCode);
 
   res.status(statusCode).json({
     success: false,
