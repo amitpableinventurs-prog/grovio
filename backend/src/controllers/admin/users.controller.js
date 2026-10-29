@@ -148,23 +148,27 @@ const getUserDetail = catchAsync(async (req, res) => {
   new ApiResponse(200, { ...user.toObject(), pickerProfile, deliveryProfile, onboarding }).send(res);
 });
 
-// DELETE /admin/customers/:id — the same deletion as the customer doing it from the app
-// (services/accountDeletion.service.js): refused while an order is still in progress.
-const deleteCustomer = catchAsync(async (req, res) => {
-  const user = await User.findOne({ _id: req.params.id, role: 'customer', deletedAt: null });
-  if (!user) throw new ApiError(404, 'Customer not found');
+// DELETE /admin/customers/:id | /admin/pickers/:id — the same deletion as the person doing it from
+// their app (services/accountDeletion.service.js), refused while something is still open (an
+// order in progress, a pick task, a pending payout).
+function deleteByRole(role) {
+  const label = role === 'customer' ? 'Customer' : 'Picker';
+  return catchAsync(async (req, res) => {
+    const user = await User.findOne({ _id: req.params.id, role, deletedAt: null });
+    if (!user) throw new ApiError(404, `${label} not found`);
 
-  const { walletBalance } = await deleteAccount(user);
+    const { walletBalance } = await deleteAccount(user);
 
-  await logAdminActivity({
-    adminId: req.user.id,
-    action: 'customer.delete',
-    entityType: 'User',
-    entityId: user._id,
-    metadata: { walletBalance },
+    await logAdminActivity({
+      adminId: req.user.id,
+      action: `${role}.delete`,
+      entityType: 'User',
+      entityId: user._id,
+      metadata: { walletBalance },
+    });
+
+    new ApiResponse(200, null, `${label} deleted`).send(res);
   });
+}
 
-  new ApiResponse(200, null, 'Customer deleted').send(res);
-});
-
-module.exports = { listByRole, updateProfileStatus, assignPickerToStore, toggleActive, getUserDetail, deleteCustomer };
+module.exports = { listByRole, updateProfileStatus, assignPickerToStore, toggleActive, getUserDetail, deleteByRole };

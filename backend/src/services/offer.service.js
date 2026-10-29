@@ -6,6 +6,7 @@ const sessions = require('./riderSession.service');
 const gigs = require('./gig.service');
 const { deliveredStats, round2 } = require('./riderEarnings.service');
 const { creditWallet } = require('./payment.service');
+const { logServerError } = require('./errorLog.service');
 
 // Incentive offers for delivery partners (models/incentiveOffer.model.js). While an offer runs,
 // a partner's progress is computed live from their gigs, delivered orders, order earnings,
@@ -117,13 +118,18 @@ function evaluate(offer, m, now = new Date()) {
   const status = offerStatus(offer, now);
   const progress = { gigs: m.gigs, orders: m.orders, earnings: m.earnings, orderDenials: m.orderDenials, cancellations: m.cancellations, incompleteGigs: m.incompleteGigs };
 
-  const tiers = offer.tiers.map((tier) => ({
-    incentive: tier.incentive,
-    gigs: tier.minGigs ?? null,
-    orders: tier.minOrders ?? null,
-    earnings: tier.minEarnings ?? null,
-    achieved: tierMet(tier, progress),
-  }));
+  const tiers = offer.tiers.map((tier) => {
+    const achieved = tierMet(tier, progress);
+    return {
+      incentive: tier.incentive,
+      gigs: tier.minGigs ?? null,
+      orders: tier.minOrders ?? null,
+      earnings: tier.minEarnings ?? null,
+      achieved,
+      // The tier's lock icon: it unlocks once all of its requirements are met.
+      locked: !achieved,
+    };
+  });
   let tierIndex = -1;
   tiers.forEach((tier, i) => { if (tier.achieved && (tierIndex < 0 || tier.incentive > tiers[tierIndex].incentive)) tierIndex = i; });
 
@@ -418,24 +424,27 @@ async function settleDueOffers() {
     try {
       await settleOffer(offer);
     } catch (err) {
-      console.error(`Settling offer ${offer.id} failed:`, err.message);
+      logServerError(`Settling offer ${offer.id} failed`, err);
     }
   }
   return due.length;
 }
+
+// Each tier's lock state for a partner's progress: [{ incentive, locked }].
+const tierLocks = (offer, p) => offer.tiers.map((tier) => ({ incentive: tier.incentive, locked: !p || !tierMet(tier, p) }));
 
 // Admin: live progress (or settled payouts) for every partner in an offer.
 async function ridersProgress(offer) {
   const now = new Date();
   if (offer.settledAt) {
     const payouts = await OfferPayout.find({ offer: offer._id }).populate('rider', 'name phone').sort({ amount: -1 }).lean();
-    return payouts.map((p) => ({ rider: p.rider, status: p.status, amount: p.amount, tierIndex: p.tierIndex, reason: p.reason, progress: p.progress }));
+    return payouts.map((p) => ({ rider: p.rider, status: p.status, amount: p.amount, tierIndex: p.tierIndex, tiers: tierLocks(offer, p.progress), reason: p.reason, progress: p.progress }));
   }
   const riderIds = (await candidateRiders({ ...offer.toObject(), endAt: offerStatus(offer, now) === 'live' ? now : offer.endAt })).slice(0, 200);
   const users = await User.find({ _id: { $in: riderIds }, role: 'delivery' }).select('name phone');
   const rows = await Promise.all(users.map(async (u) => {
     const ev = evaluate(offer, await measure(offer, u._id, now), now);
-    return { rider: u, status: ev.disqualified ? 'disqualified' : 'in_progress', amount: ev.earnedSoFar, tierIndex: ev.achievedTierIndex, reason: ev.disqualified, progress: ev.progress };
+    return { rider: u, status: ev.disqualified ? 'disqualified' : 'in_progress', amount: ev.earnedSoFar, tierIndex: ev.achievedTierIndex, tiers: tierLocks(offer, ev.progress), reason: ev.disqualified, progress: ev.progress };
   }));
   return rows.sort((a, b) => b.amount - a.amount);
 }

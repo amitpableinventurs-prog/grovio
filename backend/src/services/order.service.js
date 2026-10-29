@@ -4,6 +4,7 @@ const { emitOrderEvent } = require('../sockets');
 const { notifyUser } = require('./notification.service');
 const ApiError = require('../utils/apiError');
 const { generateHubPickupToken } = require('../utils/hubPickupToken');
+const { logServerError } = require('./errorLog.service');
 
 // Allowed forward transitions. Cancellation is handled separately (allowed from most pre-delivery states).
 // 'assigned' -> 'picked_up' is gated behind a verified handover OTP (see verifyHandoverOtp below) —
@@ -180,13 +181,13 @@ async function transitionOrder({ order, toStatus, changedBy, note, notifyHubPick
     if (toStatus === 'assigned') await require('./coldBag.service').markNeedsColdBag(order);
     await require('./riderPay.service').onOrderStatus(order, toStatus);
   } catch (err) {
-    console.error(`Trip/pay update for ${order.orderNumber} (${toStatus}) failed:`, err.message);
+    logServerError(`Trip/pay update for ${order.orderNumber} (${toStatus}) failed`, err);
   }
   // "New order request" card for the partner it was just assigned to (needs the pay quote above).
   // Not for a hub claim, which is accepted as it's taken.
   if (toStatus === 'assigned' && order.delivery && !order.deliveryAcceptedAt) {
     await require('./deliveryRequest.service').pushRequest(order._id)
-      .catch((err) => console.error(`Order request push for ${order.orderNumber} failed:`, err.message));
+      .catch((err) => logServerError(`Order request push for ${order.orderNumber} failed`, err));
   }
 
   const message = STATUS_MESSAGES[toStatus];
@@ -202,7 +203,7 @@ async function transitionOrder({ order, toStatus, changedBy, note, notifyHubPick
   // Auto IVR call for this status, if switched on (services/ivr.service.js). Fire and forget —
   // a telephony problem must never fail the status change itself. Required lazily (cycle).
   require('./ivr.service').triggerOrderEvent(order, toStatus)
-    .catch((err) => console.error(`IVR call for ${order.orderNumber} (${toStatus}) failed:`, err.message));
+    .catch((err) => logServerError(`IVR call for ${order.orderNumber} (${toStatus}) failed`, err));
 
   // Only the hub picker(s) — the ones working order.store — ever meet the delivery partner, so
   // only they need the handover code.

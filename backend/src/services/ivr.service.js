@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const { IvrCall, Order, User, Setting, SupportTicket } = require('../models');
 const { getSetting, invalidateSettingsCache } = require('./settings.service');
 const { sendSms } = require('./sms.service');
+const { logServerError } = require('./errorLog.service');
 
 // IVR (voice calls) for orders, built on Exotel (Indian cloud telephony). Covers:
 //   - auto call notifications on order events      triggerOrderEvent()
@@ -195,7 +196,7 @@ async function placeCall({ type, order = null, user = null, phone, event = null,
   } catch (err) {
     call.status = 'failed';
     call.error = err.message;
-    console.error(`IVR call ${call.id} failed:`, err.message);
+    logServerError(`IVR call ${call.id} failed`, err);
   }
   await call.save();
   return call;
@@ -372,7 +373,7 @@ async function handleMissedCall(params) {
     if (cfg.missedCallCallback) {
       await placeCall({ type: 'missed_call_callback', order, user, phone: user.phone, event: 'missed_call', message: `Hello ${firstName(user.name)}, this is Grovio returning your call. ${sentence} Goodbye.` });
     }
-  })().catch((err) => console.error('Missed call follow-up failed:', err.message));
+  })().catch((err) => logServerError('Missed call follow-up failed', err));
 }
 
 // ---- Customer care IVR (inbound) ------------------------------------------------------------

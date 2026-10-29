@@ -5,6 +5,7 @@ const { sendTextSms } = require('./sms.service');
 const { emitToRooms, ROOMS } = require('../sockets');
 const { hasFullAccess } = require('../utils/storeScope');
 const { PERMISSIONS } = require('../utils/permissions');
+const { logServerError } = require('./errorLog.service');
 
 // SOS for pickers, delivery partners and customers.
 //
@@ -187,7 +188,7 @@ async function raise(user, body = {}) {
   await alert.save();
 
   await pushToAdmins(created ? 'sos:alert' : 'sos:updated', alert._id);
-  if (created) notifyContacts(alert._id, user).catch((err) => console.error('SOS SMS failed:', err.message));
+  if (created) notifyContacts(alert._id, user).catch((err) => logServerError('SOS SMS failed', err));
 
   return {
     alert: userView(alert),

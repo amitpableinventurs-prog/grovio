@@ -84,6 +84,31 @@ body {
   pointer-events: none;
 }
 
+/* Location picker pin (components/LocationPicker.tsx): a CSS teardrop, tip at the chosen point */
+.location-pin span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50% 50% 50% 0;
+  background: #16a34a;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transform: rotate(-45deg);
+  cursor: grab;
+}
+.location-pin span::after {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 7px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+}
+
 /* Live Map: map and rider list side by side, stacked on narrow screens */
 @media (max-width: 992px) {
   .live-map-grid { grid-template-columns: 1fr !important; }

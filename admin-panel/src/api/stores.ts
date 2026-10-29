@@ -17,3 +17,13 @@ export function updateStore(id: string, data: Partial<Store>) {
 export function deleteStore(id: string) {
   return unwrap(apiClient.delete(`/admin/stores/${id}`));
 }
+
+export interface Place {
+  label: string;
+  lat: number;
+  lng: number;
+}
+
+export function searchPlaces(q: string) {
+  return unwrap<Place[]>(apiClient.get('/admin/places', { params: { q } }));
+}

@@ -4,6 +4,7 @@ const ApiError = require('../utils/apiError');
 const t = require('../utils/localTime');
 const { getSetting, invalidateSettingsCache } = require('./settings.service');
 const sessions = require('./riderSession.service');
+const { logServerError } = require('./errorLog.service');
 
 // GoGrovio delivery partner pay: KM earning + performance incentives.
 //
@@ -371,7 +372,7 @@ async function attachToTrip(order) {
   try {
     await quoteOrder(order, order.delivery);
   } catch (err) {
-    console.error(`Pay quote for ${order.orderNumber} failed:`, err.message);
+    logServerError(`Pay quote for ${order.orderNumber} failed`, err);
   }
   return trip;
 }

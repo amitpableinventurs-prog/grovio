@@ -17,10 +17,12 @@ import IvrCallsPage from './pages/IvrCallsPage';
 import VoipCallsPage from './pages/VoipCallsPage';
 import SosAlertsPage from './pages/SosAlertsPage';
 import GigsPage from './pages/GigsPage';
+import OffersPage from './pages/OffersPage';
 import ChargesPage from './pages/ChargesPage';
 import InventoryPage from './pages/InventoryPage';
 import CouponsPage from './pages/CouponsPage';
 import BannersPage from './pages/BannersPage';
+import AlertsPage from './pages/AlertsPage';
 import PaymentsPage from './pages/PaymentsPage';
 import CashCollectionPage from './pages/CashCollectionPage';
 import SettlementsPage from './pages/SettlementsPage';
@@ -30,6 +32,7 @@ import SettingsPage from './pages/SettingsPage';
 import ContentPagesPage from './pages/ContentPagesPage';
 import AdminsPage from './pages/AdminsPage';
 import ActivityLogsPage from './pages/ActivityLogsPage';
+import ErrorLogsPage from './pages/ErrorLogsPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -119,6 +122,14 @@ export default function App() {
             }
           />
           <Route
+            path="/offers"
+            element={
+              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_DELIVERY]}>
+                <OffersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/sos"
             element={
               <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PICKERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY]}>
@@ -163,6 +174,14 @@ export default function App() {
             element={
               <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_PROMOTIONS]}>
                 <BannersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/alerts"
+            element={
+              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_SETTINGS, PERMISSIONS.MANAGE_PROMOTIONS, PERMISSIONS.MANAGE_DELIVERY]}>
+                <AlertsPage />
               </ProtectedRoute>
             }
           />
@@ -243,6 +262,14 @@ export default function App() {
             element={
               <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_ADMINS]}>
                 <ActivityLogsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/error-logs"
+            element={
+              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_SETTINGS]}>
+                <ErrorLogsPage />
               </ProtectedRoute>
             }
           />

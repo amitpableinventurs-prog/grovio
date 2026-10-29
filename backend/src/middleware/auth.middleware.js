@@ -25,6 +25,22 @@ const authenticate = catchAsync(async (req, res, next) => {
   next();
 });
 
+// Sets req.user when a valid token is sent, and carries on without one otherwise (an expired or
+// bad token is not an error here).
+const optionalAuthenticate = catchAsync(async (req, res, next) => {
+  const header = req.headers.authorization;
+  if (header?.startsWith('Bearer ')) {
+    try {
+      const decoded = jwt.verify(header.split(' ')[1], process.env.JWT_SECRET);
+      const user = await User.findById(decoded.id);
+      if (user && !user.deletedAt && user.isActive) req.user = user;
+    } catch (err) {
+      // treat as signed out
+    }
+  }
+  next();
+});
+
 const authorize = (...roles) => (req, res, next) => {
   if (!req.user || !roles.includes(req.user.role)) {
     throw new ApiError(403, 'You do not have permission to perform this action');
@@ -32,4 +48,4 @@ const authorize = (...roles) => (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, authorize };
+module.exports = { authenticate, optionalAuthenticate, authorize };

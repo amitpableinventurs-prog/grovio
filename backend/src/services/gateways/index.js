@@ -2,6 +2,7 @@ const { Order } = require('../../models');
 const { getSetting } = require('../settings.service');
 const { notifyUser } = require('../notification.service');
 const { dispatchToPickers } = require('../order.service');
+const { logServerError } = require('../errorLog.service');
 
 // Shared bits for the payment gateways (Razorpay lives in ../payment.service.js; PayU and PhonePe
 // in this folder): which payment options checkout offers, and marking a gateway payment paid or
@@ -51,7 +52,7 @@ async function markPaid(payment, { gatewayPaymentId, instrument, amount, raw }) 
     payment.failureReason = `Amount mismatch: expected ${payment.amount}, gateway reported ${amount}`;
     payment.rawResponse = raw ?? null;
     await payment.save();
-    console.error(`Payment ${payment._id}: ${payment.failureReason}`);
+    logServerError(`Payment ${payment._id}: ${payment.failureReason}`);
     return { changed: true, mismatch: true };
   }
 

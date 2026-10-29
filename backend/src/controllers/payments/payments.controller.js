@@ -7,6 +7,7 @@ const { creditWallet } = require('../../services/payment.service');
 const { notifyUser } = require('../../services/notification.service');
 const { getSetting } = require('../../services/settings.service');
 const { dispatchToPickers } = require('../../services/order.service');
+const { logServerError } = require('../../services/errorLog.service');
 
 // POST /payments/razorpay/create  { orderId }
 const createRazorpayOrder = catchAsync(async (req, res) => {
@@ -100,12 +101,12 @@ const razorpayWebhook = catchAsync(async (req, res) => {
     if (payment && payment.status !== 'paid') {
       const expectedPaise = Math.round(Number(payment.amount) * 100);
       if (paymentEntity.amount !== expectedPaise) {
-        console.error(`Razorpay authorized amount mismatch for payment ${payment._id}: expected ${expectedPaise}, got ${paymentEntity.amount} — not capturing`);
+        logServerError(`Razorpay authorized amount mismatch for payment ${payment._id}: expected ${expectedPaise}, got ${paymentEntity.amount} — not capturing`);
       } else {
         try {
           await paymentService.capturePayment(paymentEntity.id, expectedPaise, paymentEntity.currency || 'INR');
         } catch (err) {
-          console.error(`Failed to capture Razorpay payment ${paymentEntity.id}:`, err.message);
+          logServerError(`Failed to capture Razorpay payment ${paymentEntity.id}`, err);
         }
       }
     }

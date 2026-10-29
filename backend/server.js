@@ -11,8 +11,18 @@ require('./src/models'); // registers all Mongoose models
 const { initSocket } = require('./src/sockets');
 const { startRiderJobs } = require('./src/services/riderJobs.service');
 const { notFoundHandler, errorHandler } = require('./src/middleware/error.middleware');
+const { logCrash } = require('./src/services/errorLog.service');
 const swaggerUi = require('swagger-ui-express');
 const openapiSpec = require('./src/docs/openapi');
+
+// A crash goes to Admin > Error Logs first, then the process exits as Node would anyway.
+async function crash(label, err) {
+  console.error(`${label}:`, err);
+  await logCrash(label, err);
+  process.exit(1);
+}
+process.on('uncaughtException', (err) => crash('Uncaught exception', err));
+process.on('unhandledRejection', (err) => crash('Unhandled promise rejection', err));
 
 const app = express();
 

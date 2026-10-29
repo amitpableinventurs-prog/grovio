@@ -91,6 +91,13 @@ paths['/admin/pickers/{id}'] = {
     }),
     responses: { 200: envelope({ type: 'object', properties: { user: ref('User'), pickerProfile: ref('PickerProfile') } }, 'Picker updated'), 401: RESPONSES_401, 404: RESPONSES_404 },
   },
+  delete: {
+    tags: TAG_USERS,
+    summary: 'Delete a picker account — same as DELETE /picker/account. Requires manage_pickers',
+    description: 'ID proof (number and document), address and emergency contact are removed and the picker is unlinked from their store; picking and pay history is kept under "Deleted user". Refused (400, blockers in errors[]) while a pick task is in progress or a payout is pending.',
+    ...bearer(), parameters: [idParam('id', 'Picker USER ID')],
+    responses: { 200: envelope(null, 'Picker deleted'), 400: errorResponse('1 order(s) still in progress (GRV1024). Try again once they are picked or handed to another picker.'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 },
+  },
 };
 
 paths['/admin/delivery-partners'] = userListPath('delivery', 'Requires manage_delivery permission');
@@ -159,6 +166,19 @@ paths['/admin/users/{id}/active'] = {
 };
 
 // ---------- Stores ----------
+paths['/admin/places'] = {
+  get: {
+    tags: TAG_STORES,
+    summary: 'Search a place by name (area, street, city) for a store\'s location. Requires manage_stores',
+    description: 'Google Geocoding when a Maps key is set in Settings, else OpenStreetMap (Nominatim). At most 6 results, India only, cached for a day.',
+    ...bearer(), parameters: [q('q', 'What to search for, at least 3 letters')],
+    responses: {
+      200: envelope({ type: 'array', items: { type: 'object', properties: { label: { type: 'string', example: 'Vijay Nagar, Indore, Madhya Pradesh, India' }, lat: { type: 'number', example: 22.7511 }, lng: { type: 'number', example: 75.8955 } } } }),
+      400: errorResponse('Type at least 3 letters — an area, street or city'), 401: RESPONSES_401, 403: RESPONSES_403,
+      502: errorResponse('Place search is not available right now. Try again in a moment, or drop the pin on the map.'),
+    },
+  },
+};
 paths['/admin/stores'] = {
   get: {
     tags: TAG_STORES, summary: 'List all stores platform-wide', ...bearer(),

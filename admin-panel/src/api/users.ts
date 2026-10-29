@@ -54,6 +54,10 @@ export function deleteCustomer(userId: string) {
   return unwrap(apiClient.delete(`/admin/customers/${userId}`));
 }
 
+export function deletePicker(userId: string) {
+  return unwrap(apiClient.delete(`/admin/pickers/${userId}`));
+}
+
 export function toggleUserActive(userId: string, isActive: boolean) {
   return unwrap(apiClient.patch(`/admin/users/${userId}/active`, { isActive }));
 }

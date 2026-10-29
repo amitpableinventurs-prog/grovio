@@ -1,17 +1,28 @@
 const router = require('express').Router();
-const { authenticate } = require('../middleware/auth.middleware');
+const { authenticate, optionalAuthenticate } = require('../middleware/auth.middleware');
 const upload = require('../middleware/upload.middleware');
+const validate = require('../middleware/validate.middleware');
+const { asErrorList, reportErrorRules } = require('../validators/errorLogs.validator');
+const { appAlertsRules } = require('../validators/alerts.validator');
 
 const publicCtrl = require('../controllers/common/public.controller');
 const notificationsCtrl = require('../controllers/common/notifications.controller');
 const sosCtrl = require('../controllers/common/sos.controller');
 const supportCtrl = require('../controllers/common/support.controller');
 const announcementsCtrl = require('../controllers/common/announcements.controller');
+const errorLogsCtrl = require('../controllers/common/errorLogs.controller');
+const alertsCtrl = require('../controllers/common/alerts.controller');
 
 // Public
 router.get('/banners', publicCtrl.listActiveBanners);
 router.get('/content/:slug', publicCtrl.getContentPage);
 router.get('/wishlist/:shareToken', publicCtrl.getSharedWishlist);
+
+// App error reports for Admin > Error Logs (login optional).
+router.post('/error-logs', optionalAuthenticate, asErrorList, reportErrorRules, validate, errorLogsCtrl.reportErrors);
+
+// Alert messages set in Admin > Alert Messages (login optional: signed out, pass ?app=).
+router.get('/alerts', optionalAuthenticate, appAlertsRules, validate, alertsCtrl.listAlerts);
 
 // Authenticated (any role)
 router.post('/upload', authenticate, upload.single('file'), publicCtrl.uploadFile);

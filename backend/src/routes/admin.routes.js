@@ -38,7 +38,11 @@ const announcementsCtrl = require('../controllers/admin/announcements.controller
 const pickerPayCtrl = require('../controllers/admin/pickerPay.controller');
 const riderPayCtrl = require('../controllers/admin/riderPay.controller');
 const programsCtrl = require('../controllers/admin/riderPrograms.controller');
+const errorLogsCtrl = require('../controllers/admin/errorLogs.controller');
+const alertsCtrl = require('../controllers/admin/alerts.controller');
 const { gigBulkRules, gigUpdateRules, offerRules, earningAdjustmentRules, deductionRules, cashDepositRules, announcementRules } = require('../validators/programs.validator');
+const { errorLogFilterRules } = require('../validators/errorLogs.validator');
+const { alertRules, alertActiveRules, alertListRules } = require('../validators/alerts.validator');
 
 router.use(authenticate, authorize('admin'));
 
@@ -48,7 +52,7 @@ router.get('/dashboard', dashboardCtrl.getStats);
 // Users by role
 const p = requirePermission;
 router.get('/customers', p(PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.VIEW_REPORTS), usersCtrl.listByRole('customer'));
-router.delete('/customers/:id', p(PERMISSIONS.MANAGE_ORDERS), usersCtrl.deleteCustomer);
+router.delete('/customers/:id', p(PERMISSIONS.MANAGE_ORDERS), usersCtrl.deleteByRole('customer'));
 router.get('/pickers', p(PERMISSIONS.MANAGE_PICKERS), usersCtrl.listByRole('picker'));
 router.post(
   '/pickers',
@@ -62,6 +66,7 @@ router.put(
   upload.fields([{ name: 'profilePhoto', maxCount: 1 }, { name: 'idProofDocument', maxCount: 1 }]),
   pickersCtrl.updatePicker
 );
+router.delete('/pickers/:id', p(PERMISSIONS.MANAGE_PICKERS), usersCtrl.deleteByRole('picker'));
 router.get('/delivery-partners', p(PERMISSIONS.MANAGE_DELIVERY), usersCtrl.listByRole('delivery'));
 router.post('/delivery-partners', p(PERMISSIONS.MANAGE_DELIVERY), adminBankRules, validate, deliveryPartnersCtrl.createDeliveryPartner);
 router.put('/delivery-partners/:id', p(PERMISSIONS.MANAGE_DELIVERY), adminBankRules, validate, deliveryPartnersCtrl.updateDeliveryPartner);
@@ -123,6 +128,14 @@ router.put('/announcements/:id', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANA
 router.delete('/announcements/:id', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PROMOTIONS), announcementsCtrl.archive);
 router.post('/announcements/:id/publish', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PROMOTIONS), announcementsCtrl.publish);
 router.get('/announcements/:id/stats', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PROMOTIONS), announcementsCtrl.stats);
+// Alert messages: banners / popups in the Customer, Picker and Delivery apps.
+const ALERT_PERMS = [PERMISSIONS.MANAGE_SETTINGS, PERMISSIONS.MANAGE_PROMOTIONS, PERMISSIONS.MANAGE_DELIVERY];
+router.get('/alerts', p(...ALERT_PERMS), alertListRules, validate, alertsCtrl.listAlerts);
+router.post('/alerts', p(...ALERT_PERMS), alertRules, validate, alertsCtrl.createAlert);
+router.get('/alerts/:id', p(...ALERT_PERMS), alertsCtrl.getAlert);
+router.put('/alerts/:id', p(...ALERT_PERMS), alertRules, validate, alertsCtrl.updateAlert);
+router.patch('/alerts/:id/active', p(...ALERT_PERMS), alertActiveRules, validate, alertsCtrl.setAlertActive);
+router.delete('/alerts/:id', p(...ALERT_PERMS), alertsCtrl.deleteAlert);
 // Picker product-based pay: policy, earnings, errors; per-order contribution report.
 router.get('/picker-pay/policy', p(PERMISSIONS.MANAGE_SETTINGS, PERMISSIONS.MANAGE_SETTLEMENTS), pickerPayCtrl.getPolicy);
 router.put('/picker-pay/policy', p(PERMISSIONS.MANAGE_SETTINGS), pickerPayCtrl.updatePolicy);
@@ -152,6 +165,7 @@ router.post(
   storesCtrl.createStore
 );
 router.get('/stores', p(PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), storesCtrl.listStores);
+router.get('/places', p(PERMISSIONS.MANAGE_STORES), storesCtrl.placeSearch);
 router.get('/stores/:id', p(PERMISSIONS.MANAGE_STORES, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), storesCtrl.getStore);
 router.patch(
   '/stores/:id',
@@ -287,5 +301,11 @@ router.post('/admins', p(PERMISSIONS.MANAGE_ADMINS), adminsCtrl.createAdmin);
 router.get('/admins', p(PERMISSIONS.MANAGE_ADMINS), adminsCtrl.listAdmins);
 router.patch('/admins/:id/permissions', p(PERMISSIONS.MANAGE_ADMINS), adminsCtrl.updatePermissions);
 router.get('/activity-logs', p(PERMISSIONS.MANAGE_ADMINS), adminsCtrl.listActivityLogs);
+
+// Error logs: backend errors and the ones apps report (POST /common/error-logs).
+router.get('/error-logs', p(PERMISSIONS.MANAGE_SETTINGS), errorLogFilterRules, validate, errorLogsCtrl.listErrorLogs);
+router.delete('/error-logs', p(PERMISSIONS.MANAGE_SETTINGS), errorLogFilterRules, validate, errorLogsCtrl.clearErrorLogs);
+router.get('/error-logs/:id', p(PERMISSIONS.MANAGE_SETTINGS), errorLogsCtrl.getErrorLog);
+router.delete('/error-logs/:id', p(PERMISSIONS.MANAGE_SETTINGS), errorLogsCtrl.deleteErrorLog);
 
 module.exports = router;

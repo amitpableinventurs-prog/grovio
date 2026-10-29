@@ -29,6 +29,9 @@ import {
   AudioOutlined,
   AlertOutlined,
   MoneyCollectOutlined,
+  GiftOutlined,
+  BugOutlined,
+  NotificationOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -65,10 +68,12 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'sos', path: '/sos', label: 'SOS Alerts', icon: <AlertOutlined />, permissions: SOS_PERMISSIONS },
   { key: 'live-map', path: '/live-map', label: 'Live Map', icon: <EnvironmentOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
   { key: 'gigs', path: '/gigs', label: 'Gigs', icon: <ScheduleOutlined />, permissions: [PERMISSIONS.MANAGE_DELIVERY] },
+  { key: 'offers', path: '/offers', label: 'Incentive Offers', icon: <GiftOutlined />, permissions: [PERMISSIONS.MANAGE_DELIVERY] },
   { key: 'orders', path: '/orders', label: 'Orders', icon: <ShoppingCartOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
   { key: 'inventory', path: '/inventory', label: 'Inventory', icon: <DatabaseOutlined />, permissions: [PERMISSIONS.MANAGE_INVENTORY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
   { key: 'coupons', path: '/coupons', label: 'Coupons', icon: <TagsOutlined />, permissions: [PERMISSIONS.MANAGE_PROMOTIONS] },
   { key: 'banners', path: '/banners', label: 'Banners', icon: <PictureOutlined />, permissions: [PERMISSIONS.MANAGE_PROMOTIONS] },
+  { key: 'alerts', path: '/alerts', label: 'Alert Messages', icon: <NotificationOutlined />, permissions: [PERMISSIONS.MANAGE_SETTINGS, PERMISSIONS.MANAGE_PROMOTIONS, PERMISSIONS.MANAGE_DELIVERY] },
   { key: 'payments', path: '/payments', label: 'Payments & Refunds', icon: <CreditCardOutlined />, permissions: [PERMISSIONS.MANAGE_PAYMENTS] },
   { key: 'cash-collection', path: '/cash-collection', label: 'Cash Collection', icon: <MoneyCollectOutlined />, permissions: [PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS] },
   { key: 'settlements', path: '/settlements', label: 'Settlements', icon: <WalletOutlined />, permissions: [PERMISSIONS.MANAGE_SETTLEMENTS] },
@@ -81,6 +86,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'content-pages', path: '/content-pages', label: 'Content Pages', icon: <FileTextOutlined />, permissions: [PERMISSIONS.MANAGE_SETTINGS] },
   { key: 'admins', path: '/admins', label: 'Admins & Roles', icon: <SafetyCertificateOutlined />, permissions: [PERMISSIONS.MANAGE_ADMINS] },
   { key: 'activity-logs', path: '/activity-logs', label: 'Activity Logs', icon: <FileSearchOutlined />, permissions: [PERMISSIONS.MANAGE_ADMINS] },
+  { key: 'error-logs', path: '/error-logs', label: 'Error Logs', icon: <BugOutlined />, permissions: [PERMISSIONS.MANAGE_SETTINGS] },
 ];
 
 // A store-manager (vendor) account holds only MANAGE_OWN_STORE_INVENTORY — everyone else with

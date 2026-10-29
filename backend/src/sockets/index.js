@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { hasFullAccess } = require('../utils/storeScope');
 const { PERMISSIONS } = require('../utils/permissions');
+const { logServerError } = require('../services/errorLog.service');
 
 let io = null;
 
@@ -127,7 +128,7 @@ function initSocket(server) {
       if (role !== 'delivery') return;
       const { lat, lng } = payload || {};
       require('../services/tracking.service').handleRiderLocation(id, lat, lng)
-        .catch((err) => console.error('delivery:location failed:', err.message));
+        .catch((err) => logServerError('delivery:location failed', err));
     });
 
     // Live picker GPS ping, relayed to anyone watching this order (e.g. admin's

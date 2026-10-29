@@ -8,6 +8,7 @@ const { getSetting } = require('../../services/settings.service');
 const { navigationLinks } = require('../../services/directions.service');
 const { distanceKm } = require('../../utils/geo');
 const { emitToRooms, ROOMS } = require('../../sockets');
+const { logServerError } = require('../../services/errorLog.service');
 const {
   extractCheckinToken,
   parseHubCode,
@@ -217,7 +218,7 @@ async function pickUpByScan(req, profile, token) {
   const log = (status, failureReason = null) => ScannerLog.create({
     order: order._id, qrType: 'hub_pickup', qrToken: token, scannedBy: riderId, userType: 'delivery',
     deviceId: deviceId || null, location: position || undefined, status, failureReason,
-  }).catch((err) => console.error('Scanner log failed:', err.message));
+  }).catch((err) => logServerError('Scanner log failed', err));
   const fail = async (status, reason, message) => {
     await log('failed', reason);
     throw new ApiError(status, message);
