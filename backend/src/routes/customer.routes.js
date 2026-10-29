@@ -32,6 +32,8 @@ router.delete('/cart/items/:id', cartCtrl.removeCartItem);
 router.delete('/cart', cartCtrl.clearCart);
 router.post('/cart/apply-coupon', cartCtrl.applyCoupon);
 router.delete('/cart/coupon', cartCtrl.removeCoupon);
+// Alias: the app removes a coupon with DELETE on the same path it applies it with.
+router.delete('/cart/apply-coupon', cartCtrl.removeCoupon);
 
 // Wishlist
 router.get('/wishlist', wishlistCtrl.getWishlist);

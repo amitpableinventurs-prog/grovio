@@ -50,6 +50,7 @@ paths['/customer/cart/items/{id}'] = {
 };
 paths['/customer/cart/apply-coupon'] = {
   post: { tags: TAG_CART, summary: 'Validate and apply a coupon to the cart', ...bearer(), requestBody: jsonBody({ code: { type: 'string' } }, ['code']), responses: { 200: envelope(ref('Cart'), 'Coupon applied'), 400: errorResponse('Invalid/expired/ineligible coupon'), 401: RESPONSES_401 } },
+  delete: { tags: TAG_CART, summary: 'Remove the applied coupon (same as DELETE /customer/cart/coupon)', ...bearer(), responses: { 200: envelope(ref('Cart'), 'Coupon removed'), 401: RESPONSES_401 } },
 };
 paths['/customer/cart/coupon'] = {
   delete: { tags: TAG_CART, summary: 'Remove the applied coupon', ...bearer(), responses: { 200: envelope(ref('Cart'), 'Coupon removed'), 401: RESPONSES_401 } },
