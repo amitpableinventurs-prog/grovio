@@ -17,6 +17,7 @@ import IvrCallsPage from './pages/IvrCallsPage';
 import VoipCallsPage from './pages/VoipCallsPage';
 import SosAlertsPage from './pages/SosAlertsPage';
 import GigsPage from './pages/GigsPage';
+import OffersPage from './pages/OffersPage';
 import ChargesPage from './pages/ChargesPage';
 import InventoryPage from './pages/InventoryPage';
 import CouponsPage from './pages/CouponsPage';
@@ -115,6 +116,14 @@ export default function App() {
             element={
               <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_DELIVERY]}>
                 <GigsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/offers"
+            element={
+              <ProtectedRoute requiredPermissions={[PERMISSIONS.MANAGE_DELIVERY]}>
+                <OffersPage />
               </ProtectedRoute>
             }
           />

@@ -29,6 +29,7 @@ import {
   AudioOutlined,
   AlertOutlined,
   MoneyCollectOutlined,
+  GiftOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -65,6 +66,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'sos', path: '/sos', label: 'SOS Alerts', icon: <AlertOutlined />, permissions: SOS_PERMISSIONS },
   { key: 'live-map', path: '/live-map', label: 'Live Map', icon: <EnvironmentOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
   { key: 'gigs', path: '/gigs', label: 'Gigs', icon: <ScheduleOutlined />, permissions: [PERMISSIONS.MANAGE_DELIVERY] },
+  { key: 'offers', path: '/offers', label: 'Incentive Offers', icon: <GiftOutlined />, permissions: [PERMISSIONS.MANAGE_DELIVERY] },
   { key: 'orders', path: '/orders', label: 'Orders', icon: <ShoppingCartOutlined />, permissions: [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
   { key: 'inventory', path: '/inventory', label: 'Inventory', icon: <DatabaseOutlined />, permissions: [PERMISSIONS.MANAGE_INVENTORY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
   { key: 'coupons', path: '/coupons', label: 'Coupons', icon: <TagsOutlined />, permissions: [PERMISSIONS.MANAGE_PROMOTIONS] },

@@ -60,7 +60,7 @@ const HISTORY_GIG = obj({
   isPriority: bool(false), isFree: bool(true),
   trips: int(2), loginMinutes: int(43), summaryLabel: str('2 trips • 0:43 hrs'), earnings: num(96),
 });
-const TIER = obj({ incentive: num(130), gigs: { type: 'integer', nullable: true, example: 1 }, orders: { type: 'integer', nullable: true, example: 13 }, earnings: { type: 'number', nullable: true, example: null }, achieved: bool(false) });
+const TIER = obj({ incentive: num(130), gigs: { type: 'integer', nullable: true, example: 1 }, orders: { type: 'integer', nullable: true, example: 13 }, earnings: { type: 'number', nullable: true, example: null }, achieved: bool(false), locked: { ...bool(true), description: 'The lock icon: true until every requirement of the tier is met (= !achieved)' } });
 const OFFER = obj({
   id: str(''),
   title: str('Welcome_back_offer_wk_39_Fullday'),
@@ -469,7 +469,18 @@ paths['/admin/offers/{id}'] = {
   ...admin('put', 'Edit an offer (not once paid out)', { parameters: [idParam()], body: jsonBody(OFFER_INPUT, ['title', 'startAt', 'endAt', 'tiers']), extra: { 400: errorResponse('Already paid out'), 404: RESPONSES_404, 422: RESPONSES_422 } }),
   ...admin('delete', 'Cancel an offer (nobody is paid)', { parameters: [idParam()], extra: { 400: errorResponse('Already paid out'), 404: RESPONSES_404 } }),
 };
-paths['/admin/offers/{id}/riders'] = admin('get', 'Each partner\'s live progress, or their payout once settled', { parameters: [idParam()] });
+paths['/admin/offers/{id}/riders'] = admin('get', 'Each partner\'s live progress, or their payout once settled, with each tier locked / unlocked', {
+  parameters: [idParam()],
+  data: arr(obj({
+    rider: obj({ _id: str(''), name: str('Amit'), phone: str('9876543210') }),
+    status: S('string', 'in_progress', { enum: ['in_progress', 'disqualified', 'paid', 'not_achieved'] }),
+    amount: num(109),
+    tierIndex: int(0),
+    tiers: arr(obj({ incentive: num(109), locked: bool(false) })),
+    reason: { type: 'string', nullable: true },
+    progress: obj({ gigs: int(2), orders: int(14), earnings: num(531), orderDenials: int(0), cancellations: int(0), incompleteGigs: int(0) }),
+  })),
+});
 paths['/admin/offers/{id}/settle'] = admin('post', 'Pay out an ended offer now (otherwise the background job does it within ~5 min). Never pays anyone twice.', {
   parameters: [idParam()], data: obj({ riders: int(40), paid: int(12), total: num(3120) }), extra: { 400: errorResponse('Not ended yet / cancelled') },
 });
