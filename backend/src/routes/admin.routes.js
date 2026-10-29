@@ -39,8 +39,10 @@ const pickerPayCtrl = require('../controllers/admin/pickerPay.controller');
 const riderPayCtrl = require('../controllers/admin/riderPay.controller');
 const programsCtrl = require('../controllers/admin/riderPrograms.controller');
 const errorLogsCtrl = require('../controllers/admin/errorLogs.controller');
+const alertsCtrl = require('../controllers/admin/alerts.controller');
 const { gigBulkRules, gigUpdateRules, offerRules, earningAdjustmentRules, deductionRules, cashDepositRules, announcementRules } = require('../validators/programs.validator');
 const { errorLogFilterRules } = require('../validators/errorLogs.validator');
+const { alertRules, alertActiveRules, alertListRules } = require('../validators/alerts.validator');
 
 router.use(authenticate, authorize('admin'));
 
@@ -126,6 +128,14 @@ router.put('/announcements/:id', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANA
 router.delete('/announcements/:id', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PROMOTIONS), announcementsCtrl.archive);
 router.post('/announcements/:id/publish', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PROMOTIONS), announcementsCtrl.publish);
 router.get('/announcements/:id/stats', p(PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PROMOTIONS), announcementsCtrl.stats);
+// Alert messages: banners / popups in the Customer, Picker and Delivery apps.
+const ALERT_PERMS = [PERMISSIONS.MANAGE_SETTINGS, PERMISSIONS.MANAGE_PROMOTIONS, PERMISSIONS.MANAGE_DELIVERY];
+router.get('/alerts', p(...ALERT_PERMS), alertListRules, validate, alertsCtrl.listAlerts);
+router.post('/alerts', p(...ALERT_PERMS), alertRules, validate, alertsCtrl.createAlert);
+router.get('/alerts/:id', p(...ALERT_PERMS), alertsCtrl.getAlert);
+router.put('/alerts/:id', p(...ALERT_PERMS), alertRules, validate, alertsCtrl.updateAlert);
+router.patch('/alerts/:id/active', p(...ALERT_PERMS), alertActiveRules, validate, alertsCtrl.setAlertActive);
+router.delete('/alerts/:id', p(...ALERT_PERMS), alertsCtrl.deleteAlert);
 // Picker product-based pay: policy, earnings, errors; per-order contribution report.
 router.get('/picker-pay/policy', p(PERMISSIONS.MANAGE_SETTINGS, PERMISSIONS.MANAGE_SETTLEMENTS), pickerPayCtrl.getPolicy);
 router.put('/picker-pay/policy', p(PERMISSIONS.MANAGE_SETTINGS), pickerPayCtrl.updatePolicy);

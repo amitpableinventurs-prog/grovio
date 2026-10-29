@@ -67,6 +67,8 @@ const spec = {
     { name: 'Admin - SOS' },
     { name: 'Error Logs' },
     { name: 'Admin - Error Logs' },
+    { name: 'Alert Messages' },
+    { name: 'Admin - Alert Messages' },
   ],
   paths: {
     ...require('./paths/core.paths'),
@@ -80,6 +82,7 @@ const spec = {
     ...require('./paths/programs.paths'),
     ...require('./paths/sos.paths'),
     ...require('./paths/errorLogs.paths'),
+    ...require('./paths/alerts.paths'),
   },
 };
 

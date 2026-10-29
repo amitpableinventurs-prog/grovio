@@ -31,6 +31,7 @@ import {
   MoneyCollectOutlined,
   GiftOutlined,
   BugOutlined,
+  NotificationOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -72,6 +73,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'inventory', path: '/inventory', label: 'Inventory', icon: <DatabaseOutlined />, permissions: [PERMISSIONS.MANAGE_INVENTORY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY] },
   { key: 'coupons', path: '/coupons', label: 'Coupons', icon: <TagsOutlined />, permissions: [PERMISSIONS.MANAGE_PROMOTIONS] },
   { key: 'banners', path: '/banners', label: 'Banners', icon: <PictureOutlined />, permissions: [PERMISSIONS.MANAGE_PROMOTIONS] },
+  { key: 'alerts', path: '/alerts', label: 'Alert Messages', icon: <NotificationOutlined />, permissions: [PERMISSIONS.MANAGE_SETTINGS, PERMISSIONS.MANAGE_PROMOTIONS, PERMISSIONS.MANAGE_DELIVERY] },
   { key: 'payments', path: '/payments', label: 'Payments & Refunds', icon: <CreditCardOutlined />, permissions: [PERMISSIONS.MANAGE_PAYMENTS] },
   { key: 'cash-collection', path: '/cash-collection', label: 'Cash Collection', icon: <MoneyCollectOutlined />, permissions: [PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_SETTLEMENTS] },
   { key: 'settlements', path: '/settlements', label: 'Settlements', icon: <WalletOutlined />, permissions: [PERMISSIONS.MANAGE_SETTLEMENTS] },
