@@ -147,6 +147,61 @@ paths['/customer/orders/{id}/delivery-pin'] = {
 paths['/customer/orders/{id}/cancel'] = {
   post: { tags: TAG_ORDERS, summary: 'Cancel an order (refunds to wallet if already paid)', ...bearer(), parameters: [idParam()], requestBody: jsonBody({ reason: { type: 'string' } }), responses: { 200: envelope(ref('Order'), 'Order cancelled'), 400: errorResponse('Cannot cancel from current status'), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
+const REORDER_LINE = {
+  productId: { type: 'string' },
+  variantId: { type: 'string', nullable: true },
+  name: { type: 'string', example: 'Amul Taaza Milk' },
+  variantLabel: { type: 'string', nullable: true, example: '1 L' },
+};
+paths['/customer/orders/{id}/reorder'] = {
+  post: {
+    tags: TAG_ORDERS,
+    summary: 'Order again: put a past order\'s items back in the cart',
+    description: 'Any of my orders (delivered, cancelled, …). Each item goes in at today\'s price, as many as are in stock (counting what is already in the cart). Items that can\'t be added come back in `unavailable` with a reason. Adds to the current cart; `replaceCart: true` empties it first (and drops its coupon), but only if at least one item can be added. Always 200 when the order is mine: check `summary.added` (0 = nothing could be added, cart unchanged). Then go to checkout as usual.',
+    ...bearer(),
+    parameters: [idParam()],
+    requestBody: { required: false, content: { 'application/json': { schema: { type: 'object', properties: { replaceCart: { type: 'boolean', default: false } } } } } },
+    responses: {
+      200: envelope({
+        type: 'object',
+        properties: {
+          cart: { allOf: [ref('Cart')], description: 'The cart after reordering, items populated, with subtotal' },
+          orderNumber: { type: 'string', example: 'GRV-MVRW3ICR-3804' },
+          summary: { type: 'object', properties: { items: { type: 'integer', example: 4 }, added: { type: 'integer', example: 3 }, unavailable: { type: 'integer', example: 1 } } },
+          added: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                ...REORDER_LINE,
+                qty: { type: 'integer', example: 2, description: 'Added now' },
+                requestedQty: { type: 'integer', example: 3, description: 'In the old order' },
+                limitedByStock: { type: 'boolean', example: true, description: 'qty < requestedQty: only this many in stock' },
+                price: { type: 'number', example: 29 },
+                oldPrice: { type: 'number', example: 27 },
+                priceChanged: { type: 'boolean', example: true },
+              },
+            },
+          },
+          unavailable: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                ...REORDER_LINE,
+                qty: { type: 'integer', example: 1 },
+                reason: { type: 'string', enum: ['removed', 'unavailable', 'out_of_stock', 'store_unavailable'] },
+                reasonText: { type: 'string', example: 'Out of stock', description: 'Ready to show, e.g. "Only 2 in stock, already in your cart"' },
+              },
+            },
+          },
+        },
+      }, '3 of 4 items added to your cart'),
+      401: RESPONSES_401,
+      404: RESPONSES_404,
+    },
+  },
+};
 paths['/customer/orders/{orderId}/rating'] = {
   post: { tags: TAG_ORDERS, summary: 'Rate a delivered order (store + optional product + optional delivery partner)', ...bearer(), parameters: [idParam('orderId')], requestBody: jsonBody({ rating: { type: 'integer', minimum: 1, maximum: 5 }, comment: { type: 'string' }, productId: { type: 'string' }, deliveryPartnerRating: { type: 'integer', minimum: 1, maximum: 5 } }, ['rating']), responses: { 201: envelope({ type: 'object' }, 'Review submitted'), 404: errorResponse('Delivered order not found'), 409: errorResponse('Already reviewed'), 401: RESPONSES_401 } },
 };

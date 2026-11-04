@@ -5,6 +5,7 @@ const {
   PickerProfile, DeliveryProfile, Settlement, PocketTransfer, ColdBag, GigBooking, GigSlot, RiderSession, SelfieCheck,
 } = require('../models');
 const ApiError = require('../utils/apiError');
+const { UPLOADS_DIR } = require('../config/uploads');
 
 // Deleting a customer, picker or delivery partner account — by the person from their app
 // (DELETE /customer/account, /picker/account, /delivery/account) or, for a customer or picker, by an
@@ -18,7 +19,6 @@ const ApiError = require('../utils/apiError');
 
 // An order in any other status is still going (or being returned).
 const CLOSED_ORDER_STATUSES = ['delivered', 'cancelled', 'returned', 'rejected'];
-const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads');
 
 const rupees = (n) => `₹${Math.round(Math.abs(n) * 100) / 100}`;
 const openOrdersBlocker = (orders, waitFor) => (orders.length

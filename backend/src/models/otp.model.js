@@ -8,4 +8,6 @@ const otpSchema = new Schema({
   attempts: { type: Number, default: 0 },
 }, { timestamps: true });
 
+otpSchema.index({ phone: 1 });
+
 module.exports = model('Otp', otpSchema);

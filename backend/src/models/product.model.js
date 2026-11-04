@@ -45,4 +45,11 @@ const productSchema = new Schema({
   qrToken: { type: String, unique: true, sparse: true },
 }, { timestamps: true });
 
+// Customer catalog (live products, newest first), products by category / by store, and the admin
+// Products list (newest first).
+productSchema.index({ status: 1, isAvailable: 1, createdAt: -1 });
+productSchema.index({ category: 1, status: 1 });
+productSchema.index({ store: 1, status: 1 });
+productSchema.index({ createdAt: -1 });
+
 module.exports = model('Product', productSchema);

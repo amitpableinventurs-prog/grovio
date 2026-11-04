@@ -57,6 +57,8 @@ router.get('/orders/:id', ordersCtrl.getOrderDetail);
 router.get('/orders/:id/tracking', ordersCtrl.getTracking);
 router.get('/orders/:id/delivery-pin', ordersCtrl.getDeliveryPin);
 router.post('/orders/:id/cancel', ordersCtrl.cancelOrder);
+// Order again: the order's items back in the cart (cart.controller.js#reorder).
+router.post('/orders/:id/reorder', cartCtrl.reorder);
 // Masked in-app call to my delivery partner (services/voip.service.js).
 router.post('/orders/:id/call', voipCtrl.callFromCustomer);
 router.post('/orders/:orderId/rating', reviewsCtrl.submitReview);
