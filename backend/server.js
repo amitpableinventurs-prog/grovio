@@ -2,10 +2,12 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
+const compression = require('compression');
 const morgan = require('morgan');
 const path = require('path');
 
 const { connectDB } = require('./src/config/db');
+const { UPLOADS_DIR } = require('./src/config/uploads');
 require('./src/models'); // registers all Mongoose models
 
 const { initSocket } = require('./src/sockets');
@@ -27,6 +29,9 @@ process.on('unhandledRejection', (err) => crash('Unhandled promise rejection', e
 const app = express();
 
 app.use(cors());
+// gzip JSON / text responses over 1 KB (images are already compressed and are left alone):
+// most API responses shrink 75–90%, which is what makes the apps feel faster on mobile data.
+app.use(compression());
 app.use(morgan('dev'));
 
 // Interactive API docs — http://localhost:5000/api-docs (raw spec at /api-docs.json,
@@ -39,7 +44,7 @@ app.use('/api/v1/payments', require('./src/routes/payments.routes'));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Standalone public onboarding/login pages (call the auth API directly) — deliberately kept as
 // separate plain-HTML directories rather than routes inside customer-web/admin-panel's React

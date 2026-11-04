@@ -9,4 +9,8 @@ const notificationSchema = new Schema({
   isRead: { type: Boolean, default: false },
 }, { timestamps: true });
 
+// A user's notifications, newest first, and their unread count.
+notificationSchema.index({ user: 1, createdAt: -1 });
+notificationSchema.index({ user: 1, isRead: 1 });
+
 module.exports = model('Notification', notificationSchema);

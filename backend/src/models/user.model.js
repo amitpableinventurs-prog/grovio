@@ -23,4 +23,7 @@ const userSchema = new Schema({
   deletedAt: { type: Date, default: null },
 }, { timestamps: true });
 
+// Admin lists and counts by role (customers, pickers, delivery partners), newest first.
+userSchema.index({ role: 1, createdAt: -1 });
+
 module.exports = model('User', userSchema);

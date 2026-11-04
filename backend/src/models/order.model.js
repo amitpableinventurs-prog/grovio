@@ -237,6 +237,18 @@ function stripSensitiveFields(doc, ret) {
 }
 // Hub screen scans look an order up by its pickup token; only packed orders on a screen have one.
 orderSchema.index({ hubPickupToken: 1 }, { partialFilterExpression: { hubPickupToken: { $type: 'string' } } });
+// My orders (customer app), newest first.
+orderSchema.index({ customer: 1, createdAt: -1 });
+// A delivery partner's jobs, history and earnings (by status and delivered time).
+orderSchema.index({ delivery: 1, orderStatus: 1, deliveredAt: -1 });
+// A picker's jobs and history.
+orderSchema.index({ 'pickTasks.picker': 1, orderStatus: 1, createdAt: -1 });
+// A hub's orders by status (hub screen, store manager, rider requests).
+orderSchema.index({ store: 1, orderStatus: 1 });
+// Orders by status (dispatch, live pipeline) and by date (dashboard ranges; the admin list, newest first).
+orderSchema.index({ orderStatus: 1, placedAt: -1 });
+orderSchema.index({ placedAt: -1 });
+orderSchema.index({ createdAt: -1 });
 
 orderSchema.set('toJSON', { transform: stripSensitiveFields });
 orderSchema.set('toObject', { transform: stripSensitiveFields });

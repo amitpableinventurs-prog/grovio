@@ -8,4 +8,8 @@ const adminActivityLogSchema = new Schema({
   metadata: { type: Schema.Types.Mixed, default: {} },
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
+// Activity Logs page: newest first, optionally one admin's.
+adminActivityLogSchema.index({ createdAt: -1 });
+adminActivityLogSchema.index({ admin: 1, createdAt: -1 });
+
 module.exports = model('AdminActivityLog', adminActivityLogSchema);

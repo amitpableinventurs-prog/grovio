@@ -13,4 +13,6 @@ const addressSchema = new Schema({
   isDefault: { type: Boolean, default: false },
 }, { timestamps: true });
 
+addressSchema.index({ user: 1 });
+
 module.exports = model('Address', addressSchema);

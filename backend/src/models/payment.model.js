@@ -25,4 +25,8 @@ const paymentSchema = new Schema({
   rawResponse: { type: Schema.Types.Mixed, default: null },
 }, { timestamps: true });
 
+// Gateway callbacks / webhooks find the payment by the gateway's order id; checkout and refunds by order.
+paymentSchema.index({ gatewayOrderId: 1 }, { partialFilterExpression: { gatewayOrderId: { $type: 'string' } } });
+paymentSchema.index({ order: 1 });
+
 module.exports = model('Payment', paymentSchema);

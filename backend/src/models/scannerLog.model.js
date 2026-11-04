@@ -19,4 +19,7 @@ const scannerLogSchema = new Schema({
   failureReason: { type: String, default: null },
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
+// An order's scans (admin Orders > Handover Scans), newest first.
+scannerLogSchema.index({ order: 1, createdAt: -1 });
+
 module.exports = model('ScannerLog', scannerLogSchema);
