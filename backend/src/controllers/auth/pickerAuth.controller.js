@@ -1,8 +1,8 @@
 // Picker app login/signup: phone number -> OTP -> tokens (the app's single "Login/Signup with
 // Phone Number" screen, then the "Enter OTP" screen). Same OTP machinery as the generic
 // /auth/send-otp + /auth/verify-otp (see auth.controller.js), but locked to role 'picker':
-//  - a number already registered as a customer / delivery partner / admin is refused up front,
-//    instead of silently logging that other account into the Picker app;
+//  - only the number's picker account is used; a customer/delivery account on the same number is a
+//    separate account (users are unique per phone + role) and is left alone;
 //  - the response carries the PickerProfile plus an `onboarding.nextStep` so the app knows
 //    which screen to route to after login (profile -> KYC upload -> awaiting approval -> home).
 // Token refresh (/auth/refresh) is shared with every other role; the Register step and logout have
@@ -23,14 +23,11 @@ const OTP_ERROR_MESSAGES = {
   invalid: 'Incorrect OTP. Please try again.',
 };
 
-// Rejects numbers that belong to a non-picker account or a disabled picker. Runs before an OTP
-// is sent (so no SMS is wasted) and again before one is verified (so it's never consumed).
+// The number's picker account, if any; rejects a disabled one. Runs before an OTP is sent (so no
+// SMS is wasted) and again before one is verified (so it's never consumed).
 async function findPickerAccount(phone) {
-  const user = await User.findOne({ phone });
+  const user = await User.findOne({ phone, role: 'picker' });
   if (!user) return null;
-  if (user.role !== 'picker') {
-    throw new ApiError(409, 'This number is already registered with a different Grovio account. Please use another number for the Picker app.');
-  }
   if (!user.isActive) throw new ApiError(403, 'Your account has been disabled. Please contact support.');
   return user;
 }

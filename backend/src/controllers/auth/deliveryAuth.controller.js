@@ -1,7 +1,7 @@
 // Delivery app login/signup: phone number -> OTP -> tokens. Same OTP machinery as the generic
 // /auth/send-otp + /auth/verify-otp (see auth.controller.js), but locked to role 'delivery':
-//  - a number already registered as a customer / picker / admin is refused up front, instead of
-//    silently logging that other account into the Delivery app;
+//  - only the number's delivery account is used; a customer/picker account on the same number is a
+//    separate account (users are unique per phone + role) and is left alone;
 //  - the response carries the DeliveryProfile plus `onboarding.nextStep`, so the app knows which
 //    screen to open after login (vehicle -> PAN/Aadhaar -> address proof -> selfie -> bank ->
 //    awaiting approval -> home; see utils/deliveryOnboarding.js and delivery/onboarding.controller.js).
@@ -24,14 +24,11 @@ const OTP_ERROR_MESSAGES = {
   invalid: 'Incorrect OTP. Please try again.',
 };
 
-// Rejects numbers that belong to a non-delivery account or a disabled one. Runs before an OTP is
-// sent (so no SMS is wasted) and again before one is verified (so it's never consumed).
+// The number's delivery account, if any; rejects a disabled one. Runs before an OTP is sent (so no
+// SMS is wasted) and again before one is verified (so it's never consumed).
 async function findDeliveryAccount(phone) {
-  const user = await User.findOne({ phone });
+  const user = await User.findOne({ phone, role: 'delivery' });
   if (!user) return null;
-  if (user.role !== 'delivery') {
-    throw new ApiError(409, 'This number is already registered with a different Grovio account. Please use another number for the Delivery app.');
-  }
   if (!user.isActive) throw new ApiError(403, 'Your account has been disabled. Please contact support.');
   return user;
 }
