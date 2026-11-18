@@ -159,12 +159,11 @@ paths['/auth/picker/send-otp'] = {
   post: {
     tags: ['Auth'],
     summary: 'Picker app — send login/signup OTP',
-    description: 'Same OTP flow as /auth/send-otp, but only for picker accounts: a number already registered as a customer, delivery partner or admin gets 409, and a disabled picker gets 403, before any SMS is sent.',
+    description: 'Same OTP flow as /auth/send-otp, but only for picker accounts: it uses the picker account for that number (a customer or delivery account on the same number is separate and untouched), and a disabled picker gets 403, before any SMS is sent.',
     requestBody: jsonBody(otpPhoneFields, ['phone']),
     responses: {
       200: envelope(pickerOtpSentSchema, 'OTP sent successfully'),
       403: errorResponse('Your account has been disabled'),
-      409: errorResponse('This number is already registered with a different Grovio account'),
       429: errorResponse('Please wait Ns before requesting another OTP'),
     },
   },
@@ -177,7 +176,6 @@ paths['/auth/picker/resend-otp'] = {
     requestBody: jsonBody(otpPhoneFields, ['phone']),
     responses: {
       200: envelope(pickerOtpSentSchema, 'OTP resent successfully'),
-      409: errorResponse('This number is already registered with a different Grovio account'),
       429: errorResponse('Please wait Ns before requesting another OTP'),
     },
   },
@@ -214,7 +212,6 @@ paths['/auth/picker/verify-otp'] = {
       }, 'Login successful'),
       400: errorResponse('Incorrect OTP'),
       403: errorResponse('Your account has been disabled'),
-      409: errorResponse('This number is already registered with a different Grovio account'),
     },
   },
 };
@@ -319,12 +316,11 @@ paths['/auth/delivery/send-otp'] = {
   post: {
     tags: ['Auth'],
     summary: 'Delivery app — send login/signup OTP',
-    description: 'Same OTP flow as /auth/send-otp, but only for delivery accounts: a number already registered as a customer, picker or admin gets 409, and a disabled partner gets 403, before any SMS is sent.',
+    description: 'Same OTP flow as /auth/send-otp, but only for delivery accounts: it uses the delivery account for that number (a customer or picker account on the same number is separate and untouched), and a disabled partner gets 403, before any SMS is sent.',
     requestBody: jsonBody(otpPhoneFields, ['phone']),
     responses: {
       200: envelope(deliveryOtpSentSchema, 'OTP sent successfully'),
       403: errorResponse('Your account has been disabled'),
-      409: errorResponse('This number is already registered with a different Grovio account'),
       429: errorResponse('Please wait Ns before requesting another OTP'),
     },
   },
@@ -337,7 +333,6 @@ paths['/auth/delivery/resend-otp'] = {
     requestBody: jsonBody(otpPhoneFields, ['phone']),
     responses: {
       200: envelope(deliveryOtpSentSchema, 'OTP resent successfully'),
-      409: errorResponse('This number is already registered with a different Grovio account'),
       429: errorResponse('Please wait Ns before requesting another OTP'),
     },
   },
@@ -373,7 +368,6 @@ paths['/auth/delivery/verify-otp'] = {
       }, 'Login successful'),
       400: errorResponse('Incorrect OTP'),
       403: errorResponse('Your account has been disabled'),
-      409: errorResponse('This number is already registered with a different Grovio account'),
     },
   },
 };

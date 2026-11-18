@@ -25,8 +25,8 @@ const createPicker = catchAsync(async (req, res) => {
 
   const phone = resolvePhone(req.body);
 
-  const existing = await User.findOne({ phone });
-  if (existing) throw new ApiError(409, 'A user with this mobile number already exists');
+  const existing = await User.findOne({ phone, role: 'picker' });
+  if (existing) throw new ApiError(409, 'A picker with this mobile number already exists');
 
   if (employeeId) {
     const existingEmployee = await PickerProfile.findOne({ employeeId });

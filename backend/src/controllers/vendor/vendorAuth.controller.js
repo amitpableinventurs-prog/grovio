@@ -29,7 +29,7 @@ const register = catchAsync(async (req, res) => {
   if (existingEmail) throw new ApiError(409, 'Email already registered');
 
   if (phone) {
-    const existingPhone = await User.findOne({ phone });
+    const existingPhone = await User.findOne({ phone, role: 'admin' });
     if (existingPhone) throw new ApiError(409, 'Phone number already registered');
   }
 

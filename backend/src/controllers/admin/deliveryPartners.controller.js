@@ -35,8 +35,8 @@ const createDeliveryPartner = catchAsync(async (req, res) => {
   const { name, email, vehicleType, vehicleNumber, licenseNumber } = req.body;
   const phone = resolvePhone(req.body);
 
-  const existing = await User.findOne({ phone });
-  if (existing) throw new ApiError(409, 'A user with this mobile number already exists');
+  const existing = await User.findOne({ phone, role: 'delivery' });
+  if (existing) throw new ApiError(409, 'A delivery partner with this mobile number already exists');
 
   const user = await User.create({
     name,

@@ -3,7 +3,9 @@ const { Schema, model } = require('mongoose');
 const userSchema = new Schema({
   name: { type: String, required: true },
   email: { type: String, unique: true, sparse: true },
-  phone: { type: String, unique: true, sparse: true },
+  // Unique per role, not globally (see the index below): one number can have a customer account
+  // AND a delivery/picker account, each signed in from its own app.
+  phone: { type: String },
   password: { type: String, select: false },
   role: { type: String, enum: ['admin', 'customer', 'picker', 'delivery'], required: true },
   gender: { type: String, enum: ['male', 'female', 'other'], default: null },
@@ -25,5 +27,11 @@ const userSchema = new Schema({
 
 // Admin lists and counts by role (customers, pickers, delivery partners), newest first.
 userSchema.index({ role: 1, createdAt: -1 });
+// One account per (phone, role). Partial rather than sparse: role is always set, so a sparse
+// compound index would still clash on the many phone-less admin accounts.
+userSchema.index(
+  { phone: 1, role: 1 },
+  { unique: true, partialFilterExpression: { phone: { $type: 'string' } } },
+);
 
 module.exports = model('User', userSchema);

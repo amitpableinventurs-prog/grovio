@@ -69,14 +69,18 @@ const verifyOtp = catchAsync(async (req, res) => {
     ]);
   }
 
-  let user = await User.findOne({ phone });
+  const effectiveRole = role || 'customer';
+  if (!['customer', 'picker', 'delivery'].includes(effectiveRole)) {
+    throw new ApiError(400, 'role must be one of customer, picker, delivery');
+  }
+
+  // Accounts are per (phone, role): a rider or picker opening the customer app with the same number
+  // gets (or creates) their customer account, not their delivery/picker one — which every
+  // customer route would refuse with a 403.
+  let user = await User.findOne({ phone, role: effectiveRole });
   let isNewUser = false;
 
   if (!user) {
-    const effectiveRole = role || 'customer';
-    if (!['customer', 'picker', 'delivery'].includes(effectiveRole)) {
-      throw new ApiError(400, 'role must be one of customer, picker, delivery');
-    }
     // Both picker and delivery partners can self-register here, same as a customer — but they
     // land in {Picker,Delivery}Profile.status='pending', just like an admin-created one. Neither
     // can actually work (accept jobs / get assigned pick-lists) until an admin approves them —
