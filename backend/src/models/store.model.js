@@ -18,6 +18,9 @@ const storeSchema = new Schema({
   closeTime: { type: String, default: null },
   isOpen: { type: Boolean, default: true },
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+  // How a packed order here gets its rider: 'hub_screen' | 'auto_assign', or null = the global
+  // "Hub pickup" setting. Set by the vendor in the Vendor Panel (see hubDisplay.service.js).
+  hubPickupMode: { type: String, enum: ['hub_screen', 'auto_assign'], default: null },
   // Picker pay rates for this store: only what differs from the default policy
   // (services/pickerPay.service.js). A picker's own rates override these.
   pickerPayPolicy: { type: Schema.Types.Mixed, default: null },

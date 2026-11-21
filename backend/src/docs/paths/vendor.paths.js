@@ -111,6 +111,18 @@ paths['/vendor/orders/{id}/mark-returned'] = {
   patch: { tags: TAG, summary: 'Mark a failed delivery as returned to my store', ...bearer(), parameters: [idParam()], requestBody: jsonBody({ reason: { type: 'string' } }, ['reason']), responses: { 200: envelope(ref('Order')), ...guarded, 404: RESPONSES_404 } },
 };
 
+const hubPickupState = envelope({
+  type: 'object',
+  properties: {
+    mode: { type: 'string', enum: ['hub_screen', 'auto_assign'], nullable: true, description: "This store's own choice; null = follow the global Hub pickup setting" },
+    defaultMode: { type: 'string', enum: ['hub_screen', 'auto_assign'], description: 'The global Hub pickup setting' },
+    effectiveMode: { type: 'string', enum: ['hub_screen', 'auto_assign'], description: 'What applies at this store' },
+  },
+});
+paths['/vendor/store/hub-pickup'] = {
+  get: { tags: TAG, summary: 'How packed orders at my store get a rider: hub screen QR or auto-assign', ...bearer(), responses: { 200: hubPickupState, ...guarded, 404: RESPONSES_404 } },
+  patch: { tags: TAG, summary: 'Choose hub screen QR or auto-assign for my store (null = Grovio default). Applies to orders packed from now on.', ...bearer(), requestBody: jsonBody({ mode: { type: 'string', enum: ['hub_screen', 'auto_assign'], nullable: true, example: 'hub_screen' } }), responses: { 200: hubPickupState, ...guarded, 404: RESPONSES_404 } },
+};
 paths['/vendor/hub-displays'] = {
   get: { tags: TAG, summary: 'Hub Center screens paired with my store', ...bearer(), responses: { 200: envelope({ type: 'array', items: { type: 'object' } }), ...guarded } },
   post: { tags: TAG, summary: 'Pair a new screen — the pairing link is returned only here, once', ...bearer(), requestBody: jsonBody({ name: { type: 'string', example: 'Packing counter' } }, ['name']), responses: { 201: envelope({ type: 'object', properties: { display: { type: 'object' }, pairingUrl: { type: 'string' } } }), ...guarded } },

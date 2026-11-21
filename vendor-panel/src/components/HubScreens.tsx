@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Card, Table, Tag, Button, Input, Space, Alert, Typography, Popconfirm, App as AntApp } from 'antd';
+import { Card, Table, Tag, Button, Input, Space, Alert, Typography, Popconfirm, Radio, Divider, App as AntApp } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchHubDisplays, createHubDisplay, revokeHubDisplay } from '../api/hubDisplays';
-import type { HubDisplay } from '../types';
+import { fetchHubPickup, updateHubPickup } from '../api/store';
+import type { HubDisplay, HubPickupMode } from '../types';
 import { formatDateTime } from '../utils/format';
 
 // A screen checks in with the API at least every minute (and its last-seen time is written at most
@@ -14,6 +15,55 @@ function screenState(d: HubDisplay) {
   if (d.lastSeenAt && Date.now() - new Date(d.lastSeenAt).getTime() < ONLINE_WINDOW_MS) return <Tag color="green">Online</Tag>;
   if (!d.lastSeenAt) return <Tag color="gold">Not paired yet</Tag>;
   return <Tag color="default">Offline</Tag>;
+}
+
+const PICKUP_MODE_LABELS: Record<HubPickupMode, string> = {
+  hub_screen: 'Hub screen QR',
+  auto_assign: 'Auto-assign nearest rider',
+};
+
+// "How riders get orders" — this store's hub pickup mode, or the Grovio default.
+function HubPickupSetting() {
+  const { message } = AntApp.useApp();
+  const queryClient = useQueryClient();
+  const { data, isLoading } = useQuery({ queryKey: ['hub-pickup'], queryFn: fetchHubPickup });
+
+  const updateMutation = useMutation({
+    mutationFn: (mode: HubPickupMode | null) => updateHubPickup(mode),
+    onSuccess: (res) => {
+      queryClient.setQueryData(['hub-pickup'], res);
+      message.success(`Riders now get orders by: ${PICKUP_MODE_LABELS[res.effectiveMode]}`);
+    },
+  });
+
+  return (
+    <>
+      <Typography.Title level={5} style={{ marginTop: 0 }}>How riders get orders</Typography.Title>
+      <Radio.Group
+        value={data ? data.mode ?? 'default' : undefined}
+        disabled={isLoading || updateMutation.isPending}
+        onChange={(e) => updateMutation.mutate(e.target.value === 'default' ? null : e.target.value)}
+        style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+      >
+        <Radio value="hub_screen">
+          <strong>Hub screen QR</strong>
+          <Typography.Text type="secondary"> · each ready order shows its own QR on the hub screen; the first rider at the store to scan it takes the order</Typography.Text>
+        </Radio>
+        <Radio value="auto_assign">
+          <strong>Auto-assign nearest rider</strong>
+          <Typography.Text type="secondary"> · the nearest available rider is assigned as soon as the order is packed; the picker hands over with a QR or OTP</Typography.Text>
+        </Radio>
+        <Radio value="default">
+          <strong>Grovio default</strong>
+          {data && <Typography.Text type="secondary"> · currently {PICKUP_MODE_LABELS[data.defaultMode]}; follows the setting chosen by the Grovio team</Typography.Text>}
+        </Radio>
+      </Radio.Group>
+      <Typography.Paragraph type="secondary" style={{ marginTop: 10, marginBottom: 0 }}>
+        Applies to orders packed from now on.
+      </Typography.Paragraph>
+      <Divider />
+    </>
+  );
 }
 
 // My Store -> "Hub screens": the TVs/tablets at my store that show /hub-display (live pickup board
@@ -53,6 +103,8 @@ export default function HubScreens() {
         A hub screen shows the orders ready for pickup at this store, buzzes when an order becomes ready, and shows a QR
         code that delivery partners scan from the Delivery app to check in and pick an order. The QR changes after every scan.
       </Typography.Paragraph>
+
+      <HubPickupSetting />
 
       {pairing && (
         <Alert
