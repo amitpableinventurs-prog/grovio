@@ -115,7 +115,7 @@ export function TrackingCard() {
       <Form.Item
         name="hubPickupMode"
         label="Hub pickup"
-        extra="Hub screen QR: each ready order shows its own QR on the hub screen, and the first rider at the hub to scan it takes the order. Auto-assign: the nearest rider is assigned when the order is packed, and the picker hands over with a QR or OTP."
+        extra="Hub screen QR: each ready order shows its own QR on the hub screen, and the first rider at the hub to scan it takes the order. Auto-assign: the nearest rider is assigned when the order is packed, and the picker hands over with a QR or OTP. This is the default: a store can choose its own in the Vendor Panel (My Store → Hub screens)."
       >
         <Select
           placeholder="Hub screen QR"

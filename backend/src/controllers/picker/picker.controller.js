@@ -168,7 +168,7 @@ function myItem(order, itemId, userId) {
 // app); 'auto_assign' — a rider is assigned and the picker shows GET .../qr or reads out .../otp.
 const getJobDetail = catchAsync(async (req, res) => {
   const order = await findAssignedJob(req);
-  new ApiResponse(200, { ...order.toJSON(), handoverMode: await getHubPickupMode() }).send(res);
+  new ApiResponse(200, { ...order.toJSON(), handoverMode: await getHubPickupMode(order.store) }).send(res);
 });
 
 // POST /picker/jobs/:id/accept -> the picker takes on their part of this order (the other choice
@@ -359,7 +359,7 @@ const completeMyPicking = catchAsync(async (req, res) => {
   await require('../../services/pickerPay.service').payTask(order, req.user.id);
   await advancePickingStatus({ order, changedBy: req.user.id });
 
-  const handoverMode = await getHubPickupMode();
+  const handoverMode = await getHubPickupMode(order.store);
   if (order.orderStatus === 'packed' && handoverMode === 'auto_assign') {
     const delivery = await findNearestDeliveryPartner({ lat: order.store.lat, lng: order.store.lng });
     if (delivery) {

@@ -73,12 +73,14 @@ const updateStore = catchAsync(async (req, res) => {
   const store = await Store.findById(req.params.id);
   if (!store) throw new ApiError(404, 'Store not found');
 
-  const fields = ['name', 'address', 'lat', 'lng', 'description', 'zoneId', 'status', 'openTime', 'closeTime', 'isOpen', 'serviceRadiusKm'];
+  const fields = ['name', 'address', 'lat', 'lng', 'description', 'zoneId', 'status', 'openTime', 'closeTime', 'isOpen', 'serviceRadiusKm', 'hubPickupMode'];
   fields.forEach((f) => {
     if (req.body[f] !== undefined) store[f] = req.body[f];
   });
   // Blank from a form means "no store-specific limit" (falls back to defaultServiceRadiusKm).
   if (req.body.serviceRadiusKm === '') store.serviceRadiusKm = null;
+  // Blank = follow the global Hub pickup setting.
+  if (req.body.hubPickupMode === '') store.hubPickupMode = null;
   if (req.files?.logo?.[0]) store.logo = `/uploads/${req.files.logo[0].filename}`;
   if (req.files?.banner?.[0]) store.banner = `/uploads/${req.files.banner[0].filename}`;
   await store.save();

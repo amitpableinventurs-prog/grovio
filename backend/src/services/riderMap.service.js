@@ -79,9 +79,9 @@ async function mapState(riderId, query = {}) {
     DeliveryProfile.findOne({ user: riderId }).select('isAvailable status currentLat currentLng locationUpdatedAt hubCheckin'),
     trackingConfig(),
   ]);
-  // 'hub_screen': riders take orders by scanning each order's QR on the hub screen
+  // 'hub_screen' (per store): riders take orders by scanning each order's QR on the hub screen
   // (POST /delivery/hub/scan, which also accepts the check-in QR).
-  const hubScreen = (await getHubPickupMode()) === 'hub_screen';
+  const isHubScreen = async (store) => (await getHubPickupMode(store)) === 'hub_screen';
   const position = await riderPosition(profile, query, cfg);
   const base = {
     online: !!profile?.isAvailable,
@@ -115,6 +115,7 @@ async function mapState(riderId, query = {}) {
     };
 
     if (next.type === 'pickup') {
+      const hubScreen = await isHubScreen(order?.store);
       const atPickup = straightM <= cfg.pickupGeofenceM || !!order?.arrivedAtPickupAt;
       return {
         ...common,
@@ -181,6 +182,7 @@ async function mapState(riderId, query = {}) {
       actions: [action('go_online', 'Go online', { method: 'PATCH', path: '/delivery/availability', body: { isAvailable: true } })],
     };
   }
+  const hubScreen = await isHubScreen(store);
   const scanQr = action('scan_qr', 'Scan QR to get orders', { method: 'POST', path: '/delivery/hub/scan' });
   let mode = 'to_store';
   let banner = { text: 'Reach the store to pick orders', tone: 'warning' };

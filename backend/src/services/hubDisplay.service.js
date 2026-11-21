@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const QRCode = require('qrcode');
-const { HubDisplay, Order } = require('../models');
+const { HubDisplay, Order, Store } = require('../models');
 const { getSetting } = require('./settings.service');
 const { HUB_PICKUP_TOKEN_RE, generateHubPickupToken } = require('../utils/hubPickupToken');
 
@@ -28,14 +28,26 @@ const { HUB_PICKUP_TOKEN_RE, generateHubPickupToken } = require('../utils/hubPic
 
 const CHECKIN_MINUTES = Number(process.env.HUB_CHECKIN_MINUTES || 30);
 
-// How a packed order gets its rider — the "Hub pickup" setting (hubPickupMode / HUB_PICKUP_MODE):
+// How a packed order gets its rider:
 //   hub_screen   (default) nobody is assigned; the first partner to scan the order's QR on the
 //                hub screen takes it
 //   auto_assign  the nearest available partner is assigned when the order is packed
+// Each store can choose its own (Store.hubPickupMode, set in the Vendor Panel); a store that hasn't
+// chosen follows the global "Hub pickup" setting (hubPickupMode / HUB_PICKUP_MODE).
 const HUB_PICKUP_MODES = ['hub_screen', 'auto_assign'];
-async function getHubPickupMode() {
+async function getDefaultHubPickupMode() {
   const mode = await getSetting('hubPickupMode', 'HUB_PICKUP_MODE');
   return HUB_PICKUP_MODES.includes(mode) ? mode : 'hub_screen';
+}
+
+// The mode at a store (id or document — a populated order.store works too). No store -> the global one.
+async function getHubPickupMode(store) {
+  const storeId = store?._id || store;
+  if (storeId) {
+    const own = (await Store.findById(storeId).select('hubPickupMode').lean())?.hubPickupMode;
+    if (HUB_PICKUP_MODES.includes(own)) return own;
+  }
+  return getDefaultHubPickupMode();
 }
 
 // Orders a hub screen lists: packed and waiting for a rider.
@@ -200,6 +212,7 @@ async function buildBoard(storeId, { baseUrl }) {
 module.exports = {
   CHECKIN_MINUTES,
   HUB_PICKUP_MODES,
+  getDefaultHubPickupMode,
   getHubPickupMode,
   pickupUrl,
   parseHubCode,

@@ -50,7 +50,9 @@ router.get('/orders/:id/tracking', trackingCtrl.getOrderTracking);
 router.patch('/orders/:id/cancel', ordersCtrl.cancelOrder);
 router.patch('/orders/:id/mark-returned', ordersCtrl.markReturned);
 
-// Hub Center screens at my store.
+// Hub Center screens at my store, and how its packed orders get a rider (hub screen QR / auto-assign).
+router.get('/store/hub-pickup', storeCtrl.getHubPickup);
+router.patch('/store/hub-pickup', storeCtrl.updateHubPickup);
 router.get('/hub-displays', storeCtrl.useMyStore, hubDisplaysCtrl.listHubDisplays);
 router.post('/hub-displays', storeCtrl.useMyStore, hubDisplaysCtrl.createHubDisplay);
 router.delete('/hub-displays/:id', hubDisplaysCtrl.revokeHubDisplay);

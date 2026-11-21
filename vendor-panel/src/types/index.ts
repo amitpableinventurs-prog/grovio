@@ -61,7 +61,19 @@ export interface Store {
   status: 'active' | 'inactive';
   // Delivery radius in km; null = the defaultServiceRadiusKm setting.
   serviceRadiusKm?: number | null;
+  // How packed orders get a rider here; null = the Grovio default (GET /vendor/store/hub-pickup).
+  hubPickupMode?: HubPickupMode | null;
   createdAt: string;
+}
+
+// 'hub_screen': the first rider to scan the order's QR on the hub screen takes it.
+// 'auto_assign': the nearest rider is assigned when the order is packed.
+export type HubPickupMode = 'hub_screen' | 'auto_assign';
+
+export interface HubPickupState {
+  mode: HubPickupMode | null; // this store's own choice; null = follow the default
+  defaultMode: HubPickupMode; // Grovio's default (admin setting)
+  effectiveMode: HubPickupMode; // what applies at this store
 }
 
 // A Hub Center screen showing /hub-display — see backend models/hubDisplay.model.js.
