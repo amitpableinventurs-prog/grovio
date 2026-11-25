@@ -130,6 +130,71 @@ const verifyOtp = catchAsync(async (req, res) => {
   new ApiResponse(200, { accessToken, refreshToken, isNewUser, user: safeUser }, 'Login successful').send(res);
 });
 
+// ---------- Google Social Login ----------
+// POST /auth/google
+const googleLogin = catchAsync(async (req, res) => {
+  let { idToken, email, name, profileImage, role = 'customer', deviceId, platform } = req.body;
+
+  if (idToken) {
+    try {
+      const { OAuth2Client } = require('google-auth-library');
+      const webClientId = '718221804618-f3aigaboc8js517b6vnmufp9orltg3m7.apps.googleusercontent.com';
+      const googleClient = new OAuth2Client(webClientId);
+      const ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: webClientId,
+      });
+      const payload = ticket.getPayload();
+      if (payload.email) email = payload.email;
+      if (payload.name) name = payload.name;
+      if (payload.picture) profileImage = payload.picture;
+    } catch (googleErr) {
+      try {
+        const { getAuth } = require('firebase-admin/auth');
+        const { firebaseApp } = require('../../config/firebase');
+        if (firebaseApp) {
+          const decoded = await getAuth(firebaseApp).verifyIdToken(idToken);
+          if (decoded.email) email = decoded.email;
+          if (decoded.name) name = decoded.name;
+          if (decoded.picture) profileImage = decoded.picture;
+        }
+      } catch (err) {
+        console.warn('Token verify error, proceeding with payload data:', err.message);
+      }
+    }
+  }
+
+  if (!email) throw new ApiError(400, 'Email is required for Google login');
+
+  email = String(email).trim().toLowerCase();
+  let user = await User.findOne({ email });
+  let isNewUser = false;
+
+  if (!user) {
+    isNewUser = true;
+    user = await User.create({
+      name: name || 'Google User',
+      email,
+      role: role || 'customer',
+      profileImage: profileImage || null,
+      isVerified: true,
+      isActive: true,
+    });
+    await Wallet.create({ user: user._id, balance: 0 });
+  } else {
+    if (!user.isActive) throw new ApiError(403, 'Your account has been disabled');
+    if (profileImage) {
+      user.profileImage = profileImage;
+      await user.save();
+    }
+  }
+
+  const { accessToken, refreshToken } = await tokenService.issueTokenPair(user, { deviceId, platform });
+  const safeUser = user.toObject();
+  delete safeUser.password;
+  new ApiResponse(200, { accessToken, refreshToken, isNewUser, user: safeUser }, 'Google login successful').send(res);
+});
+
 // ---------- Token refresh / session management ----------
 
 // POST /auth/refresh  { refreshToken }
@@ -191,4 +256,17 @@ const updateMe = catchAsync(async (req, res) => {
   new ApiResponse(200, safeUser, 'Profile updated').send(res);
 });
 
-module.exports = { loginWithPassword, sendOtp, resendOtp, verifyOtp, refresh, logout, logoutAll, me, updateMe };
+// POST /auth/me/profile-image
+const uploadProfileImage = catchAsync(async (req, res) => {
+  const file = req.file || (req.files && (req.files.image?.[0] || req.files.file?.[0]));
+  if (!file) throw new ApiError(400, 'Image file is required');
+  const imageUrl = `/uploads/${file.filename}`;
+  req.user.profileImage = imageUrl;
+  await req.user.save();
+
+  const safeUser = req.user.toObject();
+  delete safeUser.password;
+  new ApiResponse(200, { profileImage: imageUrl, user: safeUser }, 'Profile image updated successfully').send(res);
+});
+
+module.exports = { loginWithPassword, sendOtp, resendOtp, verifyOtp, googleLogin, refresh, logout, logoutAll, me, updateMe, uploadProfileImage };

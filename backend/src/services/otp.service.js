@@ -31,12 +31,13 @@ async function sendOtp(phone) {
 
   await Otp.create({ phone, code, expiresAt });
 
-  // Dev mode always logs the OTP too, regardless of whether an SMS provider is configured —
-  // handy when testing against a provider sandbox that doesn't actually deliver to your phone.
-  console.log(`[OTP] ${phone} -> ${code}`);
-
   const debugMode = process.env.OTP_DEBUG_MODE === 'true';
+  // The code itself is only ever written to the log in debug mode — otherwise anyone with log
+  // access could sign in as any user.
+  if (debugMode) console.log(`[OTP] ${phone} -> ${code}`);
   const result = await sendSms(phone, `Your Grovio verification code is ${code}. It expires in ${process.env.OTP_EXPIRY_MINUTES || 5} minutes.`, { otpCode: code });
+  // Delivery outcome (never the code) so a failing SMS provider is visible in the server log.
+  console.log(`[OTP] SMS to ***${String(phone).slice(-4)}: ${result.sent ? 'sent' : `NOT sent (${result.reason})`}`);
 
   // No provider configured (Admin > Settings > Integrations): fall back to the existing
   // dev-mode behavior below. A provider IS configured but the send actually failed: don't lie

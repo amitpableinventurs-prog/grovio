@@ -4,6 +4,7 @@ const pickerCtrl = require('../controllers/auth/pickerAuth.controller');
 const deliveryCtrl = require('../controllers/auth/deliveryAuth.controller');
 const validate = require('../middleware/validate.middleware');
 const { authenticate, authorize } = require('../middleware/auth.middleware');
+const upload = require('../middleware/upload.middleware');
 const vendorAuthCtrl = require('../controllers/vendor/vendorAuth.controller');
 const { registerVendorRules } = require('../validators/vendor.validator');
 const {
@@ -29,6 +30,7 @@ router.post('/refresh', ctrl.refresh);
 router.post('/picker/send-otp', sendOtpRules, validate, pickerCtrl.sendOtp);
 router.post('/picker/resend-otp', sendOtpRules, validate, pickerCtrl.resendOtp);
 router.post('/picker/verify-otp', pickerVerifyOtpRules, validate, pickerCtrl.verifyOtp);
+router.post('/picker/google', pickerCtrl.googleLogin);
 router.get('/picker/me', authenticate, authorize('picker'), pickerCtrl.me);
 router.post('/picker/register', authenticate, authorize('picker'), pickerRegisterRules, validate, pickerCtrl.register);
 router.post('/picker/logout', authenticate, authorize('picker'), pickerLogoutRules, validate, pickerCtrl.logout);
@@ -39,6 +41,7 @@ router.post('/picker/logout-all', authenticate, authorize('picker'), pickerCtrl.
 router.post('/delivery/send-otp', sendOtpRules, validate, deliveryCtrl.sendOtp);
 router.post('/delivery/resend-otp', sendOtpRules, validate, deliveryCtrl.resendOtp);
 router.post('/delivery/verify-otp', deliveryVerifyOtpRules, validate, deliveryCtrl.verifyOtp);
+router.post('/delivery/google', deliveryCtrl.googleLogin);
 router.get('/delivery/me', authenticate, authorize('delivery'), deliveryCtrl.me);
 router.post('/delivery/logout', authenticate, authorize('delivery'), deliveryLogoutRules, validate, deliveryCtrl.logout);
 router.post('/delivery/logout-all', authenticate, authorize('delivery'), deliveryCtrl.logoutAll);
@@ -46,11 +49,16 @@ router.post('/delivery/logout-all', authenticate, authorize('delivery'), deliver
 // Google/Apple social login are not wired up yet — they need OAuth app credentials
 // (Google client ID/secret, Apple key) from the client team before the token-verification
 // step can be implemented. Placeholders return 501 so clients get a clear signal.
-router.post('/google', (req, res) => res.status(501).json({ success: false, message: 'Google login is not configured yet' }));
+router.post('/google', ctrl.googleLogin);
 router.post('/apple', (req, res) => res.status(501).json({ success: false, message: 'Apple login is not configured yet' }));
 
 router.get('/me', authenticate, ctrl.me);
 router.put('/me', authenticate, ctrl.updateMe);
+const profileUpload = upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'file', maxCount: 1 },
+]);
+router.post('/me/profile-image', authenticate, profileUpload, ctrl.uploadProfileImage);
 router.post('/logout', authenticate, ctrl.logout);
 router.post('/logout-all', authenticate, ctrl.logoutAll);
 

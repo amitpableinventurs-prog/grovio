@@ -183,13 +183,15 @@
       function storageGet() { try { return localStorage.getItem(STORAGE_KEY); } catch (_) { return null; } }
       function storageSet(v) { try { v ? localStorage.setItem(STORAGE_KEY, v) : localStorage.removeItem(STORAGE_KEY); } catch (_) {} }
 
-      // Pairing link is /hub-display/#key=<deviceKey>: keep the key, then drop it from the URL.
+      // Pairing link is /hub-display/#key=<deviceKey> or ?key=<deviceKey>: keep the key, then drop it from the URL.
+      const searchKey = new URLSearchParams(location.search).get('key');
       const hashKey = new URLSearchParams(location.hash.slice(1)).get('key');
-      if (hashKey) {
-        storageSet(hashKey);
-        history.replaceState(null, '', location.pathname + location.search);
+      const paramKey = hashKey || searchKey;
+      if (paramKey) {
+        storageSet(paramKey);
+        history.replaceState(null, '', location.pathname);
       }
-      let deviceKey = hashKey || storageGet();
+      let deviceKey = paramKey || storageGet();
 
       const SOUND_KEY = 'grovio_hub_buzzer';
       let clockOffset = 0; // serverTime - local time, for the waiting times

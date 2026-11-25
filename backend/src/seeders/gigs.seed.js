@@ -3,7 +3,7 @@
 // Safe to run again — a gig that already exists for the same hub and time is skipped, same as
 // POST /admin/gigs/bulk.
 require('dotenv').config();
-const { connectDB, mongoose } = require('../config/db');
+const { connectDB, disconnectDB } = require('../config/db');
 const { GigSlot } = require('../models');
 const t = require('../utils/localTime');
 
@@ -56,7 +56,8 @@ async function run() {
     }
   }
   console.log(`Gigs: ${created} created, ${skipped} already there (${days} days from ${t.dateKey(today)}).`);
-  await mongoose.disconnect();
+  await disconnectDB();
+  process.exit(0);
 }
 
 run().catch((err) => {

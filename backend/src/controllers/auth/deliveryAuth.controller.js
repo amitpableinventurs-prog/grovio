@@ -13,6 +13,7 @@ const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const otpService = require('../../services/otp.service');
 const tokenService = require('../../services/token.service');
+const { verifyGoogleIdToken } = require('../../services/googleAuth.service');
 const { resolveOtpPhone } = require('../../utils/phone');
 const { deliveryOnboarding } = require('../../utils/deliveryOnboarding');
 const { PLACEHOLDER_NAME } = require('../../utils/pickerOnboarding');
@@ -97,6 +98,47 @@ const verifyOtp = catchAsync(async (req, res) => {
   }, isNewUser ? 'Signup successful' : 'Login successful').send(res);
 });
 
+// POST /auth/delivery/google  { idToken, deviceId?, platform? }
+// "Sign in with Google" for the Delivery app. Same result as verify-otp — logs the delivery in, or creates
+// a new account (profile status 'pending') — and the same onboarding.nextStep routing. The account is
+// matched by the *verified* Google email within role 'delivery'. A new Google account has no phone
+// number, which is fine: it only identifies the OTP flow.
+const googleLogin = catchAsync(async (req, res) => {
+  const { idToken, deviceId, platform } = req.body;
+  const google = await verifyGoogleIdToken(idToken);
+
+  let user = await User.findOne({ email: google.email, role: 'delivery' });
+  let isNewUser = false;
+  if (user) {
+    if (!user.isActive) throw new ApiError(403, 'Your account has been disabled. Please contact support.');
+    if (!user.isVerified) { user.isVerified = true; await user.save(); }
+  } else {
+    // Emails are unique across all roles, so an address already used by e.g. a customer account can't be reused here.
+    if (await User.exists({ email: google.email })) {
+      throw new ApiError(409, 'This email is already used by another account. Sign in with your phone number instead.');
+    }
+    isNewUser = true;
+    user = await User.create({
+      name: google.name || PLACEHOLDER_NAME, email: google.email, role: 'delivery',
+      profileImage: google.picture, isVerified: true,
+    });
+    await Wallet.create({ user: user._id, balance: 0 });
+  }
+
+  let profile = await DeliveryProfile.findOne({ user: user._id });
+  if (!profile) profile = await DeliveryProfile.create({ user: user._id, status: 'pending' });
+
+  const { accessToken, refreshToken } = await tokenService.issueTokenPair(user, { deviceId, platform });
+  new ApiResponse(200, {
+    accessToken,
+    refreshToken,
+    isNewUser,
+    user: safeUserOf(user),
+    deliveryProfile: profile,
+    onboarding: deliveryOnboarding(profile),
+  }, isNewUser ? 'Signup successful' : 'Login successful').send(res);
+});
+
 // GET /auth/delivery/me — for the app's splash screen: who am I and where should I land?
 const me = catchAsync(async (req, res) => {
   const profile = await DeliveryProfile.findOne({ user: req.user._id });
@@ -133,4 +175,4 @@ const logoutAll = catchAsync(async (req, res) => {
   new ApiResponse(200, null, 'Logged out from all devices').send(res);
 });
 
-module.exports = { sendOtp, resendOtp, verifyOtp, me, logout, logoutAll };
+module.exports = { sendOtp, resendOtp, verifyOtp, googleLogin, me, logout, logoutAll };

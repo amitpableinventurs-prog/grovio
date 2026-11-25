@@ -12,10 +12,49 @@ async function sendSms(phone, message, { otpCode } = {}) {
   try {
     if (provider === 'msg91') return await sendViaMsg91(phone, message, otpCode);
     if (provider === 'twilio') return await sendViaTwilio(phone, message);
+    if (provider === 'apitxt') return await sendViaApitxt(phone, otpCode);
     return { sent: false, reason: 'unknown_provider' };
   } catch (err) {
     return { sent: false, reason: err.message };
   }
+}
+
+// apitxt.com Unified OTP API (https://apitxt.com/developer/otp-api): one endpoint, `/api/sendOTP`.
+// apitxt only DELIVERS an OTP — we generate it (otp.service.js) and pass it as `otp`; it fills the
+// {otp} placeholder of the template configured in the apitxt dashboard. There is no verify
+// endpoint, so verification stays local. It can't send free-form text, hence the otpCode guard.
+// The auth key lives in Admin > Settings (smsApiKey) or APITXT_AUTH_KEY — never in the apps.
+// Optional: smsTemplateId / APITXT_TEMPLATE_ID (your apitxt SMS template id),
+// APITXT_CHANNEL (sms | whatsapp | voice, default sms), APITXT_BASE_URL.
+async function sendViaApitxt(phone, otpCode) {
+  const authKey = await getSetting('smsApiKey', 'APITXT_AUTH_KEY');
+  if (!authKey) return { sent: false, reason: 'not_configured' };
+  if (!otpCode) return { sent: false, reason: 'apitxt_supports_otp_only' };
+
+  const baseUrl = (process.env.APITXT_BASE_URL || 'https://apitxt.com').replace(/\/+$/, '');
+  const templateId = await getSetting('smsTemplateId', 'APITXT_TEMPLATE_ID');
+  const channel = process.env.APITXT_CHANNEL || 'sms';
+
+  // POST (form-encoded) keeps the key out of URLs and proxy/access logs.
+  const body = new URLSearchParams({
+    authkey: authKey,
+    mobile: toE164(phone).replace(/^\+/, ''), // e.g. 919999999999; apitxt wants the country code
+    otp: String(otpCode),
+    channel,
+  });
+  if (templateId && channel === 'sms') body.set('template_id', String(templateId));
+
+  const res = await fetch(`${baseUrl}/api/sendOTP`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  // apitxt reports some failures with HTTP 200 and { status: 'error' }, so res.ok isn't enough.
+  const json = await res.json().catch(() => null);
+  if (res.ok && json?.status === 'success') return { sent: true, requestId: json.data?.request_id };
+  return { sent: false, reason: `apitxt_${res.status}_${json?.status || 'bad_response'}${json?.message ? `: ${json.message}` : ''}` };
 }
 
 // MSG91's Flow API sends a pre-approved DLT transactional template (mandatory for sending
@@ -71,6 +110,7 @@ async function sendViaTwilio(phone, message) {
 async function sendTextSms(phone, message, { msg91TemplateSetting, vars = {} } = {}) {
   const provider = await getSetting('smsProvider', 'SMS_PROVIDER');
   if (!provider || provider === 'none') return { sent: false, reason: 'not_configured' };
+  if (provider === 'apitxt') return { sent: false, reason: 'apitxt_supports_otp_only' };
 
   try {
     if (provider === 'twilio') return await sendViaTwilio(toE164(phone), message);

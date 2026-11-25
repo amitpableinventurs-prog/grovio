@@ -212,9 +212,21 @@ export default function SettingsPage() {
                               { value: 'none', label: 'None (dev mode)' },
                               { value: 'msg91', label: 'MSG91' },
                               { value: 'twilio', label: 'Twilio' },
+                              { value: 'apitxt', label: 'apitxt (OTP API)' },
                             ]}
                           />
                         </Form.Item>
+
+                        {smsProvider === 'apitxt' && (
+                          <>
+                            <Form.Item name="smsApiKey" label="apitxt Auth Key" extra={secretHint(data?.smsApiKey)}>
+                              <Input.Password placeholder="Leave blank to keep existing" autoComplete="new-password" />
+                            </Form.Item>
+                            <Form.Item name="smsTemplateId" label="SMS Template ID (optional)" extra="Your apitxt SMS template id; blank uses apitxt's default OTP template">
+                              <Input />
+                            </Form.Item>
+                          </>
+                        )}
 
                         {smsProvider === 'msg91' && (
                           <>

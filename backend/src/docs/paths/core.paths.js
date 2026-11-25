@@ -446,6 +446,29 @@ paths['/auth/me'] = {
   },
 };
 
+paths['/auth/me/profile-image'] = {
+  post: {
+    tags: ['Auth'],
+    summary: 'Upload and set profile picture for current user',
+    description: 'Accepts an image file (field name "image" or "file"). Uploads to static server storage, stores the relative path in the user profile, and returns the updated profileImage URL and user object.',
+    ...bearer(),
+    requestBody: formBody({
+      image: { type: 'string', format: 'binary', description: 'Profile picture image file (jpg, png, webp)' },
+    }, ['image']),
+    responses: {
+      200: envelope({
+        type: 'object',
+        properties: {
+          profileImage: { type: 'string', example: '/uploads/1732007890-123456.jpg' },
+          user: ref('User'),
+        },
+      }, 'Profile image updated successfully'),
+      400: errorResponse('Image file is required'),
+      401: RESPONSES_401,
+    },
+  },
+};
+
 paths['/auth/logout'] = {
   post: {
     tags: ['Auth'], summary: 'Revoke one refresh token (logout this session)', ...bearer(),
