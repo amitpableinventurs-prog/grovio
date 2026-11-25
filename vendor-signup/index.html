@@ -126,6 +126,11 @@
     color: var(--brand-200);
     position: relative;
   }
+  .panel-footer a {
+    color: #fff;
+    font-weight: 600;
+    text-decoration: underline;
+  }
 
   /* ---------- Right form panel ---------- */
   .form-panel {
@@ -256,6 +261,20 @@
     font-weight: 600;
     margin-top: 18px;
   }
+  .login-cta {
+    display: inline-block;
+    margin-top: 18px;
+    padding: 12px 24px;
+    background: var(--brand-600);
+    color: #fff;
+    border-radius: 10px;
+    font-size: 14.5px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .login-cta:hover { background: var(--brand-700); }
+  .login-cta:active { transform: scale(0.99); }
 </style>
 </head>
 <body>
@@ -295,7 +314,7 @@
         </li>
       </ul>
 
-      <p class="panel-footer">Already registered? Log in from the Grovio Admin Panel.</p>
+      <p class="panel-footer">Already registered? <a id="panel-login-link" href="#">Log in to the Grovio Vendor Panel</a>.</p>
     </div>
 
     <div class="form-panel">
@@ -357,7 +376,8 @@
         </div>
         <h2>You're registered!</h2>
         <p>Your account and store have been created. The store is pending admin review before it goes live to customers.</p>
-        <p class="next-step">Open the Grovio Vendor Panel and log in with the email and password you just set.</p>
+        <p class="next-step">Log in to the Grovio Vendor Panel with the email and password you just set.</p>
+        <a id="success-login-btn" class="login-cta" href="#">Log in to Vendor Panel</a>
       </div>
     </div>
   </div>
@@ -368,6 +388,30 @@
     const submitBtn = document.getElementById('submit-btn');
     const locateBtn = document.getElementById('locate-btn');
     const locationStatus = document.getElementById('location-status');
+    const panelLoginLink = document.getElementById('panel-login-link');
+    const successLoginBtn = document.getElementById('success-login-btn');
+
+    function safeHttpUrl(raw) {
+      if (!raw) return null;
+      try {
+        const u = new URL(raw);
+        return (u.protocol === 'http:' || u.protocol === 'https:') ? u.toString() : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function resolveVendorLoginUrl() {
+      const fromQuery = safeHttpUrl(new URLSearchParams(window.location.search).get('loginUrl'));
+      if (fromQuery) return fromQuery;
+      const fromRef = safeHttpUrl(document.referrer);
+      if (fromRef && !fromRef.includes('/vendor-signup')) return fromRef;
+      return `${window.location.protocol}//${window.location.hostname}:5190/login`;
+    }
+
+    const vendorLoginUrl = resolveVendorLoginUrl();
+    panelLoginLink.href = vendorLoginUrl;
+    successLoginBtn.href = vendorLoginUrl;
 
     let lat = null;
     let lng = null;
@@ -425,6 +469,12 @@
         if (!res.ok || !body.success) {
           throw new Error(body.message || 'Registration failed. Please try again.');
         }
+
+        try {
+          const loginDest = new URL(vendorLoginUrl);
+          loginDest.searchParams.set('email', payload.email);
+          successLoginBtn.href = loginDest.toString();
+        } catch {}
 
         document.getElementById('form-view').style.display = 'none';
         document.getElementById('success-view').style.display = 'block';
