@@ -227,6 +227,30 @@ async function pickUpByScan(req, profile, token) {
   const store = order.store;
   if (!store || store.status !== 'active') await fail(400, 'hub_inactive', 'This hub is not active');
   if (!profile.isAvailable) await fail(400, 'offline', 'Go online to pick up orders');
+
+  // Another rider was assigned but never collected it (no activity for HUB_ASSIGN_STALE_MIN
+  // minutes): hand it back to the pool so the rider physically at the hub can take it, instead of
+  // leaving the order stuck on a rider who is not coming. Atomic: only if nothing changed since.
+  if (order.delivery && order.delivery.toString() !== riderId && order.orderStatus === 'assigned') {
+    const staleMs = (Number(process.env.HUB_ASSIGN_STALE_MIN) || 30) * 60 * 1000;
+    if (Date.now() - new Date(order.updatedAt).getTime() > staleMs) {
+      const previousRider = order.delivery;
+      const released = await Order.findOneAndUpdate(
+        { _id: order._id, hubPickupToken: token, orderStatus: 'assigned', delivery: previousRider, updatedAt: order.updatedAt },
+        {
+          $set: { delivery: null, deliveryAcceptedAt: null, arrivedAtPickupAt: null, orderStatus: 'packed' },
+          $push: { deliveryRejections: { rider: previousRider, kind: order.deliveryAcceptedAt ? 'cancellation' : 'denial', reason: 'Not collected at the hub in time', at: new Date() } },
+        },
+        { new: true },
+      ).select('+hubPickupToken').populate('store', 'name address lat lng status');
+      if (released) {
+        order = released;
+        await require('../../services/riderPay.service').detachFromTrip(order)
+          .catch((err) => logServerError('Detach stale hub assignment failed', err));
+      }
+    }
+  }
+
   if (order.delivery && order.delivery.toString() !== riderId) {
     await fail(409, 'taken', 'Another delivery partner has already taken this order');
   }
