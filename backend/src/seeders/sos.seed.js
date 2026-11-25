@@ -4,7 +4,7 @@
 // Safe to run again — each demo alert has a fixed id and is overwritten, not duplicated. Accounts
 // that don't exist in this database are skipped.
 require('dotenv').config();
-const { connectDB, mongoose } = require('../config/db');
+const { connectDB, disconnectDB, mongoose } = require('../config/db');
 const { SosAlert, User, Order, Store } = require('../models');
 
 const MIN = 60 * 1000;
@@ -136,7 +136,8 @@ async function run() {
   }
 
   console.log(`SOS demo alerts: ${written} written${skipped.length ? `, skipped (no such account): ${skipped.join(', ')}` : ''}.`);
-  await mongoose.disconnect();
+  await disconnectDB();
+  process.exit(0);
 }
 
 run().catch((err) => {

@@ -7,7 +7,7 @@
 // tracked by this app) before the hub picker marks the order ready. The delivery partner only
 // ever visits the hub and does ONE pickup for the whole order — see
 // delivery.controller.js#verifyHandoverOtpCtrl/scanHandoverQr.
-const { Order, PickerProfile } = require('../../models');
+const { Order, PickerProfile, Product } = require('../../models');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
@@ -168,7 +168,17 @@ function myItem(order, itemId, userId) {
 // app); 'auto_assign' — a rider is assigned and the picker shows GET .../qr or reads out .../otp.
 const getJobDetail = catchAsync(async (req, res) => {
   const order = await findAssignedJob(req);
-  new ApiResponse(200, { ...order.toJSON(), handoverMode: await getHubPickupMode() }).send(res);
+  const json = order.toJSON();
+  // The printable product QR lets the app verify a scan locally. Only this picker-owned job
+  // response carries it. One query for every item's product.
+  const productIds = [...new Set((json.items || []).map((i) => i.product && String(i.product._id || i.product)).filter(Boolean))];
+  const products = productIds.length ? await Product.find({ _id: { $in: productIds } }).select('qrToken').lean() : [];
+  const tokenById = new Map(products.map((p) => [String(p._id), p.qrToken || '']));
+  json.items = (json.items || []).map((i) => ({
+    ...i,
+    productQrToken: tokenById.get(String(i.product && (i.product._id || i.product))) || '',
+  }));
+  new ApiResponse(200, { ...json, handoverMode: await getHubPickupMode() }).send(res);
 });
 
 // POST /picker/jobs/:id/accept -> the picker takes on their part of this order (the other choice
@@ -203,15 +213,28 @@ const startPicking = catchAsync(async (req, res) => {
   new ApiResponse(200, order, 'Started picking').send(res);
 });
 
-// PATCH /picker/jobs/:id/items/:itemId  { pickedQty, isAvailable, substituteProductId, substituteNote }
-// The picker's only way to report an item — no scanning. Used both to record what was actually
+// Case-insensitive, trimmed comparison of a scanned code with the product's qrToken. A product
+// with no token can never match a scan.
+function qrMatches(scanned, token) {
+  const a = String(scanned).trim().toUpperCase();
+  const b = String(token || '').trim().toUpperCase();
+  return a.length > 0 && a === b;
+}
+
+// PATCH /picker/jobs/:id/items/:itemId  { pickedQty, isAvailable, substituteProductId, substituteNote, scannedQr? }
+// The picker's way to report an item; an optional scannedQr must match the item's product qrToken. Used both to record what was actually
 // picked and, via isAvailable/substituteProductId, to flag something out of stock.
 const updateJobItem = catchAsync(async (req, res) => {
   const order = await findAssignedJob(req);
   const item = myItem(order, req.params.itemId, req.user.id);
   if (!item) throw new ApiError(404, 'Item not found or not assigned to you');
 
-  const { pickedQty, isAvailable, substituteProductId, substituteNote } = req.body;
+  const { pickedQty, isAvailable, substituteProductId, substituteNote, scannedQr } = req.body;
+  if (scannedQr !== undefined && scannedQr !== null) {
+    if (!qrMatches(scannedQr, (await Product.findById(item.product).select('qrToken').lean())?.qrToken)) {
+      throw new ApiError(400, 'This QR does not match the item');
+    }
+  }
   if (pickedQty !== undefined) item.pickedQty = pickedQty;
   if (isAvailable !== undefined) item.isAvailable = isAvailable;
   if (substituteProductId !== undefined) item.substituteProduct = substituteProductId || null;

@@ -2,7 +2,7 @@
 // Safe to run again — each alert has a fixed key and is only created once, so edits made in
 // Admin > Alert Messages are kept. Times are IST.
 require('dotenv').config();
-const { connectDB, mongoose } = require('../config/db');
+const { connectDB, disconnectDB } = require('../config/db');
 const { AppAlert } = require('../models');
 
 const ist = (dateTime) => new Date(`${dateTime}:00+05:30`);
@@ -109,7 +109,8 @@ async function run() {
     if (res.upsertedCount) created += 1;
   }
   console.log(`Alerts: ${created} created, ${ALERTS.length - created} already there.`);
-  await mongoose.disconnect();
+  await disconnectDB();
+  process.exit(0);
 }
 
 if (require.main === module) {

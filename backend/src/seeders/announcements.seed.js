@@ -1,7 +1,7 @@
 // Sample notices for delivery partners (Updates tab). Run: npm run seed:announcements
 // Safe to run again — each notice has a fixed key and is only created once.
 require('dotenv').config();
-const { connectDB, mongoose } = require('../config/db');
+const { connectDB, disconnectDB } = require('../config/db');
 const { Announcement } = require('../models');
 
 const NOTICES = [
@@ -133,7 +133,8 @@ async function run() {
     if (res.upsertedCount) created += 1;
   }
   console.log(`Notices: ${created} created, ${NOTICES.length - created} already there.`);
-  await mongoose.disconnect();
+  await disconnectDB();
+  process.exit(0);
 }
 
 if (require.main === module) {

@@ -13,6 +13,7 @@ const ApiError = require('../../utils/apiError');
 const ApiResponse = require('../../utils/apiResponse');
 const otpService = require('../../services/otp.service');
 const tokenService = require('../../services/token.service');
+const { verifyGoogleIdToken } = require('../../services/googleAuth.service');
 const { resolveOtpPhone } = require('../../utils/phone');
 const { pickerOnboarding, PLACEHOLDER_NAME } = require('../../utils/pickerOnboarding');
 
@@ -82,6 +83,47 @@ const verifyOtp = catchAsync(async (req, res) => {
 
   // Admin-created pickers already have a profile; this only fills the gap for a new signup (or
   // a legacy account that somehow never got one).
+  let profile = await PickerProfile.findOne({ user: user._id });
+  if (!profile) profile = await PickerProfile.create({ user: user._id, status: 'pending' });
+
+  const { accessToken, refreshToken } = await tokenService.issueTokenPair(user, { deviceId, platform });
+  new ApiResponse(200, {
+    accessToken,
+    refreshToken,
+    isNewUser,
+    user: safeUserOf(user),
+    pickerProfile: profile,
+    onboarding: pickerOnboarding(user, profile),
+  }, isNewUser ? 'Signup successful' : 'Login successful').send(res);
+});
+
+// POST /auth/picker/google  { idToken, deviceId?, platform? }
+// "Sign in with Google" for the Picker app. Same result as verify-otp — logs the picker in, or creates
+// a new account (profile status 'pending') — and the same onboarding.nextStep routing. The account is
+// matched by the *verified* Google email within role 'picker'. A new Google account has no phone
+// number, which is fine: it only identifies the OTP flow.
+const googleLogin = catchAsync(async (req, res) => {
+  const { idToken, deviceId, platform } = req.body;
+  const google = await verifyGoogleIdToken(idToken);
+
+  let user = await User.findOne({ email: google.email, role: 'picker' });
+  let isNewUser = false;
+  if (user) {
+    if (!user.isActive) throw new ApiError(403, 'Your account has been disabled. Please contact support.');
+    if (!user.isVerified) { user.isVerified = true; await user.save(); }
+  } else {
+    // Emails are unique across all roles, so an address already used by e.g. a customer account can't be reused here.
+    if (await User.exists({ email: google.email })) {
+      throw new ApiError(409, 'This email is already used by another account. Sign in with your phone number instead.');
+    }
+    isNewUser = true;
+    user = await User.create({
+      name: google.name || PLACEHOLDER_NAME, email: google.email, role: 'picker',
+      profileImage: google.picture, isVerified: true,
+    });
+    await Wallet.create({ user: user._id, balance: 0 });
+  }
+
   let profile = await PickerProfile.findOne({ user: user._id });
   if (!profile) profile = await PickerProfile.create({ user: user._id, status: 'pending' });
 
@@ -188,4 +230,4 @@ const logoutAll = catchAsync(async (req, res) => {
   new ApiResponse(200, null, 'Logged out from all devices').send(res);
 });
 
-module.exports = { sendOtp, resendOtp, verifyOtp, me, register, logout, logoutAll };
+module.exports = { sendOtp, resendOtp, verifyOtp, googleLogin, me, register, logout, logoutAll };

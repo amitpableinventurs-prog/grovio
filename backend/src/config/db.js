@@ -1,9 +1,40 @@
 const mongoose = require('mongoose');
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
+let memServer = null;
+
 async function connectDB() {
-  await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/grovio');
-  console.log('MongoDB connected');
+  const uri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/grovio';
+  try {
+    await mongoose.connect(uri, { serverSelectionTimeoutMS: 2000 });
+    console.log('MongoDB connected to', uri);
+  } catch (err) {
+    console.log('Local MongoDB not reachable at', uri, '- starting embedded MongoDB instance...');
+    try {
+      const { MongoMemoryServer } = require('mongodb-memory-server');
+      const dbPath = path.join(__dirname, '../../.mongo-data');
+      if (!fs.existsSync(dbPath)) {
+        fs.mkdirSync(dbPath, { recursive: true });
+      }
+      memServer = await MongoMemoryServer.create({
+        instance: {
+          port: 27017,
+          dbPath,
+          storageEngine: 'wiredTiger',
+          dbName: 'grovio',
+        },
+      });
+      const memUri = memServer.getUri();
+      console.log('Embedded MongoDB started at:', memUri);
+      await mongoose.connect(memUri);
+      console.log('MongoDB connected successfully');
+    } catch (e) {
+      console.error('Failed to start embedded MongoDB:', e.message);
+      throw err;
+    }
+  }
   await dropLegacyUserPhoneIndex();
   return mongoose.connection;
 }
@@ -25,4 +56,12 @@ async function dropLegacyUserPhoneIndex() {
   }
 }
 
-module.exports = { connectDB, mongoose };
+async function disconnectDB() {
+  await mongoose.disconnect();
+  if (memServer) {
+    await memServer.stop();
+    memServer = null;
+  }
+}
+
+module.exports = { connectDB, disconnectDB, mongoose };

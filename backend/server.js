@@ -9,6 +9,7 @@ const path = require('path');
 const { connectDB } = require('./src/config/db');
 const { UPLOADS_DIR } = require('./src/config/uploads');
 require('./src/models'); // registers all Mongoose models
+require('./src/config/firebase'); // initializes Firebase Admin SDK
 
 const { initSocket } = require('./src/sockets');
 const { startRiderJobs } = require('./src/services/riderJobs.service');

@@ -1,2 +1,7 @@
 .DS_Store
 *.log
+
+# Local DB data and credentials - never commit
+backend/.mongo-data/
+backend/src/config/firebase-service-account.json
+*service-account*.json

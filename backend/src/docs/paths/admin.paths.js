@@ -466,7 +466,7 @@ paths['/admin/settings'] = {
     requestBody: jsonBody({
       deliveryFee: { type: 'string' }, commissionPercent: { type: 'string' }, minOrderAmount: { type: 'string' }, appVersion: { type: 'string' },
       razorpayKeyId: { type: 'string' }, razorpayKeySecret: { type: 'string', description: 'Omit/blank to keep existing' }, razorpayWebhookSecret: { type: 'string', description: 'Omit/blank to keep existing' },
-      smsProvider: { type: 'string', enum: ['none', 'msg91', 'twilio'] },
+      smsProvider: { type: 'string', enum: ['none', 'msg91', 'twilio', 'apitxt'] },
       smsApiKey: { type: 'string', description: 'MSG91 auth key or Twilio Account SID — omit/blank to keep existing' },
       smsApiSecret: { type: 'string', description: 'Twilio Auth Token only — omit/blank to keep existing' },
       smsSenderId: { type: 'string', description: 'MSG91 sender ID or Twilio From number' },
