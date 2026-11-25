@@ -21,6 +21,7 @@ module.exports = {
   Review: require('./review.model'),
   Notification: require('./notification.model'),
   SupportTicket: require('./supportTicket.model'),
+  Faq: require('./faq.model'),
   Setting: require('./setting.model'),
   ContentPage: require('./contentPage.model'),
   Settlement: require('./settlement.model'),

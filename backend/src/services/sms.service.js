@@ -1,8 +1,9 @@
 const { getSetting } = require('./settings.service');
 
 // Sends `message` to `phone` via whichever provider is configured in Admin > Settings >
-// Integrations (falling back to .env for local dev). Returns { sent, reason? } instead of
-// throwing — the caller (otp.service.js) decides how to treat "not configured" (fall back to the
+// Integrations (falling back to .env for local dev): apitxt (OTP only) or MSG91. Twilio SMS was
+// removed — a leftover smsProvider 'twilio' setting counts as unknown_provider. Returns
+// { sent, reason? } instead of throwing — the caller (otp.service.js) decides how to treat "not configured" (fall back to the
 // existing dev-mode debugOtp behavior) vs. a configured provider actually failing (surface a real
 // error to the customer).
 async function sendSms(phone, message, { otpCode } = {}) {
@@ -10,9 +11,8 @@ async function sendSms(phone, message, { otpCode } = {}) {
   if (!provider || provider === 'none') return { sent: false, reason: 'not_configured' };
 
   try {
-    if (provider === 'msg91') return await sendViaMsg91(phone, message, otpCode);
-    if (provider === 'twilio') return await sendViaTwilio(phone, message);
     if (provider === 'apitxt') return await sendViaApitxt(phone, otpCode);
+    if (provider === 'msg91') return await sendViaMsg91(phone, message, otpCode);
     return { sent: false, reason: 'unknown_provider' };
   } catch (err) {
     return { sent: false, reason: err.message };
@@ -82,38 +82,16 @@ async function sendViaMsg91(phone, message, otpCode) {
   return { sent: true };
 }
 
-// Twilio's standard Messages API — no DLT/template requirement outside India.
-async function sendViaTwilio(phone, message) {
-  const accountSid = await getSetting('smsApiKey', 'TWILIO_ACCOUNT_SID');
-  const authToken = await getSetting('smsApiSecret', 'TWILIO_AUTH_TOKEN');
-  const fromNumber = await getSetting('smsSenderId', 'TWILIO_FROM_NUMBER');
-  if (!accountSid || !authToken || !fromNumber) return { sent: false, reason: 'not_configured' };
-
-  const body = new URLSearchParams({ To: phone, From: fromNumber, Body: message });
-  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body,
-  });
-
-  if (!res.ok) return { sent: false, reason: `twilio_http_${res.status}` };
-  return { sent: true };
-}
-
 // A non-OTP text (e.g. an SOS alert). MSG91 can only send DLT-approved templates, so it needs its
 // own template: `msg91TemplateSetting` names the setting holding that flow ID, and `vars` fill its
 // variables. Without that template, MSG91 returns not_configured rather than misusing the OTP one.
-// Twilio sends `message` as is.
+// apitxt only delivers OTPs, so it can't send these.
 async function sendTextSms(phone, message, { msg91TemplateSetting, vars = {} } = {}) {
   const provider = await getSetting('smsProvider', 'SMS_PROVIDER');
   if (!provider || provider === 'none') return { sent: false, reason: 'not_configured' };
   if (provider === 'apitxt') return { sent: false, reason: 'apitxt_supports_otp_only' };
 
   try {
-    if (provider === 'twilio') return await sendViaTwilio(toE164(phone), message);
     if (provider === 'msg91') {
       const authKey = await getSetting('smsApiKey', 'MSG91_AUTH_KEY');
       const senderId = await getSetting('smsSenderId', 'MSG91_SENDER_ID');

@@ -206,14 +206,21 @@ export function VoipCard({ data, provider }: { data: Settings; provider?: string
   const { data: config } = useQuery({ queryKey: ['voip-config'], queryFn: fetchVoipConfig });
 
   return (
-    <Card title="In-app Calls — Masked Customer ↔ Rider Calls (Twilio)">
+    <Card title="Customer ↔ Rider Calls">
       <Typography.Paragraph type="secondary">
-        Customers and delivery partners call each other inside the app (VoIP), so neither ever sees the other's phone number.
-        Calls are only possible while the order is out for delivery. With "None", calls are only recorded in Masked Calls as
-        simulated. See the backend README, "Masked Calls".
+        Customers and delivery partners can call each other while the order is out for delivery. "Direct phone call" opens the
+        phone's dialler with the other person's number (no account needed, numbers are not hidden). "Twilio Voice" calls inside
+        the app, so neither ever sees the other's number. With "None", calls are only recorded in Masked Calls as simulated.
+        See the backend README, "Masked Calls".
       </Typography.Paragraph>
       <Form.Item name="voipProvider" label="Provider">
-        <Select options={[{ value: 'none', label: 'None (simulate calls)' }, { value: 'twilio', label: 'Twilio Voice' }]} />
+        <Select
+          options={[
+            { value: 'none', label: 'None (simulate calls)' },
+            { value: 'direct', label: 'Direct phone call (number shared)' },
+            { value: 'twilio', label: 'Twilio Voice (masked, in-app)' },
+          ]}
+        />
       </Form.Item>
 
       {provider === 'twilio' && (

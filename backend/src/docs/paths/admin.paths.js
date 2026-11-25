@@ -466,10 +466,9 @@ paths['/admin/settings'] = {
     requestBody: jsonBody({
       deliveryFee: { type: 'string' }, commissionPercent: { type: 'string' }, minOrderAmount: { type: 'string' }, appVersion: { type: 'string' },
       razorpayKeyId: { type: 'string' }, razorpayKeySecret: { type: 'string', description: 'Omit/blank to keep existing' }, razorpayWebhookSecret: { type: 'string', description: 'Omit/blank to keep existing' },
-      smsProvider: { type: 'string', enum: ['none', 'msg91', 'twilio', 'apitxt'] },
-      smsApiKey: { type: 'string', description: 'MSG91 auth key or Twilio Account SID — omit/blank to keep existing' },
-      smsApiSecret: { type: 'string', description: 'Twilio Auth Token only — omit/blank to keep existing' },
-      smsSenderId: { type: 'string', description: 'MSG91 sender ID or Twilio From number' },
+      smsProvider: { type: 'string', enum: ['none', 'apitxt', 'msg91'] },
+      smsApiKey: { type: 'string', description: 'apitxt or MSG91 auth key — omit/blank to keep existing' },
+      smsSenderId: { type: 'string', description: 'MSG91 sender ID' },
       smsTemplateId: { type: 'string', description: 'MSG91 DLT flow/template ID' },
       googleMapsApiKey: { type: 'string', description: 'Omit/blank to keep existing' },
     }),
@@ -517,7 +516,32 @@ paths['/admin/support-tickets'] = {
 };
 paths['/admin/support-tickets/{id}'] = {
   get: { tags: TAG_SUPPORT, summary: 'A ticket with its conversation', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('SupportTicket')), 401: RESPONSES_401, 404: RESPONSES_404 } },
-  patch: { tags: TAG_SUPPORT, summary: 'Reply to / change status of a ticket', ...bearer(), parameters: [idParam()], requestBody: jsonBody({ adminReply: { type: 'string' }, status: { type: 'string', enum: ['open', 'in_progress', 'resolved', 'closed'] } }), responses: { 200: envelope(ref('SupportTicket'), 'Ticket updated'), 401: RESPONSES_401, 404: RESPONSES_404 } },
+  patch: { tags: TAG_SUPPORT, summary: 'Reply to / change status of a ticket (the user gets it live over Socket.IO and as a push). Status open/in_progress is applied before the reply, resolved/closed after it.', ...bearer(), parameters: [idParam()], requestBody: jsonBody({ adminReply: { type: 'string' }, status: { type: 'string', enum: ['open', 'in_progress', 'resolved', 'closed'] } }), responses: { 200: envelope(ref('SupportTicket'), 'Ticket updated'), 401: RESPONSES_401, 404: RESPONSES_404 } },
+};
+paths['/admin/support-tickets/{id}/read'] = {
+  post: { tags: TAG_SUPPORT, summary: 'Support has read the conversation (the user gets a read receipt). Same as the socket\'s support:read.', ...bearer(), parameters: [idParam()], responses: { 200: envelope({ type: 'object', properties: { ticketId: { type: 'string' }, readAt: { type: 'string', format: 'date-time' } } }), 401: RESPONSES_401, 404: RESPONSES_404 } },
+};
+
+// ---------- FAQs (Support screen) ----------
+const FAQ = { type: 'object', properties: { _id: { type: 'string' }, app: { type: 'string', enum: ['all', 'delivery', 'picker', 'customer'] }, topic: { type: 'string', example: 'payouts' }, question: { type: 'string' }, answer: { type: 'string' }, sortOrder: { type: 'number', example: 10 }, isActive: { type: 'boolean' }, createdAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' } } };
+const FAQ_BODY = {
+  app: { type: 'string', enum: ['all', 'delivery', 'picker', 'customer'], description: "Which app shows it ('all' = every app). Default all." },
+  topic: { type: 'string', example: 'payouts', description: 'One of that app\'s topics (GET /admin/faq-topics)' },
+  question: { type: 'string', example: 'When do I get paid?' },
+  answer: { type: 'string' },
+  sortOrder: { type: 'number', example: 10, description: 'Lower first' },
+  isActive: { type: 'boolean' },
+};
+paths['/admin/faq-topics'] = {
+  get: { tags: TAG_SUPPORT, summary: 'FAQ topics per app (delivery / picker / customer), and the keys an "all" FAQ may use', ...bearer(), responses: { 200: envelope({ type: 'object' }), 401: RESPONSES_401, 403: RESPONSES_403 } },
+};
+paths['/admin/faqs'] = {
+  get: { tags: TAG_SUPPORT, summary: 'All FAQs, inactive included', ...bearer(), parameters: [q('app', 'all | delivery | picker | customer'), q('topic'), q('isActive', 'true | false')], responses: { 200: envelope({ type: 'array', items: FAQ }), 401: RESPONSES_401, 403: RESPONSES_403 } },
+  post: { tags: TAG_SUPPORT, summary: 'Add an FAQ', ...bearer(), requestBody: jsonBody(FAQ_BODY, ['topic', 'question', 'answer']), responses: { 201: envelope(FAQ, 'FAQ created'), 401: RESPONSES_401, 403: RESPONSES_403, 422: errorResponse('Bad app / topic, or question / answer missing') } },
+};
+paths['/admin/faqs/{id}'] = {
+  patch: { tags: TAG_SUPPORT, summary: 'Edit an FAQ (any of its fields)', ...bearer(), parameters: [idParam()], requestBody: jsonBody(FAQ_BODY), responses: { 200: envelope(FAQ, 'FAQ updated'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404, 422: RESPONSES_422 } },
+  delete: { tags: TAG_SUPPORT, summary: 'Delete an FAQ', ...bearer(), parameters: [idParam()], responses: { 200: envelope(null, 'FAQ deleted'), 401: RESPONSES_401, 403: RESPONSES_403, 404: RESPONSES_404 } },
 };
 
 // ---------- Inventory ----------

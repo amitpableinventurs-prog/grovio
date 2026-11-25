@@ -45,11 +45,15 @@ router.get('/announcements/unread-count', authenticate, announcementsCtrl.unread
 router.get('/announcements/:id', authenticate, announcementsCtrl.detail);
 router.post('/announcements/:id/ack', authenticate, announcementsCtrl.acknowledge);
 
+// Support screen (Call support / Chat with us / FAQs). Before /support/:id.
+router.get('/support/home', authenticate, supportCtrl.supportHome);
+router.get('/support/faqs', authenticate, supportCtrl.listFaqs);
 router.get('/support/categories', authenticate, supportCtrl.listCategories);
 router.post('/support', authenticate, supportCtrl.createTicket);
 router.get('/support', authenticate, supportCtrl.listMyTickets);
 router.get('/support/:id', authenticate, supportCtrl.getTicket);
 router.post('/support/:id/messages', authenticate, supportCtrl.addMessage);
+router.post('/support/:id/read', authenticate, supportCtrl.markRead);
 router.post('/support/:id/rate', authenticate, supportCtrl.rateTicket);
 router.post('/support/:id/reopen', authenticate, supportCtrl.reopenTicket);
 

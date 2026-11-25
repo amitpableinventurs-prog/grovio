@@ -17,6 +17,7 @@ const STATUS_COLORS: Record<VoipCall['status'], string> = {
   canceled: 'default',
   expired: 'default',
   simulated: 'default',
+  dialled: 'cyan',
 };
 
 const ROLE_LABELS: Record<VoipCall['callerRole'], string> = { customer: 'Customer', delivery: 'Delivery partner' };

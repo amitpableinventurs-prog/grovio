@@ -325,14 +325,54 @@ export interface Banner {
   isActive: boolean;
 }
 
+export interface SupportMessage {
+  _id: string;
+  sender: 'user' | 'agent' | 'system';
+  senderName?: string | null;
+  text: string;
+  createdAt: string;
+}
+
 export interface SupportTicket {
   _id: string;
+  ticketNumber?: string | null;
   user: string | User;
+  category?: string | null;
+  subcategory?: string | null;
   subject: string;
   message: string;
   status: 'open' | 'in_progress' | 'resolved' | 'closed';
   adminReply?: string | null;
+  order?: string | { _id: string; orderNumber: string; orderStatus?: string } | null;
+  messages?: SupportMessage[];
+  rating?: 'up' | 'down' | null;
+  lastMessageAt?: string | null;
+  lastMessageBy?: 'user' | 'agent' | 'system' | null;
+  // Messages from the user that support hasn't read yet.
+  unreadCount?: number;
   createdAt: string;
+  updatedAt?: string;
+}
+
+// Socket.IO support chat events (backend services/supportChat.service.js).
+export interface SupportTicketEvent {
+  ticketId: string;
+  ticketNumber?: string | null;
+  subject: string;
+  status: SupportTicket['status'];
+  event: 'created' | 'status' | 'reopened' | 'rated';
+}
+export interface SupportMessageEvent {
+  ticketId: string;
+  status: SupportTicket['status'];
+  message: SupportMessage;
+  clientId?: string | null;
+}
+export interface SupportTypingEvent {
+  ticketId: string;
+  from: 'user' | 'agent';
+  name?: string | null;
+  typing: boolean;
 }
 
 export interface Payment {
@@ -523,8 +563,8 @@ export interface VoipCall {
   callerRole: 'customer' | 'delivery';
   callee?: { _id: string; name: string; phone?: string } | null;
   calleeRole: 'customer' | 'delivery';
-  provider: 'twilio' | 'simulated';
-  status: 'initiated' | 'ringing' | 'in-progress' | 'completed' | 'busy' | 'no-answer' | 'failed' | 'canceled' | 'expired' | 'simulated';
+  provider: 'twilio' | 'direct' | 'simulated';
+  status: 'initiated' | 'ringing' | 'in-progress' | 'completed' | 'busy' | 'no-answer' | 'failed' | 'canceled' | 'expired' | 'simulated' | 'dialled';
   answeredAt?: string | null;
   endedAt?: string | null;
   durationSec?: number | null;

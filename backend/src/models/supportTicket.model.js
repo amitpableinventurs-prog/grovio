@@ -2,8 +2,9 @@ const { Schema, model } = require('mongoose');
 
 // A help request from any app user (customer, delivery partner, picker) — see
 // controllers/common/support.controller.js. A conversation: `messages` holds the user's and the
-// support team's replies in order. `message` / `adminReply` are the first message and the latest
-// reply, kept for older clients and the admin list.
+// support team's replies in order, live over WebSocket too (services/supportChat.service.js).
+// `message` / `adminReply` are the first message and the latest reply, kept for older clients and
+// the admin list.
 const messageSchema = new Schema({
   sender: { type: String, enum: ['user', 'agent', 'system'], required: true },
   senderName: { type: String, default: null },
@@ -31,6 +32,12 @@ const supportTicketSchema = new Schema({
   // "How would you like to rate my assistance?"
   rating: { type: String, enum: [null, 'up', 'down'], default: null },
   ratedAt: { type: Date, default: null },
+  // Live chat state (services/supportChat.service.js): who wrote last, and up to when each side has
+  // read the conversation — for unread badges and read receipts.
+  lastMessageAt: { type: Date, default: null },
+  lastMessageBy: { type: String, enum: [null, 'user', 'agent', 'system'], default: null },
+  userReadAt: { type: Date, default: null },
+  agentReadAt: { type: Date, default: null },
 }, { timestamps: true });
 
 supportTicketSchema.index({ user: 1, createdAt: -1 });
