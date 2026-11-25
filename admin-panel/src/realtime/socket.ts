@@ -69,6 +69,18 @@ export function onSocketEvent<T>(event: string, handler: (payload: T) => void): 
   };
 }
 
+// Emits with an acknowledgement; resolves with the server's reply, or { ok: false } if the socket is
+// down or the server doesn't answer in time.
+export function emitWithAck<T extends { ok: boolean; message?: string }>(event: string, payload: unknown, timeoutMs = 8000): Promise<T> {
+  const s = getSocket();
+  if (!s.connected) return Promise.resolve({ ok: false, message: 'Not connected' } as T);
+  return new Promise((resolve) => {
+    s.timeout(timeoutMs).emit(event, payload, (err: Error | null, reply: T) => {
+      resolve(err ? ({ ok: false, message: 'No reply from the server' } as T) : reply);
+    });
+  });
+}
+
 export function useSocketConnected(): boolean {
   return useSyncExternalStore(
     (cb) => {

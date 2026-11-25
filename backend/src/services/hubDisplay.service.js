@@ -209,6 +209,55 @@ async function buildBoard(storeId, { baseUrl }) {
   };
 }
 
+// What a store's picker TV (/picker-display) shows: that store's part of every order still being
+// picked — the items to pick there (name, variant, qty, picked / unavailable / substituted), the
+// picker, and how far the order is across its stores. An order leaves it once it's packed (all
+// stores done); it's then on the dark store's /hub-display with its pickup QR. Like the hub board:
+// item names only, no customer details or amounts.
+const PICKING_STATUSES = ['accepted', 'picking', 'partially_picked'];
+
+function itemState(i) {
+  if (!i.isAvailable) return i.substituteProduct || i.substituteNote ? 'substituted' : 'unavailable';
+  if (i.pickedQty != null && i.pickedQty >= i.qty) return 'picked';
+  return i.pickedQty ? 'partial' : 'to_pick';
+}
+
+async function buildPickingBoard(storeId) {
+  const sid = String(storeId);
+  const orders = await Order.find({ 'pickTasks.store': storeId, orderStatus: { $in: PICKING_STATUSES } })
+    .select('orderNumber orderStatus store items pickTasks placedAt createdAt')
+    .populate('pickTasks.picker', 'name')
+    .populate('store', 'name')
+    .sort({ placedAt: 1, createdAt: 1 })
+    .limit(200)
+    .lean();
+
+  return {
+    orders: orders.map((o) => {
+      const task = (o.pickTasks || []).find((t) => String(t.store) === sid);
+      const isHub = String(o.store?._id || o.store) === sid;
+      const done = (o.pickTasks || []).filter((t) => t.status === 'completed').length;
+      let nextStep = 'pick';
+      if (task?.status === 'completed') nextStep = isHub ? 'wait_for_other_stores' : 'take_to_hub';
+      return {
+        orderId: o._id,
+        orderNumber: o.orderNumber,
+        placedAt: o.placedAt || o.createdAt,
+        picker: { name: firstName(task?.picker?.name) },
+        // assigned (not started) | picking | completed (this store's part is packed)
+        taskStatus: task?.status || 'assigned',
+        accepted: !!task?.acceptedAt,
+        hub: { name: o.store?.name || null, isThisStore: isHub },
+        nextStep,
+        stores: { total: (o.pickTasks || []).length, done },
+        items: (o.items || [])
+          .filter((i) => String(i.pickupStore) === sid)
+          .map((i) => ({ name: i.nameSnapshot, variant: i.variantLabel || null, qty: i.qty, pickedQty: i.pickedQty, state: itemState(i), note: i.substituteNote || null })),
+      };
+    }),
+  };
+}
+
 module.exports = {
   CHECKIN_MINUTES,
   HUB_PICKUP_MODES,
@@ -229,4 +278,5 @@ module.exports = {
   checkinExpiry,
   activeCheckinStoreId,
   buildBoard,
+  buildPickingBoard,
 };

@@ -1,6 +1,6 @@
 import { Button, Card, Form, Input, Typography, App as AntApp } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { login } from '../api/auth';
 import { apiErrorMessage } from '../api/client';
@@ -12,12 +12,16 @@ interface LoginForm {
 }
 
 // The signup page is served by the backend itself (backend/server.js -> /vendor-signup).
-const SIGNUP_URL = `${(import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1').replace(/\/api\/v1\/?$/, '')}/vendor-signup/`;
+const SIGNUP_BASE_URL = `${(import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1').replace(/\/api\/v1\/?$/, '')}/vendor-signup/`;
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const setSession = useAuthStore((s) => s.setSession);
   const { message } = AntApp.useApp();
+
+  const initialEmail = searchParams.get('email') || undefined;
+  const signupUrl = `${SIGNUP_BASE_URL}?loginUrl=${encodeURIComponent(`${window.location.origin}/login`)}`;
 
   const mutation = useMutation({
     mutationFn: (values: LoginForm) => login(values.email, values.password),
@@ -48,7 +52,7 @@ export default function LoginPage() {
           </Typography.Title>
           <Typography.Text type="secondary">Sign in to manage your store</Typography.Text>
         </div>
-        <Form layout="vertical" onFinish={(values) => mutation.mutate(values)} autoComplete="off">
+        <Form layout="vertical" initialValues={{ email: initialEmail }} onFinish={(values) => mutation.mutate(values)} autoComplete="off">
           <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email' }]}>
             <Input prefix={<UserOutlined />} placeholder="you@yourstore.com" size="large" />
           </Form.Item>
@@ -63,7 +67,7 @@ export default function LoginPage() {
         </Form>
         <div style={{ textAlign: 'center' }}>
           <Typography.Text type="secondary">New to Grovio? </Typography.Text>
-          <a href={SIGNUP_URL}>Register your store</a>
+          <a href={signupUrl}>Register your store</a>
         </div>
       </Card>
     </div>

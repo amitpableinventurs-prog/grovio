@@ -16,6 +16,9 @@ let io = null;
 //                    minimal 'hub:order' ping (see orderEvents.js), never the full summary
 //   display:<id>   — one hub screen: 'hub:qr' when its check-in QR was used, and revoking it
 //                    disconnects it
+//   support:agents — admins who answer support chats (manage_orders or '*'); the chat events of
+//                    every ticket go here and to the ticket owner's user:<id> room
+//                    (services/supportChat.service.js)
 const ROOMS = {
   user: (id) => `user:${id}`,
   role: (role) => `role:${role}`,
@@ -26,6 +29,7 @@ const ROOMS = {
   display: (id) => `display:${id}`,
   // Admins who see every SOS (services/sos.service.js); store managers get their store's in store:<id>.
   sosAll: 'sos:all',
+  supportAgents: 'support:agents',
 };
 
 const idOf = (v) => (v && v._id ? v._id : v)?.toString();
@@ -88,11 +92,12 @@ function initSocket(server) {
     }
 
     try {
-      const user = await User.findById(decoded.id).select('role permissions assignedStore isActive');
+      const user = await User.findById(decoded.id).select('name role permissions assignedStore isActive');
       if (!user) return next(new Error('User no longer exists'));
       if (!user.isActive) return next(new Error('Account has been disabled'));
       socket.user = {
         id: user.id,
+        name: user.name || null,
         role: user.role,
         permissions: user.permissions || [],
         assignedStore: user.assignedStore ? user.assignedStore.toString() : null,
@@ -119,7 +124,67 @@ function initSocket(server) {
       else if (socket.user.assignedStore) socket.join(ROOMS.store(socket.user.assignedStore));
       const sosPerms = [PERMISSIONS.MANAGE_ORDERS, PERMISSIONS.MANAGE_DELIVERY, PERMISSIONS.MANAGE_PICKERS];
       if (sosPerms.some((perm) => hasFullAccess(socket.user, perm))) socket.join(ROOMS.sosAll);
+      if (hasFullAccess(socket.user, PERMISSIONS.MANAGE_ORDERS)) socket.join(ROOMS.supportAgents);
     }
+
+    // ---- Support chat (services/supportChat.service.js) ----
+    // The ticket owner (customer / rider / picker) or a support agent (admin). Every handler takes
+    // an optional ack: ({ ok: true, ... }) or ({ ok: false, message }).
+    const chat = () => require('../services/supportChat.service');
+    // ticketId -> { side, owner, at }: so typing pings don't need a DB check each time.
+    const sideCache = new Map();
+    const remember = (ticket, side) => {
+      const entry = { side, owner: String(ticket.user), at: Date.now() };
+      sideCache.set(String(ticket._id), entry);
+      return entry;
+    };
+    const ackOf = (ack) => (typeof ack === 'function' ? ack : () => {});
+    const failed = (reply, err) => reply({ ok: false, message: err.statusCode && err.statusCode < 500 ? err.message : 'Something went wrong' });
+
+    // support:send { ticketId, text, clientId? } -> ack { ok, message, status, clientId }
+    socket.on('support:send', async (payload, ack) => {
+      const reply = ackOf(ack);
+      try {
+        const { ticketId, text, clientId } = payload || {};
+        const { ticket, side } = await chat().ticketFor(socket.user, ticketId);
+        remember(ticket, side);
+        const { message } = await chat().postMessage({ ticket, side, senderName: side === 'user' ? socket.user.name : null, text, clientId: clientId ? String(clientId).slice(0, 64) : null });
+        reply({ ok: true, message: chat().messageView(message), status: ticket.status, clientId: clientId || null });
+      } catch (err) {
+        if (!err.statusCode) logServerError('support:send failed', err);
+        failed(reply, err);
+      }
+    });
+
+    // support:typing { ticketId, typing } -> the other side gets support:typing
+    socket.on('support:typing', async (payload, ack) => {
+      const reply = ackOf(ack);
+      try {
+        const { ticketId, typing } = payload || {};
+        let entry = sideCache.get(String(ticketId));
+        if (!entry || Date.now() - entry.at > 5 * 60 * 1000) {
+          const { ticket, side } = await chat().ticketFor(socket.user, ticketId);
+          entry = remember(ticket, side);
+        }
+        chat().emitTyping({ _id: String(ticketId), user: entry.owner }, entry.side, socket.user.name, typing);
+        reply({ ok: true });
+      } catch (err) {
+        failed(reply, err);
+      }
+    });
+
+    // support:read { ticketId } -> marks it read for my side; the other side gets support:read
+    socket.on('support:read', async (payload, ack) => {
+      const reply = ackOf(ack);
+      try {
+        const { ticket, side } = await chat().ticketFor(socket.user, (payload || {}).ticketId);
+        remember(ticket, side);
+        const at = await chat().markRead(ticket, side);
+        reply({ ok: true, at });
+      } catch (err) {
+        failed(reply, err);
+      }
+    });
 
     // Rider GPS ping { lat, lng } (an orderId in the payload is ignored). Goes through the same
     // path as POST /delivery/location: stored, geofenced, and pushed with an ETA only to the

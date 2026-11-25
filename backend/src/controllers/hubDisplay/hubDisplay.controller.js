@@ -7,6 +7,7 @@ const {
   checkinUrl,
   qrSvg,
   buildBoard,
+  buildPickingBoard,
 } = require('../../services/hubDisplay.service');
 
 // Endpoints for the Hub Center screen itself (/hub-display page), authenticated by its device key
@@ -37,4 +38,17 @@ const getCheckinQr = catchAsync(async (req, res) => {
   new ApiResponse(200, { qrSvg: await qrSvg(url), serverTime: new Date() }).send(res);
 });
 
-module.exports = { getBoard, getCheckinQr };
+// GET /hub-display/picking-board -> the same screen as a picker TV (/picker-display page): this
+// store's part of every order being picked. Refetched on every 'hub:order' socket event.
+const getPickingBoard = catchAsync(async (req, res) => {
+  const { store } = req.hubDisplay;
+  const board = await buildPickingBoard(store._id);
+  new ApiResponse(200, {
+    display: { id: req.hubDisplay._id, name: req.hubDisplay.name },
+    store: { id: store._id, name: store.name, address: store.address },
+    ...board,
+    serverTime: new Date(),
+  }).send(res);
+});
+
+module.exports = { getBoard, getCheckinQr, getPickingBoard };

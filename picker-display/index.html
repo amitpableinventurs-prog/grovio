@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/svg+xml" href="/brand/grovio-icon.svg">
+<title>Grovio Picking Screen</title>
+<style>
+  :root {
+    --brand-50: #eefdf3; --brand-100: #d6f7e0; --brand-200: #b0edc6; --brand-500: #22ab61;
+    --brand-600: #158a4d; --brand-700: #126e40; --brand-800: #125736;
+    --bg: #f6f8f7; --surface: #ffffff; --text: #1f2937; --muted: #6b7280; --border: #e5e7eb;
+    --amber-bg: #fffbeb; --amber: #b45309; --red-bg: #fef2f2; --red: #dc2626; --blue-bg: #eff6ff; --blue: #1d4ed8;
+    --shadow: 0 1px 2px rgba(16,72,46,0.05), 0 12px 28px -14px rgba(16,72,46,0.22);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --brand-50: #0f2a1c; --brand-100: #133523; --brand-200: #1d4d33; --brand-500: #3ccf80;
+      --brand-600: #3ccf80; --brand-700: #7be3a8; --brand-800: #a6efc6;
+      --bg: #0c1210; --surface: #151d1a; --text: #e8eeeb; --muted: #95a39c; --border: #26322d;
+      --amber-bg: #2d2210; --amber: #f5b453; --red-bg: #2e1414; --red: #f47a7a; --blue-bg: #13213b; --blue: #8fb4ff;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-variant-numeric: tabular-nums; }
+  /* A TV: the board fits one screen; a long list scrolls inside the panel. */
+  .app { height: 100vh; height: 100dvh; display: flex; flex-direction: column; padding: clamp(12px, 2vw, 28px); gap: clamp(12px, 2vw, 20px); }
+
+  header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; color: var(--brand-700); font-size: clamp(16px, 1.6vw, 22px); }
+  .store-name { font-size: clamp(18px, 2vw, 28px); font-weight: 700; }
+  .store-sub { color: var(--muted); font-size: clamp(12px, 1vw, 15px); }
+  header .spacer { flex: 1; }
+  .live { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--muted); }
+  .live .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--amber); }
+  .live.on .dot { background: var(--brand-500); box-shadow: 0 0 0 4px var(--brand-100); }
+  .clock { font-size: clamp(18px, 2vw, 28px); font-weight: 700; }
+  .sound-btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  .sound-btn.on { color: var(--brand-700); border-color: var(--brand-200); background: var(--brand-50); }
+  .unlock { display: none; background: var(--amber-bg); color: var(--amber); border-radius: 999px; padding: 6px 12px; font-weight: 600; font-size: 14px; cursor: pointer; }
+  .unlock.show { display: inline-block; }
+
+  .panel { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow); padding: clamp(16px, 2vw, 24px); }
+  .section-title { display: flex; align-items: baseline; gap: 10px; margin: 0 0 14px; font-size: clamp(18px, 1.8vw, 26px); flex-shrink: 0; }
+  .count { font-size: 0.8em; font-weight: 700; color: var(--brand-700); background: var(--brand-50); border-radius: 999px; padding: 2px 12px; }
+  .legend { margin-left: auto; font-size: 13px; font-weight: 500; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; }
+  .grid { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; align-content: start; padding: 2px; }
+  .empty { color: var(--muted); font-size: 16px; padding: 24px 4px; }
+
+  .card { border: 1px solid var(--border); border-left: 6px solid var(--blue); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; background: var(--surface); }
+  .card.new { border-left-color: var(--amber); }
+  .card.ready { border-left-color: var(--brand-500); }
+  .card.fresh { animation: pulse 1s ease-in-out 8; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 6px var(--brand-200); } }
+  @media (prefers-reduced-motion: reduce) { .card.fresh { animation: none; outline: 3px solid var(--amber); } }
+  .top { display: flex; align-items: flex-start; gap: 10px; }
+  .order-no { font-weight: 800; line-height: 1.05; min-width: 0; }
+  .order-no .prefix { display: block; font-size: clamp(12px, 1vw, 15px); color: var(--muted); font-weight: 700; }
+  .order-no .tail { font-size: clamp(26px, 2.4vw, 36px); letter-spacing: 0.02em; }
+  .top .spacer { flex: 1; }
+  .wait { font-size: 14px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+  .wait.warn { color: var(--amber); }
+  .wait.late { color: var(--red); }
+  .chip { display: inline-block; font-size: 14px; font-weight: 700; border-radius: 8px; padding: 6px 10px; }
+  .chip.new { background: var(--amber-bg); color: var(--amber); }
+  .chip.picking { background: var(--blue-bg); color: var(--blue); }
+  .chip.ready { background: var(--brand-50); color: var(--brand-800); }
+  .items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .items li { display: flex; align-items: baseline; gap: 10px; font-size: clamp(15px, 1.2vw, 18px); }
+  .items .mark { width: 22px; flex-shrink: 0; text-align: center; font-weight: 800; }
+  .items .name { flex: 1; min-width: 0; }
+  .items .variant { color: var(--muted); font-size: 0.85em; }
+  .items .qty { font-weight: 800; white-space: nowrap; }
+  .items li.picked .name { color: var(--muted); text-decoration: line-through; }
+  .items li.picked .mark { color: var(--brand-600); }
+  .items li.unavailable .mark, .items li.unavailable .name { color: var(--red); }
+  .items li.substituted .mark { color: var(--amber); }
+  .items .note { display: block; font-size: 0.8em; color: var(--amber); }
+  .foot { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 13px; border-top: 1px dashed var(--border); padding-top: 8px; }
+
+  .overlay { position: fixed; inset: 0; background: var(--bg); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+  .overlay.show { display: flex; }
+  .notice { max-width: 480px; text-align: center; }
+  .notice h2 { margin: 0 0 8px; }
+  .notice p { color: var(--muted); line-height: 1.6; margin: 0; }
+  @media (max-width: 820px) { .app { height: auto; min-height: 100%; } .grid { overflow: visible; } }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand"><img src="/brand/grovio-logo-compact.svg" alt="Grovio" style="height:clamp(28px,3vw,40px);width:auto;display:block"> Picking</div>
+      <div>
+        <div class="store-name" id="store-name">Loading…</div>
+        <div class="store-sub" id="store-sub"></div>
+      </div>
+      <div class="spacer"></div>
+      <div class="unlock" id="unlock" role="button" tabindex="0">Tap to turn on the buzzer</div>
+      <button type="button" class="sound-btn" id="sound-btn" aria-pressed="true">Buzzer on</button>
+      <div class="live" id="live"><span class="dot"></span><span id="live-label">Connecting</span></div>
+      <div class="clock" id="clock"></div>
+    </header>
+
+    <section class="panel" aria-labelledby="title">
+      <h2 class="section-title" id="title">To pick here <span class="count" id="count">0</span>
+        <span class="legend"><span>○ to pick</span><span>✓ picked</span><span>✕ not available</span><span>⇄ substitute</span></span>
+      </h2>
+      <div class="grid" id="orders"></div>
+    </section>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="notice">
+      <h2 id="overlay-title">This screen isn't paired</h2>
+      <p id="overlay-text">In the admin panel, open Stores → Hub screens for this store, add a screen and open its picking-screen link on this device.</p>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    (function () {
+      const API = '/api/v1/hub-display';
+      // Same key as the /hub-display page: one paired screen can show either.
+      const STORAGE_KEY = 'grovio_hub_display_key';
+      const SOUND_KEY = 'grovio_picker_buzzer';
+      const WARN_MIN = 10;
+      const LATE_MIN = 20;
+      const $ = (id) => document.getElementById(id);
+      const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      const storageGet = () => { try { return localStorage.getItem(STORAGE_KEY); } catch (_) { return null; } };
+      const storageSet = (v) => { try { v ? localStorage.setItem(STORAGE_KEY, v) : localStorage.removeItem(STORAGE_KEY); } catch (_) {} };
+
+      // Pairing link: /picker-display/#key=<deviceKey> (or ?key=). Keep it, drop it from the URL.
+      const paramKey = new URLSearchParams(location.hash.slice(1)).get('key') || new URLSearchParams(location.search).get('key');
+      if (paramKey) { storageSet(paramKey); history.replaceState(null, '', location.pathname); }
+      let deviceKey = paramKey || storageGet();
+
+      let clockOffset = 0;
+      let board = { orders: [] };
+      let known = null; // order ids already on the board (null until the first load)
+      const fresh = new Set();
+      let boardTimer = null;
+      let socket = null;
+      let stopped = false;
+      const now = () => Date.now() + clockOffset;
+
+      function unpaired(title, text) {
+        stopped = true;
+        storageSet(null);
+        deviceKey = null;
+        if (socket) socket.close();
+        $('overlay-title').textContent = title;
+        $('overlay-text').textContent = text;
+        $('overlay').classList.add('show');
+      }
+
+      async function api(path) {
+        const res = await fetch(API + path, { headers: { 'X-Hub-Display-Key': deviceKey }, cache: 'no-store' });
+        if (res.status === 401) {
+          unpaired('This screen was disconnected', 'Its access was revoked or the link is no longer valid. Add the screen again from Stores → Hub screens in the admin panel.');
+          throw new Error('unauthorized');
+        }
+        const body = await res.json();
+        if (!res.ok || !body.success) throw new Error(body.message || 'Request failed');
+        if (body.data && body.data.serverTime) clockOffset = new Date(body.data.serverTime).getTime() - Date.now();
+        return body.data;
+      }
+
+      // ---- Buzzer (new order to pick here) --------------------------------------------------
+      let soundOn = true;
+      try { soundOn = localStorage.getItem(SOUND_KEY) !== 'off'; } catch (_) {}
+      let audioCtx = null;
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {}
+      function renderSound() {
+        $('sound-btn').textContent = soundOn ? 'Buzzer on' : 'Buzzer off';
+        $('sound-btn').classList.toggle('on', soundOn);
+        $('sound-btn').setAttribute('aria-pressed', String(soundOn));
+        $('unlock').classList.toggle('show', !!audioCtx && soundOn && audioCtx.state !== 'running');
+      }
+      function unlockAudio() { if (audioCtx && audioCtx.state !== 'running') audioCtx.resume().then(renderSound, renderSound); }
+      function buzz() {
+        if (!soundOn || !audioCtx || audioCtx.state !== 'running') return;
+        const start = audioCtx.currentTime;
+        for (let i = 0; i < 2; i++) {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'square';
+          osc.frequency.value = 620;
+          const t = start + i * 0.35;
+          gain.gain.setValueAtTime(0.0001, t);
+          gain.gain.exponentialRampToValueAtTime(0.3, t + 0.01);
+          gain.gain.setValueAtTime(0.3, t + 0.22);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+          osc.connect(gain).connect(audioCtx.destination);
+          osc.start(t);
+          osc.stop(t + 0.3);
+        }
+      }
+      $('sound-btn').addEventListener('click', () => {
+        soundOn = !soundOn;
+        try { localStorage.setItem(SOUND_KEY, soundOn ? 'on' : 'off'); } catch (_) {}
+        unlockAudio(); renderSound();
+        if (soundOn) setTimeout(buzz, 100);
+      });
+      ['pointerdown', 'keydown'].forEach((ev) => document.addEventListener(ev, unlockAudio));
+      if (audioCtx) audioCtx.addEventListener('statechange', renderSound);
+
+      // ---- Board ----------------------------------------------------------------------------
+      const minutesSince = (iso) => (iso ? Math.max(Math.floor((now() - new Date(iso).getTime()) / 60000), 0) : null);
+      function fmtMinutes(m) {
+        if (m == null) return '';
+        if (m < 1) return 'just now';
+        if (m < 60) return m + ' min';
+        if (m < 24 * 60) return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+        return Math.floor(m / (24 * 60)) + 'd ' + Math.floor((m % (24 * 60)) / 60) + 'h';
+      }
+      function orderNo(n) {
+        const s = String(n || '');
+        const cut = s.lastIndexOf('-') + 1;
+        return '<div class="order-no" title="' + esc(s) + '"><span class="prefix">' + esc(s.slice(0, cut)) + '</span><span class="tail">' + esc(s.slice(cut)) + '</span></div>';
+      }
+      const MARKS = { to_pick: '○', partial: '◐', picked: '✓', unavailable: '✕', substituted: '⇄' };
+
+      function card(o) {
+        const waited = minutesSince(o.placedAt);
+        const waitCls = waited >= LATE_MIN ? ' late' : waited >= WARN_MIN ? ' warn' : '';
+        const picker = o.picker && o.picker.name ? esc(o.picker.name) : 'Picker';
+        let cls = 'picking';
+        let chip = '<span class="chip picking">' + picker + ' · picking</span>';
+        if (o.taskStatus === 'completed') {
+          cls = 'ready';
+          chip = o.nextStep === 'take_to_hub'
+            ? '<span class="chip ready">Ready · ' + picker + ': take the bag to ' + esc(o.hub.name || 'the dark store') + '</span>'
+            : '<span class="chip ready">Ready · waiting for the other stores</span>';
+        } else if (o.taskStatus === 'assigned' && !o.accepted) {
+          cls = 'new';
+          chip = '<span class="chip new">New · for ' + picker + '</span>';
+        }
+        const items = o.items.map((i) => {
+          const qty = i.state === 'partial' ? i.pickedQty + '/' + i.qty : '×' + i.qty;
+          return '<li class="' + i.state + '"><span class="mark">' + (MARKS[i.state] || '○') + '</span>'
+            + '<span class="name">' + esc(i.name) + (i.variant ? ' <span class="variant">' + esc(i.variant) + '</span>' : '')
+            + (i.note ? '<span class="note">' + esc(i.note) + '</span>' : '') + '</span>'
+            + '<span class="qty">' + qty + '</span></li>';
+        }).join('');
+        const stores = o.stores.total > 1 ? o.stores.done + ' of ' + o.stores.total + ' stores ready' : 'Only this store';
+        const hub = o.hub.isThisStore ? 'Packed here (dark store)' : 'Dark store: ' + esc(o.hub.name || '—');
+        return '<article class="card ' + cls + (fresh.has(o.orderId) ? ' fresh' : '') + '">'
+          + '<div class="top">' + orderNo(o.orderNumber) + '<span class="spacer"></span><span class="wait' + waitCls + '">' + (waited < 1 ? 'New' : fmtMinutes(waited)) + '</span></div>'
+          + '<div>' + chip + '</div>'
+          + '<ul class="items">' + items + '</ul>'
+          + '<div class="foot"><span>' + stores + '</span><span>' + hub + '</span></div>'
+          + '</article>';
+      }
+
+      function render() {
+        // Still to pick first, then ready-to-hand-over ones.
+        const rank = (o) => (o.taskStatus === 'completed' ? 1 : 0);
+        const list = board.orders.slice().sort((a, b) => rank(a) - rank(b));
+        $('count').textContent = board.orders.filter((o) => o.taskStatus !== 'completed').length;
+        $('orders').innerHTML = list.length ? list.map(card).join('') : '<div class="empty">No orders to pick here right now.</div>';
+      }
+
+      async function load() {
+        if (stopped) return;
+        try {
+          const data = await api('/picking-board');
+          board = { orders: data.orders || [] };
+          const ids = board.orders.map((o) => o.orderId);
+          if (known) {
+            const added = ids.filter((id) => !known.has(id));
+            if (added.length) {
+              added.forEach((id) => fresh.add(id));
+              setTimeout(() => added.forEach((id) => fresh.delete(id)), 8000);
+              buzz();
+            }
+          }
+          known = new Set(ids);
+          $('store-name').textContent = data.store.name;
+          $('store-sub').textContent = [data.display.name, data.store.address].filter(Boolean).join(' · ');
+          document.title = data.store.name + ' · Grovio Picking';
+          render();
+        } catch (_) { /* socket reconnect / periodic refresh retries */ }
+      }
+      function schedule() { clearTimeout(boardTimer); boardTimer = setTimeout(load, 300); }
+
+      // ---- Live -----------------------------------------------------------------------------
+      function setLive(on, label) { $('live').classList.toggle('on', on); $('live-label').textContent = label; }
+      function connect() {
+        if (typeof io !== 'function') { setLive(false, 'Offline'); return; }
+        socket = io({ auth: { hubDisplayKey: deviceKey } });
+        socket.on('connect', () => { setLive(true, 'Live'); load(); });
+        socket.on('disconnect', (reason) => { setLive(false, 'Reconnecting'); if (reason === 'io server disconnect') load(); });
+        socket.on('connect_error', (err) => { setLive(false, 'Reconnecting'); if (/invalid or revoked/i.test(err.message)) load(); });
+        socket.on('hub:order', schedule);
+      }
+      function tickClock() { $('clock').textContent = new Date(now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+
+      if (!deviceKey) { $('overlay').classList.add('show'); return; }
+      tickClock();
+      setInterval(tickClock, 10000);
+      setInterval(render, 30000); // keep the waiting times current
+      setInterval(load, 60000);   // safety net if a socket event is missed
+      renderSound();
+      load();
+      connect();
+    })();
+  </script>
+</body>
+</html>

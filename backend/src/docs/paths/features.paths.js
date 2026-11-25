@@ -129,14 +129,16 @@ const START_CALL = {
   type: 'object',
   properties: {
     callId: { type: 'string' },
-    simulated: { type: 'boolean', description: 'true when no VoIP provider is configured: nothing is dialled' },
+    mode: { type: 'string', enum: ['twilio', 'direct', 'none'], description: "twilio: connect with the Voice SDK (params). direct: open dialUrl in the phone's dialler. none: nothing is dialled" },
+    simulated: { type: 'boolean', description: 'true when no VoIP provider is configured (mode none): nothing is dialled' },
     orderNumber: { type: 'string' },
-    callee: { type: 'object', properties: { role: { type: 'string', enum: ['customer', 'delivery'] }, name: { type: 'string', description: 'First name only' } } },
+    callee: { type: 'object', properties: { role: { type: 'string', enum: ['customer', 'delivery'] }, name: { type: 'string', description: 'First name only' }, phone: { type: 'string', example: '+919876543210', description: 'direct mode only' } } },
+    dialUrl: { type: 'string', nullable: true, example: 'tel:+919876543210', description: 'direct mode only: open it to call' },
     params: { type: 'object', description: 'Pass to the Twilio Voice SDK: device.connect({ params })', properties: { callId: { type: 'string' } } },
   },
 };
 const startCallDoc = (tags, who) => ({
-  tags, summary: `Start a masked in-app call to ${who}. Only while the order is assigned / picked up / out for delivery. Returns no phone number — connect with the Twilio Voice SDK within 2 minutes.`,
+  tags, summary: `Call ${who}. Only while the order is assigned / picked up / out for delivery. Twilio mode: masked in-app call, no phone number — connect with the Voice SDK within 2 minutes. Direct mode: returns ${who}'s number as dialUrl (tel:) — open it in the dialler.`,
   ...bearer(), parameters: [idParam()],
   responses: { 201: envelope(START_CALL), 400: errorResponse('Order not out for delivery / no rider assigned'), 401: RESPONSES_401, 404: RESPONSES_404, 503: errorResponse('VoIP not fully configured') },
 });
@@ -148,7 +150,7 @@ paths['/voip/token'] = {
     summary: 'Twilio Voice access token (1 h) for the Voice SDK Device, for customers and delivery partners. Refresh on the SDK tokenWillExpire event. Incoming calls carry customParameters callId, orderNumber, callerRole, callerName.',
     ...bearer(), parameters: [q('platform', 'web (default), android or ios — picks the push credential for incoming calls')],
     responses: {
-      200: envelope({ type: 'object', properties: { enabled: { type: 'boolean', description: 'false = in-app calling is off (no other fields)' }, identity: { type: 'string', example: 'u_665f0c...' }, token: { type: 'string' }, ttlSec: { type: 'integer' }, expiresAt: { type: 'string', format: 'date-time' } } }),
+      200: envelope({ type: 'object', properties: { enabled: { type: 'boolean', description: 'false = no in-app (Twilio) calling; see mode' }, mode: { type: 'string', enum: ['twilio', 'direct', 'none'], description: 'direct: calls go through the dialler (dialUrl from POST .../call)' }, identity: { type: 'string', example: 'u_665f0c...' }, token: { type: 'string' }, ttlSec: { type: 'integer' }, expiresAt: { type: 'string', format: 'date-time' } } }),
       401: RESPONSES_401, 503: errorResponse('VoIP not fully configured'),
     },
   },

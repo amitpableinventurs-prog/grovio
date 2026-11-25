@@ -16,6 +16,9 @@ function screenState(d: HubDisplay) {
   return <Tag color="default">Offline</Tag>;
 }
 
+// The same pairing key opens the picker TV (/picker-display) instead of the pickup board.
+const pickingUrl = (url: string) => url.replace('/hub-display/', '/picker-display/');
+
 // Stores page -> "Hub screens": the TVs/tablets at this store that show /hub-display (live pickup
 // board + single-use check-in QR for delivery partners).
 export default function HubScreensModal({ store, onClose }: { store: Store | null; onClose: () => void }) {
@@ -72,12 +75,17 @@ export default function HubScreensModal({ store, onClose }: { store: Store | nul
           title={`Open this link on the "${pairing.name}" screen`}
           description={
             <>
+              <Typography.Text strong>Dark store pickup screen</Typography.Text> (ready orders with their QR for delivery partners)
               <Typography.Paragraph copyable={{ text: pairing.url }} style={{ wordBreak: 'break-all', marginBottom: 8 }}>
                 <Typography.Text code>{pairing.url}</Typography.Text>
               </Typography.Paragraph>
+              <Typography.Text strong>Picking screen</Typography.Text> (this store's items to pick for every order, for its pickers)
+              <Typography.Paragraph copyable={{ text: pickingUrl(pairing.url) }} style={{ wordBreak: 'break-all', marginBottom: 8 }}>
+                <Typography.Text code>{pickingUrl(pairing.url)}</Typography.Text>
+              </Typography.Paragraph>
               <Typography.Text type="secondary">
-                This link is shown only once and works like a password for the screen. If it's lost or shared, revoke the
-                screen and add a new one.
+                Open one of them on the screen. These links are shown only once and work like a password for the screen. If
+                they're lost or shared, revoke the screen and add a new one.
               </Typography.Text>
             </>
           }

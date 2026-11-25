@@ -10,7 +10,8 @@
     "seed:announcements": "node src/seeders/announcements.seed.js",
     "seed:gigs": "node src/seeders/gigs.seed.js",
     "seed:sos": "node src/seeders/sos.seed.js",
-    "seed:alerts": "node src/seeders/alerts.seed.js"
+    "seed:alerts": "node src/seeders/alerts.seed.js",
+    "seed:faqs": "node src/seeders/faqs.seed.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

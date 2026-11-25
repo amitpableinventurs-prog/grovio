@@ -86,6 +86,8 @@ Hub screens (below) connect with `auth: { hubDisplayKey }` instead of a token. T
 
 A TV/tablet at each Hub Center opens **`/hub-display`** (served by this backend, like `/partner-login`). It shows the hub's *Ready for pickup* and *Being packed* orders live, plus a **single-use check-in QR**: it has no timer and changes as soon as a delivery partner checks in with it. A **buzzer** sounds (and the card pulses) when an order becomes ready, i.e. its last picker presses *Ready for Pickup*. Browsers only play sound after one tap on the page, so the screen asks for a tap until then (the header button turns the buzzer off/on). No customer name, phone, address or amounts are shown.
 
+**Picker TV at each store (`/picker-display`).** In the nearby-stores setup an order's items are split across stores (say vegetables, fruits, electronics), one picker each, and the dark store (`order.store`) puts the order together. A screen paired for any store can open `/picker-display/#key=<deviceKey>` instead of `/hub-display/`: it shows that store's part of every order still being picked (`GET /hub-display/picking-board`). Each card has the picker, the items to pick there with their state (to pick, picked, not available, substituted), and how many of the order's stores are done. When a store's part is done the card says "take the bag to <dark store>" (or, at the dark store, "waiting for the other stores"). Once every store is done the order is `packed`, leaves the picker TVs and appears on the dark store's `/hub-display` with its one pickup QR for the delivery partner. A new order buzzes. `hub:order` pings now go to every store on the order, so these screens stay live. The admin panel's Add screen shows both links.
+
 **Pairing a screen.** Admin panel → Stores → **Hub screens** → Add screen. This returns a one-time link `<PUBLIC_BASE_URL>/hub-display/#key=<deviceKey>`; open it on the screen (the key is kept in the browser and removed from the address bar). Only the key's SHA-256 hash is stored (`HubDisplay` model). **Revoke** stops the screen immediately, including its live connection. Store managers can manage their own store's screens.
 
 **Hub pickup by order QR (default).** Admin → Settings → Tracking → **Hub pickup** (`hubPickupMode`, env `HUB_PICKUP_MODE`): `hub_screen` (default) or `auto_assign`.
@@ -290,7 +292,9 @@ These APIs back the delivery app's Feed, Gigs, Offers, Earnings, Session History
 - **Converse:** reply with `POST /common/support/:id/messages`. Support answers with the existing `PATCH /admin/support-tickets/:id { adminReply, status }`.
 - **After closing:** the user can rate (`/rate`, up/down) or reopen (`/reopen`).
 
-## Masked Calls (in-app VoIP, Twilio)
+## Masked Calls (in-app VoIP, Twilio) and direct calls
+
+**Direct calls (provider `direct`, no VoIP account).** `POST /customer/orders/:id/call` and `POST /delivery/jobs/:id/call` return the other party's number as `dialUrl` (`tel:+91…`) and `callee.phone`; the app opens the phone's dialler. Numbers are **not** masked. The same rules apply: only the order's customer and its assigned rider, only while the order is `assigned`, `picked_up` or `out_for_delivery`. Each call is logged in `VoipCall` with status `dialled`. `GET /voip/token` returns `{ enabled: false, mode: 'direct' }`, so the app knows to use the dialler.
 
 `src/services/voip.service.js`. The customer and their delivery partner call each other app to app over Twilio Voice, instead of from the phone's dialler. **Neither side ever receives the other's phone number.** The apps only know an opaque Twilio identity (`u_<userId>`). The callee sees the caller's first name, their role and the order number. Every call is logged in `VoipCall` (Admin > **Masked Calls**). With provider **None**, calls are only recorded as `simulated`.
 
@@ -318,7 +322,7 @@ For the Delivery, Picker and Customer apps (`services/sos.service.js`). **The ph
 
 - `GET /common/sos/config` returns the helplines to show, my emergency contact, and my open SOS. Defaults (India): 112 Emergency, 100 Police, 108 Ambulance, 101 Fire, 1091 Women helpline, 1033 Highway accident. Admin → Settings → SOS can replace them (`sosHelplines`, JSON) and add an ops phone (`sosOpsPhone`), shown as "Grovio safety team".
 - `POST /common/sos { kind, lat, lng, accuracy?, note?, orderId? }`: `kind` is `sos` (big button) or a helpline key; the response's `dial` is the number. The app starts the call first and sends this in parallel. One active SOS per person: further calls are added to it.
-- On a new SOS: the admin panel plays a siren and shows a notification (`sos:alert` to `sos:all` and the hub's `store:<id>` room). The person's emergency contact (`emergencyContactPhone` on the picker / delivery profile; riders set it with `PATCH /delivery/profile`) and the ops phone get an SMS with a Google Maps link. On MSG91 this needs a DLT template (`smsSosTemplateId`, variables `NAME`, `LINK`); Twilio sends plain text.
+- On a new SOS: the admin panel plays a siren and shows a notification (`sos:alert` to `sos:all` and the hub's `store:<id>` room). The person's emergency contact (`emergencyContactPhone` on the picker / delivery profile; riders set it with `PATCH /delivery/profile`) and the ops phone get an SMS with a Google Maps link. On MSG91 this needs a DLT template (`smsSosTemplateId`, variables `NAME`, `LINK`). apitxt only delivers OTPs, so with apitxt these SMS aren't sent.
 - `POST /common/sos/:id/location` every ~10 s while open (`sos:location` to admins). `POST /common/sos/:id/cancel` = "I'm safe". `GET /common/sos` = my history.
 - Admin → **SOS Alerts**: `GET /admin/sos?status=active`, `POST /admin/sos/:id/acknowledge` (the app gets `sos:updated`, e.g. "Help is on the way"), `POST /admin/sos/:id/resolve { note }`. Store managers see their own store's alerts only.
 - The alert keeps the order the person was on and its hub, which helplines they dialled, the location trail and whether each SMS went out.
@@ -475,9 +479,36 @@ Side branches: `out_for_delivery → delivery_failed → (out_for_delivery | ret
 - Each order snapshots its charges (`deliveryFee`, `handlingCharge`, `packingCharge`, `surcharge`, `surchargeLabel`) plus `deliveryPartnerEarning`, the delivery charge before any free-delivery waiver. That is what the rider is paid, so free-delivery orders still pay the rider.
 - `POST /customer/checkout/summary` returns every charge plus `freeDeliveryAbove` / `freeDeliveryApplied`.
 
+## Support Chat (live, Socket.IO)
+
+The apps' "Chat with us" is a support ticket (`SupportTicket`) whose conversation is live over Socket.IO (`src/services/supportChat.service.js`, handlers in `src/sockets/index.js`). Admins answer in Admin > **Support Chat**.
+
+**Connect.** Socket.IO to the API origin (e.g. `http://192.168.1.26:5050`, no `/api/v1`) with `auth: { token: <accessToken> }`. Every app socket is already in its own `user:<id>` room, so a user gets events for their own tickets without subscribing. Admins with `manage_orders` (or `*`) are in `support:agents` and get every ticket's events.
+
+**Start a chat (REST).** `GET /common/support/categories` → `POST /common/support { category, subcategory, message, orderId? }`. The Support screen's chat row (`GET /common/support/home`) has `activeTicketId` when the user already has an open ticket: open that one instead.
+
+**Send (client → server, each with an ack).**
+
+| Event | Payload | Ack |
+|---|---|---|
+| `support:send` | `{ ticketId, text, clientId? }` | `{ ok, message: { _id, sender, senderName, text, createdAt }, status, clientId }` or `{ ok: false, message }` |
+| `support:typing` | `{ ticketId, typing: true \| false }` | `{ ok }` — send at most every 2 s while typing |
+| `support:read` | `{ ticketId }` | `{ ok, at }` |
+
+**Receive (server → client).**
+
+| Event | Payload |
+|---|---|
+| `support:message` | `{ ticketId, ticketNumber, status, message: { _id, sender: 'user'\|'agent'\|'system', senderName, text, createdAt }, clientId }` — your own messages come back too; match them by `clientId` |
+| `support:ticket` | `{ ticketId, ticketNumber, subject, status, event: 'created'\|'status'\|'reopened'\|'rated', lastMessageAt, lastMessageBy }` |
+| `support:typing` | `{ ticketId, from: 'user'\|'agent', name, typing }` (the other side; support shows as "Support") |
+| `support:read` | `{ ticketId, by: 'user'\|'agent', at }` — read receipts |
+
+The REST endpoints do the same and push the same events: `POST /common/support/:id/messages { text, clientId? }`, `POST /common/support/:id/read`, `POST /common/support/:id/rate`, `POST /common/support/:id/reopen`; admin `PATCH /admin/support-tickets/:id { adminReply, status }` and `POST /admin/support-tickets/:id/read`. A support reply also sends a push (`support_reply`) for when the app is closed. Tickets carry `unreadCount` (support replies the user hasn't read; in admin lists, user messages support hasn't read). A resolved / closed ticket can't take messages until it's reopened.
+
 ## Notes / Next Steps
 
-- OTP delivery is stubbed (`src/services/otp.service.js`) — plug in MSG91/Twilio for production.
+- OTP SMS goes through apitxt (`SMS_PROVIDER=apitxt`, `APITXT_AUTH_KEY`, or Admin > Settings > SMS Gateway; `src/services/sms.service.js`). MSG91 is also supported. With a real provider, clear `OTP_FIXED_CODE` and set `OTP_DEBUG_MODE=false`.
 - Push notifications (FCM) are stored in-app and the socket layer notifies connected clients; wire `notification.service.js` to actually send FCM pushes. Multi-device tokens can be tracked via the `UserDevice` collection (model exists; wire up `/common/fcm-token` to write to it per-device once the client sends a `deviceId`).
 - Razorpay needs real test/live keys in `.env` to work end-to-end.
 - Google/Apple login need OAuth credentials before `/auth/google` and `/auth/apple` can do real token verification.

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/svg+xml" href="/brand/grovio-icon.svg">
+<title>Grovio Picker QR</title>
+<style>
+  :root {
+    --brand-50: #eefdf3; --brand-100: #d6f7e0; --brand-200: #b0edc6; --brand-500: #22ab61;
+    --brand-600: #158a4d; --brand-700: #126e40; --brand-800: #125736;
+    --text: #1f2937; --muted: #6b7280; --border: #e5e7eb; --bg: #f6f8f7; --surface: #fff;
+    --amber-bg: #fffbeb; --amber: #b45309; --danger: #dc2626;
+    --shadow: 0 1px 2px rgba(16,72,46,0.05), 0 12px 28px -14px rgba(16,72,46,0.22);
+  }
+  * { box-sizing: border-box; }
+  html, body { min-height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  .app { max-width: 560px; margin: 0 auto; padding: 16px; }
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  header .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; color: var(--brand-700); font-size: 18px; white-space: nowrap; }
+  header .spacer { flex: 1; }
+  header .who { font-size: 12px; color: var(--muted); text-align: right; line-height: 1.3; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ghost { font: inherit; font-size: 13px; font-weight: 600; color: var(--brand-700); background: none; border: 1px solid var(--brand-200); border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); padding: 20px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .lede { color: var(--muted); font-size: 14px; margin: 0 0 18px; line-height: 1.5; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 14px 0 6px; }
+  input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 12px; font: inherit; font-size: 17px; background: #fafbfa; }
+  input:focus { outline: none; border-color: var(--brand-500); background: #fff; box-shadow: 0 0 0 3px rgba(21,138,77,0.14); }
+  .phone-row { display: flex; gap: 8px; align-items: center; }
+  .phone-row .cc { padding: 12px 12px; border: 1.5px solid var(--border); border-radius: 12px; background: #f1f5f3; font-size: 17px; color: var(--muted); }
+  .primary { width: 100%; margin-top: 18px; padding: 14px; border: none; border-radius: 12px; background: var(--brand-600); color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .link { background: none; border: none; color: var(--brand-700); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; margin-top: 14px; }
+  .alert { border-radius: 12px; padding: 11px 13px; font-size: 14px; line-height: 1.45; margin-bottom: 14px; }
+  .alert.error { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
+  .alert.info { background: var(--brand-50); color: var(--brand-800); border: 1px solid var(--brand-200); }
+  .alert.warn { background: var(--amber-bg); color: var(--amber); border: 1px solid #fde68a; }
+  [hidden] { display: none !important; }
+
+  .list-head { display: flex; align-items: baseline; gap: 10px; margin: 4px 2px 12px; }
+  .list-head h1 { margin: 0; }
+  .count { font-size: 14px; font-weight: 700; color: var(--brand-700); background: var(--brand-50); border-radius: 999px; padding: 2px 10px; }
+  .list-head .spacer { flex: 1; }
+  .updated { font-size: 12px; color: var(--muted); }
+  .job { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; margin-bottom: 10px; box-shadow: var(--shadow); }
+  .job.ready { border-left: 6px solid var(--brand-500); }
+  .job.waiting { border-left: 6px solid #d1d5db; }
+  .job .body { flex: 1; min-width: 0; }
+  .order-no .prefix { font-size: 13px; color: var(--muted); font-weight: 700; display: block; }
+  .order-no .tail { font-size: 28px; font-weight: 800; letter-spacing: 0.02em; line-height: 1.1; }
+  .job .meta { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .job .state { font-size: 13px; font-weight: 600; margin-top: 6px; }
+  .job.ready .state { color: var(--brand-700); }
+  .job.waiting .state { color: var(--muted); }
+  .show-qr { font: inherit; font-size: 15px; font-weight: 700; border: none; border-radius: 12px; padding: 12px 16px; background: var(--brand-600); color: #fff; cursor: pointer; white-space: nowrap; }
+  .empty { text-align: center; color: var(--muted); padding: 40px 16px; font-size: 15px; line-height: 1.5; }
+
+  .qr-view { text-align: center; }
+  .qr-view .back { float: left; }
+  .qr-view .order-no { clear: both; padding-top: 6px; }
+  .qr-view .order-no .tail { font-size: 40px; }
+  .rider { display: inline-block; margin-top: 8px; font-size: 15px; font-weight: 600; background: var(--brand-50); color: var(--brand-800); border-radius: 999px; padding: 5px 14px; }
+  .qr-box { width: min(100%, 360px); aspect-ratio: 1; margin: 16px auto 8px; background: #fff; border: 1px solid var(--border); border-radius: 18px; padding: 12px; display: flex; align-items: center; justify-content: center; }
+  .qr-box svg { width: 100%; height: 100%; display: block; }
+  .qr-box .placeholder { color: var(--muted); font-size: 14px; }
+  .qr-hint { color: var(--muted); font-size: 14px; line-height: 1.45; margin: 0 0 16px; }
+  .otp-label { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .otp { font-size: 44px; font-weight: 800; letter-spacing: 0.3em; margin: 4px 0 2px; padding-left: 0.3em; }
+  .otp-exp { font-size: 13px; color: var(--muted); }
+  .done { padding: 30px 10px; }
+  .done .tick { width: 72px; height: 72px; border-radius: 50%; background: var(--brand-50); color: var(--brand-600); font-size: 40px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand"><img src="/brand/grovio-logo-compact.svg" alt="Grovio" style="height:30px;width:auto;display:block"> Picker QR</div>
+      <div class="spacer"></div>
+      <div class="who" id="who" hidden></div>
+      <button type="button" class="ghost" id="logout" hidden>Sign out</button>
+    </header>
+
+    <!-- Sign in: phone -> OTP -->
+    <section class="panel" id="login-view" hidden>
+      <h1>Sign in</h1>
+      <p class="lede">Use the mobile number of your Grovio picker account. We'll send you a one-time code.</p>
+      <div class="alert error" id="login-error" hidden></div>
+      <div class="alert info" id="login-info" hidden></div>
+      <form id="phone-form">
+        <label for="phone">Mobile number</label>
+        <div class="phone-row"><span class="cc">+91</span><input id="phone" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="10-digit number" required></div>
+        <button class="primary" type="submit" id="send-btn">Send OTP</button>
+      </form>
+      <form id="otp-form" hidden>
+        <label for="otp">Enter the OTP sent to <span id="otp-phone"></span></label>
+        <input id="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="OTP" required>
+        <button class="primary" type="submit" id="verify-btn">Verify &amp; sign in</button>
+        <button class="link" type="button" id="change-phone">Change number</button>
+        <button class="link" type="button" id="resend" style="float:right">Resend OTP</button>
+      </form>
+    </section>
+
+    <!-- Orders waiting for a hand-over -->
+    <section id="list-view" hidden>
+      <div class="alert warn" id="approval" hidden></div>
+      <div class="alert error" id="list-error" hidden></div>
+      <div class="list-head">
+        <h1>Ready for handover</h1>
+        <span class="count" id="count">0</span>
+        <span class="spacer"></span>
+        <span class="updated" id="updated"></span>
+      </div>
+      <div id="jobs"></div>
+    </section>
+
+    <!-- One order's QR + OTP -->
+    <section class="panel qr-view" id="qr-view" hidden>
+      <button type="button" class="ghost back" id="back">← Orders</button>
+      <div id="qr-content">
+        <div class="order-no" id="qr-order"></div>
+        <div class="rider" id="qr-rider" hidden></div>
+        <div class="alert error" id="qr-error" hidden style="margin-top:14px"></div>
+        <div class="qr-box"><div id="qr" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"><span class="placeholder">Loading QR…</span></div></div>
+        <p class="qr-hint">Delivery partner: scan this QR in the Grovio Delivery app, or enter the OTP below.</p>
+        <div class="otp-label">Pickup OTP</div>
+        <div class="otp" id="otp-code">····</div>
+        <div class="otp-exp" id="otp-exp"></div>
+      </div>
+      <div class="done" id="qr-done" hidden>
+        <div class="tick">✓</div>
+        <h1>Handed over</h1>
+        <p class="lede" id="done-text"></p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      const API = '/api/v1';
+      const AUTH_KEY = 'grovio_picker_qr_auth';
+      const $ = (id) => document.getElementById(id);
+      const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      const show = (el, on = true) => { el.hidden = !on; };
+      const setAlert = (el, text) => { el.textContent = text || ''; show(el, !!text); };
+
+      let auth = null;
+      try { auth = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null'); } catch (_) {}
+      const saveAuth = (a) => { auth = a; try { a ? localStorage.setItem(AUTH_KEY, JSON.stringify(a)) : localStorage.removeItem(AUTH_KEY); } catch (_) {} };
+
+      let listTimer = null;
+      let qrTimer = null;
+      let tickTimer = null;
+      let current = null; // the order whose QR is open
+
+      // ---- API -------------------------------------------------------------------------------
+      async function call(method, path, body, { retry = true } = {}) {
+        const res = await fetch(API + path, {
+          method,
+          headers: { 'Content-Type': 'application/json', ...(auth?.accessToken ? { Authorization: 'Bearer ' + auth.accessToken } : {}) },
+          body: body ? JSON.stringify(body) : undefined,
+          cache: 'no-store',
+        });
+        if (res.status === 401 && retry && auth?.refreshToken) {
+          if (await refreshTokens()) return call(method, path, body, { retry: false });
+          signOut('Your session ended. Please sign in again.');
+          throw Object.assign(new Error('signed_out'), { silent: true });
+        }
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || json.success === false) {
+          const err = new Error(json.message || 'Something went wrong. Please try again.');
+          err.status = res.status;
+          throw err;
+        }
+        return json;
+      }
+
+      async function refreshTokens() {
+        try {
+          const res = await fetch(API + '/auth/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken: auth.refreshToken }) });
+          const json = await res.json();
+          if (!res.ok || !json.data?.accessToken) return false;
+          saveAuth({ ...auth, accessToken: json.data.accessToken, refreshToken: json.data.refreshToken || auth.refreshToken });
+          return true;
+        } catch (_) { return false; }
+      }
+
+      // ---- Sign in ---------------------------------------------------------------------------
+      let phone = '';
+      $('phone-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        setAlert($('login-error'));
+        phone = $('phone').value.replace(/\D/g, '');
+        if (phone.length !== 10) return setAlert($('login-error'), 'Enter your 10-digit mobile number.');
+        await sendOtp();
+      });
+
+      async function sendOtp() {
+        $('send-btn').disabled = true;
+        try {
+          const json = await call('POST', '/auth/picker/send-otp', { phone });
+          $('otp-phone').textContent = '+91 ' + phone;
+          show($('phone-form'), false);
+          show($('otp-form'));
+          // Only in dev mode (OTP_DEBUG_MODE) does the API return the code.
+          setAlert($('login-info'), json.data?.debugOtp ? 'Test mode: your OTP is ' + json.data.debugOtp : 'OTP sent.');
+          $('otp').focus();
+        } catch (err) {
+          setAlert($('login-error'), err.message);
+        } finally {
+          $('send-btn').disabled = false;
+        }
+      }
+
+      $('otp-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        setAlert($('login-error'));
+        $('verify-btn').disabled = true;
+        try {
+          const json = await call('POST', '/auth/picker/verify-otp', { phone, otp: $('otp').value.trim(), platform: 'web' });
+          const d = json.data;
+          saveAuth({ accessToken: d.accessToken, refreshToken: d.refreshToken, name: d.user?.name || '', phone: d.user?.phone || phone, status: d.onboarding?.status || d.pickerProfile?.status || '' });
+          $('otp').value = '';
+          openList();
+        } catch (err) {
+          setAlert($('login-error'), err.message);
+        } finally {
+          $('verify-btn').disabled = false;
+        }
+      });
+      $('change-phone').addEventListener('click', () => { show($('otp-form'), false); show($('phone-form')); setAlert($('login-info')); });
+      $('resend').addEventListener('click', () => { setAlert($('login-error')); sendOtp(); });
+
+      function signOut(message) {
+        const rt = auth?.refreshToken;
+        if (rt && !message) fetch(API + '/auth/picker/logout', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + auth.accessToken }, body: JSON.stringify({ refreshToken: rt }) }).catch(() => {});
+        saveAuth(null);
+        stopTimers();
+        current = null;
+        ['list-view', 'qr-view', 'who', 'logout'].forEach((id) => show($(id), false));
+        show($('phone-form'));
+        show($('otp-form'), false);
+        show($('login-view'));
+        setAlert($('login-info'));
+        setAlert($('login-error'), message || '');
+      }
+      $('logout').addEventListener('click', () => signOut());
+
+      function stopTimers() { clearInterval(listTimer); clearInterval(qrTimer); clearInterval(tickTimer); }
+
+      // ---- Orders list -----------------------------------------------------------------------
+      function orderNo(n, cls = '') {
+        const s = String(n || '');
+        const cut = s.lastIndexOf('-') + 1;
+        return '<div class="order-no ' + cls + '"><span class="prefix">' + esc(s.slice(0, cut)) + '</span><span class="tail">' + esc(s.slice(cut)) + '</span></div>';
+      }
+      const itemCount = (o) => (o.items || []).reduce((sum, i) => sum + (i.qty || 0), 0);
+
+      function openList() {
+        stopTimers();
+        current = null;
+        show($('login-view'), false);
+        show($('qr-view'), false);
+        show($('list-view'));
+        $('who').innerHTML = esc(auth.name || 'Picker') + '<br>' + esc(auth.phone || '');
+        show($('who'));
+        show($('logout'));
+        const pending = auth.status && auth.status !== 'approved';
+        setAlert($('approval'), pending ? 'Your picker account is not approved yet (' + auth.status + '). Orders appear here once it is.' : '');
+        loadJobs();
+        listTimer = setInterval(loadJobs, 15000);
+      }
+
+      async function loadJobs() {
+        try {
+          const json = await call('GET', '/picker/jobs?status=assigned,packed&limit=50');
+          const items = (json.data?.items || []).slice().sort((a, b) => (a.orderStatus === b.orderStatus ? 0 : a.orderStatus === 'assigned' ? -1 : 1));
+          setAlert($('list-error'));
+          $('count').textContent = items.length;
+          $('updated').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          $('jobs').innerHTML = items.length
+            ? items.map((o) => {
+              const ready = o.orderStatus === 'assigned';
+              return '<div class="job ' + (ready ? 'ready' : 'waiting') + '"><div class="body">' + orderNo(o.orderNumber)
+                + '<div class="meta">' + itemCount(o) + ' item' + (itemCount(o) === 1 ? '' : 's') + (o.store?.name ? ' · ' + esc(o.store.name) : '') + '</div>'
+                + '<div class="state">' + (ready ? 'Delivery partner assigned' : 'Packed · waiting for a delivery partner') + '</div></div>'
+                + (ready ? '<button type="button" class="show-qr" data-id="' + esc(o._id) + '" data-no="' + esc(o.orderNumber) + '">Show QR</button>' : '')
+                + '</div>';
+            }).join('')
+            : '<div class="empty">No orders waiting for a handover right now.<br>Orders appear here once they are packed.</div>';
+        } catch (err) {
+          if (!err.silent) setAlert($('list-error'), err.message);
+        }
+      }
+
+      $('jobs').addEventListener('click', (e) => {
+        const btn = e.target.closest('.show-qr');
+        if (btn) openQr(btn.dataset.id, btn.dataset.no);
+      });
+
+      // ---- QR + OTP for one order ------------------------------------------------------------
+      let otpExpiresAt = null;
+      let qrExpiresAt = null;
+
+      function openQr(id, orderNumber) {
+        stopTimers();
+        current = { id, orderNumber };
+        show($('list-view'), false);
+        show($('qr-view'));
+        show($('qr-content'));
+        show($('qr-done'), false);
+        setAlert($('qr-error'));
+        $('qr-order').innerHTML = orderNo(orderNumber);
+        $('qr').innerHTML = '<span class="placeholder">Loading QR…</span>';
+        $('otp-code').textContent = '····';
+        $('otp-exp').textContent = '';
+        show($('qr-rider'), false);
+        loadQr();
+        qrTimer = setInterval(checkOrder, 5000);
+        tickTimer = setInterval(tick, 1000);
+      }
+
+      async function loadQr() {
+        if (!current) return;
+        const { id } = current;
+        try {
+          const [qr, otp] = await Promise.all([
+            call('GET', '/picker/jobs/' + encodeURIComponent(id) + '/qr'),
+            call('GET', '/picker/jobs/' + encodeURIComponent(id) + '/otp'),
+          ]);
+          if (!current || current.id !== id) return;
+          // qrSvg is generated by our own API (qrcode library), not user input.
+          $('qr').innerHTML = qr.data.qrSvg || '<span class="placeholder">QR unavailable</span>';
+          const svg = $('qr').querySelector('svg');
+          if (svg) { svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', 'Handover QR for order ' + current.orderNumber); }
+          if (qr.data.rider?.name) { $('qr-rider').textContent = 'Delivery partner: ' + qr.data.rider.name; show($('qr-rider')); }
+          $('otp-code').textContent = otp.data.otp;
+          otpExpiresAt = new Date(otp.data.expiresAt).getTime();
+          qrExpiresAt = new Date(qr.data.expiresAt).getTime();
+          setAlert($('qr-error'));
+          tick();
+        } catch (err) {
+          if (err.silent) return;
+          const notHub = err.status === 404;
+          setAlert($('qr-error'), notHub ? 'Only the picker at the hub hands over this order.' : err.message);
+          $('qr').innerHTML = '<span class="placeholder">No QR</span>';
+        }
+      }
+
+      // Countdown; a new OTP / QR is fetched once the old one runs out.
+      function tick() {
+        if (!otpExpiresAt) return;
+        const left = Math.max(0, Math.round((otpExpiresAt - Date.now()) / 1000));
+        $('otp-exp').textContent = left > 0 ? 'Valid for ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0') : 'Getting a new OTP…';
+        if (left === 0 || (qrExpiresAt && qrExpiresAt <= Date.now())) { otpExpiresAt = null; loadQr(); }
+      }
+
+      // Picked up (QR scanned or OTP entered)? Show it and go back to the list.
+      async function checkOrder() {
+        if (!current) return;
+        try {
+          const json = await call('GET', '/picker/jobs/' + encodeURIComponent(current.id));
+          const status = json.data?.orderStatus;
+          if (status && !['assigned', 'packed'].includes(status)) {
+            stopTimers();
+            show($('qr-content'), false);
+            show($('qr-done'));
+            $('done-text').textContent = 'Order ' + current.orderNumber + ' was picked up by the delivery partner.';
+            setTimeout(openList, 3000);
+          }
+        } catch (_) { /* next poll retries */ }
+      }
+
+      $('back').addEventListener('click', openList);
+
+      // ---- Start -----------------------------------------------------------------------------
+      if (auth?.accessToken) openList();
+      else show($('login-view'));
+    })();
+  </script>
+</body>
+</html>

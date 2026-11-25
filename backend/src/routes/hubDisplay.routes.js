@@ -7,5 +7,7 @@ router.use(authenticateHubDisplay);
 
 router.get('/board', ctrl.getBoard);
 router.get('/checkin-qr', ctrl.getCheckinQr);
+// The same paired screen used as a picker TV at any store (/picker-display).
+router.get('/picking-board', ctrl.getPickingBoard);
 
 module.exports = router;

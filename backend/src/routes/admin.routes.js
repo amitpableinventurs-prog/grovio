@@ -29,6 +29,7 @@ const pickersCtrl = require('../controllers/admin/pickers.controller');
 const deliveryPartnersCtrl = require('../controllers/admin/deliveryPartners.controller');
 const scannerLogsCtrl = require('../controllers/admin/scannerLogs.controller');
 const contentPagesCtrl = require('../controllers/admin/contentPages.controller');
+const faqsCtrl = require('../controllers/admin/faqs.controller');
 const hubDisplaysCtrl = require('../controllers/admin/hubDisplays.controller');
 const trackingCtrl = require('../controllers/admin/tracking.controller');
 const ivrCtrl = require('../controllers/admin/ivr.controller');
@@ -281,6 +282,14 @@ router.get('/reports/delivery-partners', p(PERMISSIONS.VIEW_REPORTS), reportsCtr
 router.get('/support-tickets', p(PERMISSIONS.MANAGE_ORDERS), supportCtrl.listAllTickets);
 router.get('/support-tickets/:id', p(PERMISSIONS.MANAGE_ORDERS), supportCtrl.getTicketAdmin);
 router.patch('/support-tickets/:id', p(PERMISSIONS.MANAGE_ORDERS), supportCtrl.replyToTicket);
+router.post('/support-tickets/:id/read', p(PERMISSIONS.MANAGE_ORDERS), supportCtrl.markReadAdmin);
+
+// FAQs on the apps' Support screen (GET /common/support/faqs).
+router.get('/faq-topics', p(PERMISSIONS.MANAGE_SETTINGS, PERMISSIONS.MANAGE_ORDERS), faqsCtrl.listTopics);
+router.get('/faqs', p(PERMISSIONS.MANAGE_SETTINGS, PERMISSIONS.MANAGE_ORDERS), faqsCtrl.listFaqs);
+router.post('/faqs', p(PERMISSIONS.MANAGE_SETTINGS), faqsCtrl.createFaq);
+router.patch('/faqs/:id', p(PERMISSIONS.MANAGE_SETTINGS), faqsCtrl.updateFaq);
+router.delete('/faqs/:id', p(PERMISSIONS.MANAGE_SETTINGS), faqsCtrl.deleteFaq);
 
 // Inventory
 router.get('/inventory', p(PERMISSIONS.MANAGE_INVENTORY, PERMISSIONS.MANAGE_OWN_STORE_INVENTORY), inventoryCtrl.listInventory);

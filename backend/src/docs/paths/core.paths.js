@@ -537,25 +537,79 @@ paths['/common/notifications/{id}/read'] = {
 paths['/common/notifications/read-all'] = {
   patch: { tags: ['Common'], summary: 'Mark all my notifications as read', ...bearer(), responses: { 200: envelope(null, 'All notifications marked as read'), 401: RESPONSES_401 } },
 };
+// Support screen: Call support / Chat with us / FAQs (services/support.service.js).
+const SUPPORT_TOPIC = { type: 'object', properties: { key: { type: 'string', example: 'payouts' }, label: { type: 'string', example: 'Payouts' }, count: { type: 'integer', example: 2 } } };
+const SUPPORT_FAQ = { type: 'object', properties: { _id: { type: 'string' }, topic: { type: 'string', example: 'payouts' }, question: { type: 'string', example: 'When do I get paid?' }, answer: { type: 'string' }, updatedAt: { type: 'string', format: 'date-time' } } };
+paths['/common/support/home'] = {
+  get: {
+    tags: ['Common'], summary: 'Support screen: Call support, Chat with us and FAQs rows, in display order (any app: delivery / picker / customer)', ...bearer(),
+    description: [
+      'Render `items` as the rows. Each has `key`, `title`, `subtitle` and `enabled` (show the row greyed out when false).',
+      '- **call**: dial `dialUrl` (`tel:` + number) from the phone. `subtitle` is the hours ("7 AM – 11 PM"); `isOpenNow` is false outside them (e.g. show "Closed now"). `enabled` is false when no support number is set. Number: setting `deliverySupportPhone` / `pickerSupportPhone` / `customerSupportPhone`, else `supportPhone` (env `SUPPORT_PHONE`); hours: `supportHoursFrom` / `supportHoursTo` (HH:MM, local time, default 07:00–23:00; equal = 24 hours; may cross midnight).',
+      '- **chat**: "Average reply in 2 min" — the median time to the first support reply over the last 30 days (needs 5 replied tickets; until then the `supportChatReplyMinutes` setting, default 2). If `activeTicketId` is set, open that conversation (`GET /common/support/{id}`); otherwise start one from `/common/support/categories` + `POST /common/support`.',
+      '- **faqs**: `subtitle` lists my app\'s topics ("Payouts, orders, documents"); `topics` have counts. Open `GET /common/support/faqs`. `enabled` is false when there are no FAQs yet.',
+    ].join('\n'),
+    responses: {
+      200: envelope({
+        type: 'object',
+        properties: {
+          title: { type: 'string', example: 'Support' },
+          items: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', enum: ['call', 'chat', 'faqs'] },
+                title: { type: 'string', example: 'Call support' },
+                subtitle: { type: 'string', example: '7 AM – 11 PM' },
+                enabled: { type: 'boolean' },
+                phone: { type: 'string', nullable: true, example: '+919876543210', description: 'call' },
+                dialUrl: { type: 'string', nullable: true, example: 'tel:+919876543210', description: 'call' },
+                hours: { type: 'object', properties: { from: { type: 'string', example: '07:00' }, to: { type: 'string', example: '23:00' } }, description: 'call' },
+                isOpenNow: { type: 'boolean', description: 'call' },
+                averageReplyMinutes: { type: 'integer', example: 2, description: 'chat' },
+                openTickets: { type: 'integer', example: 0, description: 'chat — my unclosed tickets' },
+                activeTicketId: { type: 'string', nullable: true, description: 'chat — my latest unclosed ticket' },
+                topics: { type: 'array', items: SUPPORT_TOPIC, description: 'faqs' },
+              },
+            },
+          },
+        },
+      }),
+      401: RESPONSES_401,
+    },
+  },
+};
+paths['/common/support/faqs'] = {
+  get: {
+    tags: ['Common'], summary: 'FAQs for my app — all, one topic, or a search over questions and answers', ...bearer(),
+    parameters: [q('topic', 'payouts | orders | documents (delivery, picker); orders | payments | account (customer)'), q('q', 'Search text')],
+    responses: { 200: envelope({ type: 'object', properties: { topics: { type: 'array', items: SUPPORT_TOPIC }, items: { type: 'array', items: SUPPORT_FAQ } } }), 401: RESPONSES_401 },
+  },
+};
 paths['/common/support/categories'] = {
   get: { tags: ['Common'], summary: 'Help categories and issues for my app (delivery / customer / picker). needsOrder = orderId required.', ...bearer(), responses: { 200: envelope({ type: 'array', items: { type: 'object', properties: { key: { type: 'string', example: 'past_order' }, label: { type: 'string', example: 'Past order related issues' }, needsOrder: { type: 'boolean' }, issues: { type: 'array', items: { type: 'object', properties: { key: { type: 'string', example: 'long_distance_return_pay' }, label: { type: 'string', example: 'Long Distance Return Pay' } } } } } } }), 401: RESPONSES_401 } },
 };
 paths['/common/support'] = {
   post: {
     tags: ['Common'], summary: 'Create a support ticket (any role). Pick category + subcategory (from /common/support/categories), optionally about an order (Trip details "Help center"), a pocket transfer ("Raise a ticket") or an offer. Older clients may still send just subject + message.', ...bearer(),
+    description: 'Live chat: connect Socket.IO to the API origin with auth { token: <accessToken> }. Send with support:send { ticketId, text, clientId? } (ack { ok, message, status, clientId }), support:typing { ticketId, typing }, support:read { ticketId }. Receive support:message, support:ticket, support:typing, support:read for your own tickets — no subscribe needed. These REST endpoints push the same events. See README \"Support Chat\".',
     requestBody: jsonBody({ category: { type: 'string', example: 'past_order' }, subcategory: { type: 'string', example: 'long_distance_return_pay' }, message: { type: 'string' }, orderId: { type: 'string' }, transferId: { type: 'string' }, offerId: { type: 'string' }, subject: { type: 'string', description: 'Only without a category' } }, ['message']),
     responses: { 201: envelope(ref('SupportTicket'), 'Support ticket created'), 401: RESPONSES_401, 404: RESPONSES_404, 422: RESPONSES_422 },
   },
   get: {
-    tags: ['Common'], summary: 'List my support tickets (without the conversation)', ...bearer(), parameters: [...PAGE_QS, q('status', 'open | in_progress | resolved | closed')],
+    tags: ['Common'], summary: 'List my support tickets (without the conversation). unreadCount is 1 when the last message is an unread support reply.', ...bearer(), parameters: [...PAGE_QS, q('status', 'open | in_progress | resolved | closed')],
     responses: { 200: envelope(paginated(ref('SupportTicket'))), 401: RESPONSES_401 },
   },
 };
 paths['/common/support/{id}'] = {
-  get: { tags: ['Common'], summary: 'A ticket with its conversation (messages: user / agent / system) and canReply / canRate / canReopen', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('SupportTicket')), 401: RESPONSES_401, 404: RESPONSES_404 } },
+  get: { tags: ['Common'], summary: 'A ticket with its conversation (messages: user / agent / system), canReply / canRate / canReopen and unreadCount (support replies I haven\'t read)', ...bearer(), parameters: [idParam()], responses: { 200: envelope(ref('SupportTicket')), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
 paths['/common/support/{id}/messages'] = {
-  post: { tags: ['Common'], summary: 'Reply in the conversation (not once closed — reopen first)', ...bearer(), parameters: [idParam()], requestBody: jsonBody({ text: { type: 'string' } }, ['text']), responses: { 201: envelope(ref('SupportTicket')), 400: errorResponse('Ticket closed'), 401: RESPONSES_401, 404: RESPONSES_404 } },
+  post: { tags: ['Common'], summary: 'Reply in the conversation (not once closed — reopen first). Same as the socket\'s support:send; support sees it live.', ...bearer(), parameters: [idParam()], requestBody: jsonBody({ text: { type: 'string' }, clientId: { type: 'string', description: 'Optional: comes back on the support:message event, to match an optimistic bubble' } }, ['text']), responses: { 201: envelope(ref('SupportTicket')), 400: errorResponse('Ticket closed'), 401: RESPONSES_401, 404: RESPONSES_404 } },
+};
+paths['/common/support/{id}/read'] = {
+  post: { tags: ['Common'], summary: 'I have read the conversation (same as the socket\'s support:read): unreadCount -> 0 and support gets a read receipt', ...bearer(), parameters: [idParam()], responses: { 200: envelope({ type: 'object', properties: { ticketId: { type: 'string' }, readAt: { type: 'string', format: 'date-time' }, unreadCount: { type: 'integer', example: 0 } } }), 401: RESPONSES_401, 404: RESPONSES_404 } },
 };
 paths['/common/support/{id}/rate'] = {
   post: { tags: ['Common'], summary: '"How would you like to rate my assistance?" — after it is closed', ...bearer(), parameters: [idParam()], requestBody: jsonBody({ rating: { type: 'string', enum: ['up', 'down'] } }, ['rating']), responses: { 200: envelope(ref('SupportTicket')), 400: errorResponse('Not closed yet'), 401: RESPONSES_401, 404: RESPONSES_404 } },

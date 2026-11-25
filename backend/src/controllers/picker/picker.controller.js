@@ -15,7 +15,7 @@ const { getPagination, buildPageMeta } = require('../../utils/pagination');
 const { transitionOrder, ensureHandoverOtp, ensureHandoverQrToken, advancePickingStatus } = require('../../services/order.service');
 const { findNearestDeliveryPartner, reassignPickerItems } = require('../../services/assignment.service');
 const { notifyUser } = require('../../services/notification.service');
-const { getHubPickupMode } = require('../../services/hubDisplay.service');
+const { getHubPickupMode, qrSvg } = require('../../services/hubDisplay.service');
 
 const getProfile = catchAsync(async (req, res) => {
   const profile = await PickerProfile.findOne({ user: req.user.id });
@@ -91,7 +91,9 @@ const listJobs = catchAsync(async (req, res) => {
   const { status } = req.query;
 
   const where = { 'pickTasks.picker': req.user.id };
-  where.orderStatus = status || { $in: ['accepted', 'picking', 'partially_picked', 'packed'] };
+  // ?status=assigned or several: ?status=packed,assigned
+  const wanted = String(status || '').split(',').map((s) => s.trim()).filter(Boolean);
+  where.orderStatus = { $in: wanted.length ? wanted : ['accepted', 'picking', 'partially_picked', 'packed'] };
 
   const [rows, count] = await Promise.all([
     Order.find(where).populate('store', 'name address').sort({ createdAt: 1 }).skip(offset).limit(limit),
@@ -301,10 +303,13 @@ const getHandoverOtp = catchAsync(async (req, res) => {
   new ApiResponse(200, { otp: order.handoverOtp, expiresAt: order.handoverOtpExpiresAt }).send(res);
 });
 
-// GET /picker/jobs/:id/qr -> same idea as the OTP above, for the QR alternative.
+// GET /picker/jobs/:id/qr -> same idea as the OTP above, for the QR alternative. qrSvg is the QR
+// itself (its content is qrToken), ready to show — e.g. on the /picker-qr page — and rider is the
+// delivery partner's first name.
 const getHandoverQr = catchAsync(async (req, res) => {
   const order = await Order.findOne({ _id: req.params.id, 'pickTasks.picker': req.user.id })
-    .select('+handoverQrToken +handoverQrTokenExpiresAt orderStatus delivery orderNumber pickTasks store');
+    .select('+handoverQrToken +handoverQrTokenExpiresAt orderStatus delivery orderNumber pickTasks store')
+    .populate('delivery', 'name');
   if (!order || !isHubPicker(order, req.user.id)) throw new ApiError(404, 'Job not found or not assigned to you');
   if (!order.delivery) throw new ApiError(400, 'No delivery partner assigned to this order yet');
   if (!['assigned', 'packed'].includes(order.orderStatus)) {
@@ -314,7 +319,12 @@ const getHandoverQr = catchAsync(async (req, res) => {
   const freshlyGenerated = ensureHandoverQrToken(order);
   if (freshlyGenerated) await order.save();
 
-  new ApiResponse(200, { qrToken: order.handoverQrToken, expiresAt: order.handoverQrTokenExpiresAt }).send(res);
+  new ApiResponse(200, {
+    qrToken: order.handoverQrToken,
+    expiresAt: order.handoverQrTokenExpiresAt,
+    qrSvg: await qrSvg(order.handoverQrToken),
+    rider: { name: String(order.delivery?.name || '').trim().split(/\s+/)[0] || null },
+  }).send(res);
 });
 
 // POST /picker/jobs/:id/complete -> marks THIS picker's own portion picked, packed and ready for

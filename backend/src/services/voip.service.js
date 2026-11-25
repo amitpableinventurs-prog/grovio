@@ -19,7 +19,11 @@ const { getSetting } = require('./settings.service');
 //      <Dial><Client> to the other party's identity.
 //   4. Twilio reports the outcome to /voip/twilio/dial-result, /client-status and /status.
 //
-// With no provider configured, calls are recorded as 'simulated' and nothing is dialled.
+// Provider 'direct' (no VoIP account needed): no masking. POST .../call returns the other party's
+// phone number as a tel: link and the app opens the phone's dialler. Still only for the order's
+// customer and rider while the order is out for delivery; logged as status 'dialled'.
+//
+// With no provider configured ('none'), calls are recorded as 'simulated' and nothing is dialled.
 
 // Order statuses in which the customer and the assigned rider may call each other.
 const CALLABLE_STATUSES = ['assigned', 'picked_up', 'out_for_delivery'];
@@ -27,13 +31,15 @@ const CALLABLE_STATUSES = ['assigned', 'picked_up', 'out_for_delivery'];
 const CONNECT_WINDOW_MS = 2 * 60 * 1000;
 const TOKEN_TTL_SEC = 3600;
 const ROLE_WORDS = { customer: 'customer', delivery: 'delivery partner' };
+const PROVIDERS = ['none', 'twilio', 'direct'];
 
 // ---- Settings -------------------------------------------------------------------------------
 
 async function voipConfig() {
   const ring = Number(await getSetting('voipRingSeconds', 'VOIP_RING_SECONDS'));
+  const provider = await getSetting('voipProvider', 'VOIP_PROVIDER');
   return {
-    provider: (await getSetting('voipProvider', 'VOIP_PROVIDER')) || 'none',
+    provider: PROVIDERS.includes(provider) ? provider : 'none',
     accountSid: await getSetting('twilioAccountSid', 'TWILIO_ACCOUNT_SID'),
     authToken: await getSetting('twilioAuthToken', 'TWILIO_AUTH_TOKEN'),
     apiKeySid: await getSetting('twilioApiKeySid', 'TWILIO_API_KEY_SID'),
@@ -65,9 +71,11 @@ const identityOf = (userId) => `u_${userId}`;
 
 // A Twilio access token with a Voice grant (the same JWT twilio-node's AccessToken builds).
 // platform picks the push credential, so a mobile app gets incoming calls while in background.
+// mode tells the app how to call: 'twilio' (this token), 'direct' (tel: link from POST .../call)
+// or 'none'.
 async function accessToken(user, platform = 'web') {
   const cfg = await voipConfig();
-  if (cfg.provider !== 'twilio') return { enabled: false };
+  if (cfg.provider !== 'twilio') return { enabled: false, mode: cfg.provider };
   const missing = missingConfig(cfg);
   if (missing.length) throw new ApiError(503, `In-app calling is not fully configured (missing: ${missing.join(', ')})`);
 
@@ -92,12 +100,24 @@ async function accessToken(user, platform = 'web') {
     cfg.apiKeySecret,
     { algorithm: 'HS256', header: { typ: 'JWT', cty: 'twilio-fpa;v=1' } },
   );
-  return { enabled: true, identity, token, ttlSec: TOKEN_TTL_SEC, expiresAt: new Date((now + TOKEN_TTL_SEC) * 1000) };
+  return { enabled: true, mode: 'twilio', identity, token, ttlSec: TOKEN_TTL_SEC, expiresAt: new Date((now + TOKEN_TTL_SEC) * 1000) };
 }
 
 // ---- Starting a call ------------------------------------------------------------------------
 
 const idOf = (v) => (v && v._id ? v._id : v)?.toString();
+
+// A stored number as something a dialler takes: '+919876543210'. Older accounts may hold just the
+// 10 digits, which are Indian numbers.
+function dialNumber(phone) {
+  const raw = String(phone || '').trim();
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return null;
+  if (raw.startsWith('+')) return `+${digits}`;
+  if (digits.length === 10) return `+91${digits}`;
+  if (digits.length === 12 && digits.startsWith('91')) return `+${digits}`;
+  return digits;
+}
 const firstName = (name) => (name ? String(name).trim().split(/\s+/)[0] : '');
 
 // Who the other party on this order is for `user`, or throws if they can't call right now.
@@ -111,18 +131,22 @@ function counterpartOf(order, user) {
   throw new ApiError(403, 'You are not part of this order');
 }
 
-// POST .../call. Returns what the app needs to connect — never a phone number.
+// POST .../call. Returns what the app needs to connect. Only in 'direct' mode does that include the
+// other party's number (as a tel: link); with Twilio or 'none' it never does.
 async function startCall(order, user) {
   const counterpart = counterpartOf(order, user);
-  const callee = await User.findById(counterpart.userId).select('name isActive');
+  const callee = await User.findById(counterpart.userId).select('name isActive phone');
   if (!callee || !callee.isActive) throw new ApiError(400, `The ${ROLE_WORDS[counterpart.role]} can't be reached right now`);
 
   const cfg = await voipConfig();
-  const live = cfg.provider === 'twilio';
+  const mode = cfg.provider;
+  const live = mode === 'twilio';
   if (live) {
     const missing = missingConfig(cfg);
     if (missing.length) throw new ApiError(503, 'In-app calling is not available right now');
   }
+  const phone = mode === 'direct' ? dialNumber(callee.phone) : null;
+  if (mode === 'direct' && !phone) throw new ApiError(400, `The ${ROLE_WORDS[counterpart.role]}'s phone number isn't available`);
 
   // One pending call per caller: an earlier call they never connected is dropped.
   await VoipCall.updateMany({ caller: user._id, status: 'initiated' }, { $set: { status: 'expired', endedAt: new Date() } });
@@ -133,17 +157,21 @@ async function startCall(order, user) {
     callerRole: user.role,
     callee: callee._id,
     calleeRole: counterpart.role,
-    provider: live ? 'twilio' : 'simulated',
-    status: live ? 'initiated' : 'simulated',
+    provider: live ? 'twilio' : mode === 'direct' ? 'direct' : 'simulated',
+    // 'dialled': the app was given the number; what happens next is on the phone network.
+    status: live ? 'initiated' : mode === 'direct' ? 'dialled' : 'simulated',
   });
-  if (!live) console.log(`[VoIP simulated] ${user.role} ${user.id} -> ${counterpart.role} ${callee.id} on ${order.orderNumber}`);
+  if (mode === 'none') console.log(`[VoIP simulated] ${user.role} ${user.id} -> ${counterpart.role} ${callee.id} on ${order.orderNumber}`);
 
   return {
     callId: call.id,
-    simulated: !live,
+    // 'twilio': connect with the Voice SDK; 'direct': open dialUrl; 'none': nothing is dialled.
+    mode,
+    simulated: mode === 'none',
     orderNumber: order.orderNumber,
-    callee: { role: counterpart.role, name: firstName(callee.name) || ROLE_WORDS[counterpart.role] },
-    // Pass these to device.connect({ params }).
+    callee: { role: counterpart.role, name: firstName(callee.name) || ROLE_WORDS[counterpart.role], ...(phone ? { phone } : {}) },
+    dialUrl: phone ? `tel:${phone}` : null,
+    // Twilio: pass these to device.connect({ params }).
     params: { callId: call.id },
   };
 }

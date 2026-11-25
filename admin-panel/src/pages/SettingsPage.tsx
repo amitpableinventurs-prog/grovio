@@ -210,9 +210,8 @@ export default function SettingsPage() {
                             placeholder="Not set — SMS_PROVIDER from .env, else None (dev mode)"
                             options={[
                               { value: 'none', label: 'None (dev mode)' },
-                              { value: 'msg91', label: 'MSG91' },
-                              { value: 'twilio', label: 'Twilio' },
                               { value: 'apitxt', label: 'apitxt (OTP API)' },
+                              { value: 'msg91', label: 'MSG91' },
                             ]}
                           />
                         </Form.Item>
@@ -242,19 +241,6 @@ export default function SettingsPage() {
                           </>
                         )}
 
-                        {smsProvider === 'twilio' && (
-                          <>
-                            <Form.Item name="smsApiKey" label="Account SID" extra={secretHint(data?.smsApiKey)}>
-                              <Input.Password placeholder="Leave blank to keep existing" autoComplete="new-password" />
-                            </Form.Item>
-                            <Form.Item name="smsApiSecret" label="Auth Token" extra={secretHint(data?.smsApiSecret)}>
-                              <Input.Password placeholder="Leave blank to keep existing" autoComplete="new-password" />
-                            </Form.Item>
-                            <Form.Item name="smsSenderId" label="From Number" extra="Must be a Twilio-verified number, e.g. +14155551234">
-                              <Input />
-                            </Form.Item>
-                          </>
-                        )}
                       </Card>
                       <VoipCard data={data} provider={voipProvider} />
                     </>

@@ -59,6 +59,12 @@ app.use('/partner-login', express.static(path.join(__dirname, '../partner-login'
 // its pairing link) and the page a plain camera lands on if it scans that QR.
 app.use('/hub-display', express.static(path.join(__dirname, '../hub-display')));
 app.use('/hub-checkin', express.static(path.join(__dirname, '../hub-checkin')));
+// Picker's handover QR screen: the hub picker signs in with their phone + OTP and shows an
+// order's QR (and OTP) for the delivery partner to scan with the Delivery app.
+app.use('/picker-qr', express.static(path.join(__dirname, '../picker-qr')));
+// Picker TV at a store (vegetables, fruits, electronics…): that store's items to pick for every
+// order, live. Uses the same paired hub screen key as /hub-display.
+app.use('/picker-display', express.static(path.join(__dirname, '../picker-display')));
 // Grovio logo files (brand/) for those pages.
 app.use('/brand', express.static(path.join(__dirname, '../brand'), { maxAge: '7d' }));
 
